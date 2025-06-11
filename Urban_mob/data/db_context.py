@@ -2,6 +2,7 @@ import sqlite3
 import hashlib
 import os
 from datetime import datetime
+from .encryption import encrypt_field, decrypt_field
 
 
 class DatabaseContext:
@@ -114,4 +115,66 @@ class DatabaseContext:
                 ),
             )
 
+            conn.commit()
+
+    # Example: Insert traveler with encrypted fields
+    def insert_traveler(self, traveler):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO travelers (
+                    customer_id, first_name, last_name, birthday, gender,
+                    street_name, house_number, zip_code, city,
+                    email, mobile_phone, driving_license, registration_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    traveler["customer_id"],
+                    traveler["first_name"],
+                    traveler["last_name"],
+                    traveler["birthday"],
+                    traveler["gender"],
+                    traveler["street_name"],
+                    traveler["house_number"],
+                    traveler["zip_code"],
+                    traveler["city"],
+                    encrypt_field(traveler["email"]),
+                    encrypt_field(traveler["mobile_phone"]),
+                    encrypt_field(traveler["driving_license"]),
+                    traveler["registration_date"],
+                ),
+            )
+            conn.commit()
+
+    # Example: Insert scooter with encrypted serial_number
+    def insert_scooter(self, scooter):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO scooters (
+                    brand, model, serial_number, top_speed, battery_capacity,
+                    state_of_charge, target_range_min, target_range_max,
+                    latitude, longitude, out_of_service, mileage,
+                    last_maintenance_date, in_service_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    scooter["brand"],
+                    scooter["model"],
+                    encrypt_field(scooter["serial_number"]),
+                    scooter["top_speed"],
+                    scooter["battery_capacity"],
+                    scooter["state_of_charge"],
+                    scooter["target_range_min"],
+                    scooter["target_range_max"],
+                    scooter["latitude"],
+                    scooter["longitude"],
+                    scooter.get("out_of_service", 0),
+                    scooter.get("mileage", 0),
+                    scooter.get("last_maintenance_date"),
+                    scooter["in_service_date"],
+                ),
+            )
             conn.commit()
