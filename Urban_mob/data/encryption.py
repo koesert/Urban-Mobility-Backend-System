@@ -3,7 +3,7 @@ import base64
 import os
 
 # You should store this key securely!
-FERNET_KEY_PATH = os.getenv("FERNET_KEY_PATH", "fernet.key")
+FERNET_KEY_PATH = os.getenv("FERNET_KEY_PATH", "Urban_mob/data/fernet.key")
 
 def generate_key():
     key = Fernet.generate_key()
