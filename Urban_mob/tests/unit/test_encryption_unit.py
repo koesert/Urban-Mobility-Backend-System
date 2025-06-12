@@ -74,8 +74,8 @@ class TestEncryptionUnit:
         for invalid_token in invalid_tokens:
             # Act & Assert
             with pytest.raises(
-                Exception
-            ):  # Could be InvalidToken or other decoding errors
+                InvalidToken
+            ):  # Expected exception for invalid tokens
                 decrypt_field(invalid_token)
 
     def test_encrypt_field_handles_unicode_characters(self):
@@ -275,10 +275,7 @@ class TestEncryptionUnit:
                 file_permissions = oct(file_stat.st_mode)[-3:]
 
                 # File should be readable/writable by owner only (600) or similar
-                assert file_permissions in [
-                    "600",
-                    "644",
-                ], f"Key file has permissions {file_permissions}, should be more restrictive"
+                assert file_permissions == "600", f"Key file has permissions {file_permissions}, should be 600 (owner read/write only)"
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
