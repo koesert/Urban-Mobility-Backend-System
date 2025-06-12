@@ -1,5 +1,5 @@
-from db_context import DatabaseContext
-from encryption import decrypt_field
+from data.db_context import DatabaseContext
+from data.encryption import decrypt_field
 
 db = DatabaseContext()
 
