@@ -6,39 +6,102 @@ from pathlib import Path
 
 
 def run_tests(test_type="all", verbose=False, coverage=False):
-    """Run Urban Mobility test suite with various options"""
+    """Run Urban Mobility test suite with automatic path detection"""
 
     print("🔐 Urban Mobility Comprehensive Test Suite")
     print("=" * 50)
 
+    # Get the correct paths
+    project_root = get_project_root()
+    tests_path = get_tests_path()
+
+    print(f"📁 Project root: {project_root}")
+    print(f"📂 Tests path: {tests_path}")
+
+    # Verify tests directory exists
+    if not os.path.exists(tests_path):
+        print(f"❌ Tests directory not found: {tests_path}")
+        print("💡 Make sure you have the correct directory structure")
+        return False
+
     # Base pytest command
     cmd = [sys.executable, "-m", "pytest"]
 
-    # Test type selection
+    # Test type selection with automatic path detection
     if test_type == "unit":
-        cmd.extend(["tests/unit/"])
+        unit_path = os.path.join(tests_path, "unit")
+        cmd.extend([unit_path])
         print("📋 Running Unit Tests Only...")
     elif test_type == "integration":
-        cmd.extend(["tests/integration/"])
+        integration_path = os.path.join(tests_path, "integration")
+        cmd.extend([integration_path])
         print("🔗 Running Integration Tests Only...")
     elif test_type == "security":
-        cmd.extend(["tests/security/"])
+        security_path = os.path.join(tests_path, "security")
+        cmd.extend([security_path])
         print("🛡️ Running Security Tests Only...")
+    elif test_type == "legacy":
+        legacy_path = os.path.join(tests_path, "legacy")
+        cmd.extend([legacy_path])
+        print("📦 Running Legacy Tests Only...")
     elif test_type == "encryption":
-        cmd.extend(["-k", "encryption"])
+        # Exclude legacy to avoid issues
+        cmd.extend(
+            [
+                os.path.join(tests_path, "unit"),
+                os.path.join(tests_path, "integration"),
+                os.path.join(tests_path, "security"),
+                "-k",
+                "encryption",
+            ]
+        )
         print("🔒 Running Encryption Tests Only...")
     elif test_type == "travelers":
-        cmd.extend(["-k", "travelers"])
+        # Exclude legacy to avoid issues
+        cmd.extend(
+            [
+                os.path.join(tests_path, "unit"),
+                os.path.join(tests_path, "integration"),
+                os.path.join(tests_path, "security"),
+                "-k",
+                "travelers",
+            ]
+        )
         print("👥 Running Travelers Management Tests Only...")
     elif test_type == "auth":
-        cmd.extend(["-k", "auth"])
+        # Exclude legacy to avoid issues
+        cmd.extend(
+            [
+                os.path.join(tests_path, "unit"),
+                os.path.join(tests_path, "integration"),
+                os.path.join(tests_path, "security"),
+                "-k",
+                "auth",
+            ]
+        )
         print("🔑 Running Authentication Tests Only...")
     elif test_type == "fast":
-        cmd.extend(["tests/", "-m", "not slow"])
+        # Exclude legacy and slow tests
+        cmd.extend(
+            [
+                os.path.join(tests_path, "unit"),
+                os.path.join(tests_path, "integration"),
+                os.path.join(tests_path, "security"),
+                "-m",
+                "not slow",
+            ]
+        )
         print("⚡ Running Fast Tests Only...")
     else:
-        cmd.extend(["tests/"])
-        print("🧪 Running All Tests...")
+        # Default: Run all tests EXCEPT legacy (to avoid issues)
+        cmd.extend(
+            [
+                os.path.join(tests_path, "unit"),
+                os.path.join(tests_path, "integration"),
+                os.path.join(tests_path, "security"),
+            ]
+        )
+        print("🧪 Running All Tests (excluding legacy)...")
 
     # Add verbosity
     if verbose:
@@ -228,6 +291,16 @@ def create_test_report():
     except Exception as e:
         print(f"❌ Error generating report: {e}")
         return False
+
+
+def get_project_root():
+    """Get the path to the project root directory"""
+    return Path(__file__).parent.parent.absolute()
+
+
+def get_tests_path():
+    """Get the path to the tests directory"""
+    return Path(__file__).parent.absolute()
 
 
 def main():

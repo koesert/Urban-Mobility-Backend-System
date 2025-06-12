@@ -1,4 +1,3 @@
-# Urban_mob/managers/travelers_manager.py
 import re
 from datetime import datetime
 from data.encryption import decrypt_field, encrypt_field
@@ -722,47 +721,80 @@ class TravelersManager:
         except Exception:
             return None
 
-    def _display_traveler_details(self, traveler):
-        """Display detailed traveler information with decrypted sensitive data"""
-        if not traveler:
+    def _display_traveler_details(self, traveler_data):
+        """Display detailed information for a specific traveler"""
+        if not traveler_data:
+            print("No traveler data to display.")
             return
 
-        labels = [
-            "ID",
-            "Customer ID",
-            "First Name",
-            "Last Name",
-            "Birthday",
-            "Gender",
-            "Street Name",
-            "House Number",
-            "Zip Code",
-            "City",
-            "Email",
-            "Mobile Phone",
-            "Driving License",
-            "Registration Date",
-        ]
+        try:
+            # Unpack traveler data
+            (
+                traveler_id,
+                customer_id,
+                first_name,
+                last_name,
+                birthday,
+                gender,
+                street_name,
+                house_number,
+                zip_code,
+                city,
+                encrypted_email,
+                encrypted_mobile_phone,
+                encrypted_driving_license,
+                registration_date,
+            ) = traveler_data
 
-        print("\nTraveler Details:")
-        for i, label in enumerate(labels):
-            if i < len(traveler) and traveler[i] is not None:
-                value = traveler[i]
-                # Decrypt sensitive fields for display
-                if label in ["Email", "Mobile Phone", "Driving License"]:
-                    try:
-                        value = decrypt_field(value)
-                    except Exception as e:
-                        # Handle Fernet decryption errors (invalid token, corrupted data)
-                        print(f"Debug: Decryption error for {label}: {e}")
-                        value = "[ENCRYPTED]"
-            else:
-                value = "N/A"
-            print(f"{label}: {value}")
+            print("\n" + "=" * 50)
+            print(f"TRAVELER DETAILS - ID: {customer_id}")
+            print("=" * 50)
+
+            # Basic information (not encrypted)
+            print(f"Name: {first_name} {last_name}")
+            print(f"Birthday: {birthday}")
+            print(f"Gender: {gender}")
+            print(f"Address: {street_name} {house_number}")
+            print(f"Zip Code: {zip_code}")
+            print(f"City: {city}")
+            print(f"Registration Date: {registration_date}")
+
+            # Sensitive information (encrypted) - decrypt before displaying
+            try:
+                email = decrypt_field(encrypted_email)
+                mobile_phone = decrypt_field(encrypted_mobile_phone)
+                driving_license = decrypt_field(encrypted_driving_license)
+
+                print(f"Email: {email}")
+                print(f"Mobile Phone: {mobile_phone}")
+                print(f"Driving License: {driving_license}")
+
+            except Exception as e:
+                print(f"Email: [ENCRYPTED] (Decryption failed)")
+                print(f"Mobile Phone: [ENCRYPTED] (Decryption failed)")
+                print(f"Driving License: [ENCRYPTED] (Decryption failed)")
+                print(f"Decryption error: {str(e)}")
+
+            print("=" * 50)
+
+        except ValueError as e:
+            print(f"Error displaying traveler details: Invalid data format - {str(e)}")
+        except Exception as e:
+            print(f"Error displaying traveler details: {str(e)}")
 
     def _validate_email(self, email):
-        """Validate email format"""
-        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+        """Validate email format - stricter validation"""
+        # More strict email validation
+        pattern = r"^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+
+        # Additional checks for common invalid patterns
+        if ".." in email:  # No consecutive dots
+            return False
+        if email.startswith(".") or email.endswith("."):
+            return False
+        if "@." in email or ".@" in email:  # No dots adjacent to @
+            return False
+
         return re.match(pattern, email) is not None
 
     def _validate_date(self, date_string):
@@ -811,6 +843,10 @@ class TravelersManager:
 
         # Check length is reasonable (not more than 10 characters total)
         if len(house_num) > 10:
+            return False
+
+        # Additional check: no negative numbers
+        if house_num.startswith('-'):
             return False
 
         return True

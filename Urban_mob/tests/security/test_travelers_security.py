@@ -558,10 +558,9 @@ class TestTravelersSecurityScenarios:
         for encrypted in encrypted_versions:
             assert len(encrypted) > len(test_email) * 2
 
-            # Should contain base64 characters (encryption output)
-            import base64
-
+            # Should contain valid Fernet token format (check if it can be decrypted)
             try:
-                base64.b64decode(encrypted.encode())
+                decrypted = decrypt_field(encrypted)
+                assert decrypted == test_email
             except Exception:
-                assert False, "Encrypted data should be valid base64"
+                assert False, "Encrypted data should be valid Fernet token"

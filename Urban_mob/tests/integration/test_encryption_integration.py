@@ -384,43 +384,52 @@ class TestEncryptionIntegration:
             with open(key2_path, "wb") as f:
                 f.write(key2)
 
+            encrypted_email = None
+
             # Encrypt data with first key
             with patch("data.encryption.FERNET_KEY_PATH", key1_path):
-                db = DatabaseContext(temp_db_path)
+                # Also patch the fernet instance to ensure it uses the new key
+                with patch("data.encryption.fernet", Fernet(key1)):
+                    db = DatabaseContext(temp_db_path)
 
-                traveler = {
-                    "customer_id": "CUST000001",
-                    "first_name": "KeyTest",
-                    "last_name": "User",
-                    "birthday": "01-01-1990",
-                    "gender": "Male",
-                    "street_name": "Key Street",
-                    "house_number": "1",
-                    "zip_code": "1000AA",
-                    "city": "Amsterdam",
-                    "email": "keytest@example.com",
-                    "mobile_phone": "+31612345678",
-                    "driving_license": "KT123456",
-                    "registration_date": "2025-06-11T10:00:00",
-                }
+                    traveler = {
+                        "customer_id": "CUST000001",
+                        "first_name": "KeyTest",
+                        "last_name": "User",
+                        "birthday": "01-01-1990",
+                        "gender": "Male",
+                        "street_name": "Key Street",
+                        "house_number": "1",
+                        "zip_code": "1000AA",
+                        "city": "Amsterdam",
+                        "email": "keytest@example.com",
+                        "mobile_phone": "+31612345678",
+                        "driving_license": "KT123456",
+                        "registration_date": "2025-06-11T10:00:00",
+                    }
 
-                db.insert_traveler(traveler)
+                    db.insert_traveler(traveler)
+
+                    # Get the encrypted email
+                    with db.get_connection() as conn:
+                        cursor = conn.cursor()
+                        cursor.execute(
+                            "SELECT email FROM travelers WHERE customer_id = ?",
+                            ("CUST000001",),
+                        )
+                        encrypted_email = cursor.fetchone()[0]
 
             # Try to decrypt with second key (should fail)
             with patch("data.encryption.FERNET_KEY_PATH", key2_path):
-                with db.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "SELECT email FROM travelers WHERE customer_id = ?",
-                        ("CUST000001",),
-                    )
-                    encrypted_email = cursor.fetchone()[0]
+                # Patch the fernet instance to use the second key
+                with patch("data.encryption.fernet", Fernet(key2)):
+                    from data.encryption import decrypt_field
 
                     # This should raise an exception
                     with pytest.raises(Exception):
                         decrypt_field(encrypted_email)
 
-                print("✅ Cross-key decryption properly failed")
+                    print("✅ Cross-key decryption properly failed")
 
         finally:
             # Cleanup

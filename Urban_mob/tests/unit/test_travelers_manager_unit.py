@@ -434,11 +434,27 @@ class TestTravelersManagerUnit:
         # Assert
         assert result is None
 
+    @patch("managers.travelers_manager.decrypt_field")
     @patch("builtins.print")
     def test_display_traveler_details_shows_decrypted_data(
-        self, mock_print, travelers_manager
+        self, mock_print, mock_decrypt, travelers_manager
     ):
         """Test _display_traveler_details shows properly decrypted sensitive data"""
+
+        # Setup the mock to return decrypted values
+        def mock_decrypt_func(encrypted_value):
+            if encrypted_value == "encrypted_john@example.com":
+                return "john@example.com"
+            elif encrypted_value == "encrypted_+31 6 12345678":
+                return "+31 6 12345678"
+            elif encrypted_value == "encrypted_AB1234567":
+                return "AB1234567"
+            else:
+                # For any other value, just remove the "encrypted_" prefix
+                return encrypted_value.replace("encrypted_", "")
+
+        mock_decrypt.side_effect = mock_decrypt_func
+
         # Arrange
         traveler_data = (
             1,
@@ -461,16 +477,22 @@ class TestTravelersManagerUnit:
         travelers_manager._display_traveler_details(traveler_data)
 
         # Assert - check that print was called with decrypted values
-        print_calls = [call.args[0] for call in mock_print.call_args_list]
+        # Get all the text that was printed
+        all_printed_text = ""
+        for call in mock_print.call_args_list:
+            if call.args:  # Make sure there are arguments
+                all_printed_text += str(call.args[0]) + " "
 
         # Should show decrypted email, phone, and license
-        email_printed = any("john@example.com" in str(call) for call in print_calls)
-        phone_printed = any("+31 6 12345678" in str(call) for call in print_calls)
-        license_printed = any("AB1234567" in str(call) for call in print_calls)
+        assert "john@example.com" in all_printed_text, f"Email should be decrypted in display. Printed: {all_printed_text}"
+        assert "+31 6 12345678" in all_printed_text, f"Phone should be decrypted in display. Printed: {all_printed_text}"
+        assert "AB1234567" in all_printed_text, f"License should be decrypted in display. Printed: {all_printed_text}"
 
-        assert email_printed, "Email should be decrypted in display"
-        assert phone_printed, "Phone should be decrypted in display"
-        assert license_printed, "License should be decrypted in display"
+        # Verify decrypt was called with the encrypted values
+        mock_decrypt.assert_any_call("encrypted_john@example.com")
+        mock_decrypt.assert_any_call("encrypted_+31 6 12345678")
+        mock_decrypt.assert_any_call("encrypted_AB1234567")
+
 
     @patch("builtins.print")
     def test_display_traveler_details_handles_decryption_error(
