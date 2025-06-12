@@ -76,10 +76,9 @@ class DatabaseContext:
                     target_range_max INTEGER NOT NULL,
                     latitude REAL NOT NULL,
                     longitude REAL NOT NULL,
-                    out_of_service INTEGER DEFAULT 0,
+                    out_of_service_status TEXT DEFAULT '',
                     mileage REAL DEFAULT 0,
-                    last_maintenance_date TEXT,
-                    in_service_date TEXT NOT NULL
+                    last_maintenance_date DATE
                 )
             """
             )
@@ -92,7 +91,8 @@ class DatabaseContext:
             cursor = conn.cursor()
 
             # Check if super admin already exists
-            cursor.execute("SELECT id FROM users WHERE username = ?", ("super_admin",))
+            cursor.execute(
+                "SELECT id FROM users WHERE username = ?", ("super_admin",))
             if cursor.fetchone():
                 return  # Super admin already exists
 
