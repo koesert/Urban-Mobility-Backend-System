@@ -1,5 +1,6 @@
 from auth import AuthenticationService
 from utils import RoleManager
+from managers.travelers_manager import TravelersManager
 from scooter import manage_scooters_menu
 
 
@@ -7,6 +8,7 @@ class UrbanMobilitySystem:
     def __init__(self):
         self.auth = AuthenticationService()
         self.role_manager = RoleManager(self.auth)
+        self.travelers_manager = TravelersManager(self.auth)
         self.running = True
 
     def display_welcome(self):
@@ -127,6 +129,8 @@ class UrbanMobilitySystem:
             elif selected_option == "Exit":
                 self.running = False
                 print("Goodbye!")
+            elif selected_option == "Manage Travelers":
+                self.travelers_manager.handle_travelers_menu()
             elif selected_option == "Manage Scooters":
                 manage_scooters_menu(self.role_manager)
                 input("Press Enter to continue...")
