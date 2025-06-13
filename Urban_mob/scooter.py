@@ -124,42 +124,59 @@ def add_new_scooter():
 
 
 def manage_scooters_menu(role_manager):
-    """Scooter management submenu with RBAC check."""
-    can_manage = role_manager.check_permission("manage_scooters")
-    can_modify = role_manager.check_permission("update_scooter_info")
+    """Scooter management submenu with RBAC, net als main menu."""
+    # Haal permissies op voor huidige gebruiker
+    permissions = role_manager.get_available_permissions()
+    print("\n--- Manage Scooters ---")
 
-    if not (can_manage or can_modify):
-        print("You do not have permission to manage scooters.")
-        input("Press Enter to continue...")
-        return
+    menu_options = []
+    option_num = 1
 
-    running = True
-    while running:
-        print("\n--- Manage Scooters ---")
-        menu_options = []
-        print("1. Modify scooter")
-        menu_options.append("modify")
-        if can_manage:
-            print("2. Add new scooter")
-            print("3. Delete scooter")
-            print("4. Back to main menu")
-            menu_options.extend(["add", "delete", "back"])
-        else:
-            print("2. Back to main menu")
-            menu_options.append("back")
+    # Altijd mogelijk voor Service Engineer, System Admin, Super Admin
+    if "update_scooter_info" in permissions or "manage_scooters" in permissions:
+        menu_options.append((option_num, "Modify scooter"))
+        option_num += 1
 
-        choice = input("Select an option: ")
+    # Alleen voor System Admin & Super Admin
+    if "manage_scooters" in permissions:
+        menu_options.append((option_num, "Add new scooter"))
+        option_num += 1
+        menu_options.append((option_num, "Delete scooter"))
+        option_num += 1
 
-        if choice == "1":
+    # Altijd beschikbaar
+    menu_options.append((option_num, "Back to main menu"))
+
+    # Toon menu
+    for num, option in menu_options:
+        print(f"{num}. {option}")
+
+    # Keuze verwerken
+    choice = input("Select an option: ")
+    try:
+        choice_num = int(choice)
+        selected_option = None
+        for num, option in menu_options:
+            if num == choice_num:
+                selected_option = option
+                break
+
+        if not selected_option:
+            print("Invalid choice!")
+            return
+
+        if selected_option == "Modify scooter":
             print("Modify scooter - Feature not yet implemented.")
             input("Press Enter to continue...")
-        elif can_manage and choice == "2":
+        elif selected_option == "Add new scooter":
             add_new_scooter()
             input("Press Enter to continue...")
-        elif can_manage and choice == "3":
+        elif selected_option == "Delete scooter":
             print("Delete scooter - Feature not yet implemented.")
             input("Press Enter to continue...")
-        elif (can_manage and choice == "4") or (not can_manage and choice == "2"):
-            running = False
+        elif selected_option == "Back to main menu":
+            return
         else:
             print("Invalid choice. Please try again.")
+    except ValueError:
+        print("Please enter a valid number!")
