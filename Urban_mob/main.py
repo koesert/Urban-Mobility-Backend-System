@@ -133,7 +133,6 @@ class UrbanMobilitySystem:
                 self.travelers_manager.handle_travelers_menu()
             elif selected_option == "Manage Scooters":
                 manage_scooters_menu(self.role_manager)
-                input("Press Enter to continue...")
             else:
                 # For now, just show that the feature is accessed
                 print(f"\n--- {selected_option} ---")

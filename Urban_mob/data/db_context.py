@@ -79,9 +79,10 @@ class DatabaseContext:
                     longitude REAL NOT NULL,
                     out_of_service_status TEXT DEFAULT '',
                     mileage REAL DEFAULT 0,
-                    last_maintenance_date DATE
+                    last_maintenance_date DATE,
+                    in_service_date TEXT NOT NULL
                 )
-            """
+                """
             )
 
             conn.commit()
@@ -156,7 +157,7 @@ class DatabaseContext:
                 INSERT INTO scooters (
                     brand, model, serial_number, top_speed, battery_capacity,
                     state_of_charge, target_range_min, target_range_max,
-                    latitude, longitude, out_of_service, mileage,
+                    latitude, longitude, out_of_service_status, mileage,
                     last_maintenance_date, in_service_date
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
@@ -171,7 +172,7 @@ class DatabaseContext:
                     scooter["target_range_max"],
                     scooter["latitude"],
                     scooter["longitude"],
-                    scooter.get("out_of_service", 0),
+                    scooter.get("out_of_service_status", ""),
                     scooter.get("mileage", 0),
                     scooter.get("last_maintenance_date"),
                     scooter["in_service_date"],

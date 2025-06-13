@@ -20,7 +20,7 @@ def prompt_serial_number():
 def is_valid_location(value):
     """Check if value is a float with up to 5 decimal places."""
     try:
-        float_val = float(value)
+        # float_val = float(value)
         # Check for 5 decimal places
         if re.fullmatch(r"-?\d+\.\d{5}$", value):
             return True
@@ -80,7 +80,7 @@ def prompt_str(field_name):
 
 
 def add_new_scooter():
-    """Prompt user for scooter details and add to database."""
+    """Prompt user for scooter details and add to database using db_context insert_scooter."""
     print("\n--- Add New Scooter ---")
     brand = prompt_str("Brand")
     model = prompt_str("Model")
@@ -96,62 +96,66 @@ def add_new_scooter():
     out_of_service_status = input(
         "Out of Service status (leave empty if not out of service): ")
     last_maintenance_date = prompt_iso_date("Last Maintenance Date")
+    in_service_date = datetime.now().isoformat()
+
+    scooter = {
+        "brand": brand,
+        "model": model,
+        "serial_number": serial_number,
+        "top_speed": top_speed,
+        "battery_capacity": battery_capacity,
+        "state_of_charge": state_of_charge,
+        "target_range_min": target_range_min,
+        "target_range_max": target_range_max,
+        "latitude": latitude,
+        "longitude": longitude,
+        "out_of_service_status": out_of_service_status,
+        "mileage": mileage,
+        "last_maintenance_date": last_maintenance_date,
+        "in_service_date": in_service_date,
+    }
 
     db = DatabaseContext()
-    with db.get_connection() as conn:
-        cursor = conn.cursor()
-        try:
-            cursor.execute(
-                """
-                INSERT INTO scooters (
-                    brand, model, serial_number, top_speed, battery_capacity,
-                    state_of_charge, target_range_min, target_range_max,
-                    latitude, longitude, out_of_service_status, mileage,
-                    last_maintenance_date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    brand, model, serial_number, top_speed, battery_capacity,
-                    state_of_charge, target_range_min, target_range_max,
-                    latitude, longitude, out_of_service_status, mileage,
-                    last_maintenance_date
-                )
-            )
-            conn.commit()
-            print("Scooter added successfully!")
-        except Exception as e:
-            print("Failed to add scooter:", e)
+    try:
+        db.insert_scooter(scooter)
+        print("Scooter added successfully!")
+    except Exception as e:
+        print("Failed to add scooter:", e)
+
+
+def delete_scooter():
+    """Delete a scooter by serial number."""
 
 
 def manage_scooters_menu(role_manager):
-    """Scooter management submenu with RBAC, net als main menu."""
-    # Haal permissies op voor huidige gebruiker
+    """Scooter management submenu with RBAC, just like the main menu."""
+    # Get permissions for current user
     permissions = role_manager.get_available_permissions()
     print("\n--- Manage Scooters ---")
 
     menu_options = []
     option_num = 1
 
-    # Altijd mogelijk voor Service Engineer, System Admin, Super Admin
+    # Always possible for Service Engineer, System Admin, Super Admin
     if "update_scooter_info" in permissions or "manage_scooters" in permissions:
         menu_options.append((option_num, "Modify scooter"))
         option_num += 1
 
-    # Alleen voor System Admin & Super Admin
+    # Only for System Admin & Super Admin
     if "manage_scooters" in permissions:
         menu_options.append((option_num, "Add new scooter"))
         option_num += 1
         menu_options.append((option_num, "Delete scooter"))
         option_num += 1
 
-    # Altijd beschikbaar
+    # Always available
     menu_options.append((option_num, "Back to main menu"))
 
-    # Toon menu
+    # Show menu
     for num, option in menu_options:
         print(f"{num}. {option}")
 
-    # Keuze verwerken
+    # Handle choice
     choice = input("Select an option: ")
     try:
         choice_num = int(choice)
@@ -172,7 +176,7 @@ def manage_scooters_menu(role_manager):
             add_new_scooter()
             input("Press Enter to continue...")
         elif selected_option == "Delete scooter":
-            print("Delete scooter - Feature not yet implemented.")
+            delete_scooter()
             input("Press Enter to continue...")
         elif selected_option == "Back to main menu":
             return
