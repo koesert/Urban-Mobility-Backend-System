@@ -4,15 +4,15 @@ from datetime import datetime
 
 
 def is_valid_serial_number(serial_number):
-    """Check if serial number is 10-17 alphabetic characters."""
-    return bool(re.fullmatch(r"[A-Za-z]{10,17}", serial_number))
+    """Check if serial number is 10-17 alphanumeric characters."""
+    return bool(re.fullmatch(r"[A-Za-z0-9]{10,17}", serial_number))
 
 
 def prompt_serial_number():
     """Prompt user for a valid serial number."""
     serial_number = input("Serial Number: ")
     while not is_valid_serial_number(serial_number):
-        print("Serial Number must be 10 to 17 alphabetic characters (A-Z, a-z). Please try again.")
+        print("Serial Number must be 10 to 17 alphanumeric characters (A-Z, a-z, 0-9). Please try again.")
         serial_number = input("Serial Number: ")
     return serial_number
 
@@ -152,6 +152,93 @@ def delete_scooter():
         print("Failed to delete scooter:", e)
 
 
+def modify_scooter():
+    """Show all scooters, select one by ID, and modify its details."""
+    db = DatabaseContext()
+    try:
+        scooters = db.show_all_scooters()
+        if not scooters:
+            print("There are no scooters to modify.")
+            return
+
+        print("\nAvailable scooters:")
+        for s in scooters:
+            print(
+                f"ID: {s['id']} | {s['brand']} {s['model']} | Serial: {s['serial_number']} | Status: {s['out_of_service_status']}"
+            )
+
+        scooter_id = input("Enter the ID of the scooter you want to modify: ")
+        if not scooter_id.isdigit():
+            print("Scooter ID must be a valid number.")
+            return
+        scooter_id = int(scooter_id)
+
+        # Find the selected scooter
+        scooter = next((s for s in scooters if s["id"] == scooter_id), None)
+        if not scooter:
+            print(f"No scooter found with ID {scooter_id}.")
+            return
+
+        print("\nPress Enter to keep the current value shown in [brackets].")
+
+        brand = input(f"Brand [{scooter['brand']}]: ") or scooter['brand']
+        model = input(f"Model [{scooter['model']}]: ") or scooter['model']
+        serial_number = input(
+            f"Serial Number [{scooter['serial_number']}]: ") or scooter['serial_number']
+
+        def prompt_int_mod(field, current):
+            val = input(f"{field} [{current}]: ")
+            return int(val) if val.strip() else current
+
+        top_speed = prompt_int_mod("Top Speed (km/h)", scooter['top_speed'])
+        battery_capacity = prompt_int_mod(
+            "Battery Capacity (Wh)", scooter['battery_capacity'])
+        state_of_charge = prompt_int_mod(
+            "State of Charge (%)", scooter['state_of_charge'])
+        target_range_min = prompt_int_mod(
+            "Target Range Min (km)", scooter['target_range_min'])
+        target_range_max = prompt_int_mod(
+            "Target Range Max (km)", scooter['target_range_max'])
+
+        def prompt_float_mod(field, current):
+            val = input(f"{field} [{current}]: ")
+            return float(val) if val.strip() else current
+
+        latitude = prompt_float_mod("Latitude", scooter['latitude'])
+        longitude = prompt_float_mod("Longitude", scooter['longitude'])
+        mileage = prompt_float_mod("Mileage (km)", scooter['mileage'])
+
+        out_of_service_status = input(
+            f"Out of Service status [{scooter['out_of_service_status']}]: ") or scooter['out_of_service_status']
+        last_maintenance_date = input(
+            f"Last Maintenance Date [{scooter['last_maintenance_date']}]: ") or scooter['last_maintenance_date']
+
+        updated_scooter = {
+            "brand": brand,
+            "model": model,
+            "serial_number": serial_number,
+            "top_speed": top_speed,
+            "battery_capacity": battery_capacity,
+            "state_of_charge": state_of_charge,
+            "target_range_min": target_range_min,
+            "target_range_max": target_range_max,
+            "latitude": latitude,
+            "longitude": longitude,
+            "out_of_service_status": out_of_service_status,
+            "mileage": mileage,
+            "last_maintenance_date": last_maintenance_date,
+        }
+
+        updated = db.update_scooter_by_id(scooter_id, updated_scooter)
+        if updated:
+            print(f"Scooter with ID {scooter_id} successfully updated.")
+        else:
+            print(f"Failed to update scooter with ID {scooter_id}.")
+
+    except Exception as e:
+        print("Failed to modify scooter:", e)
+
+
 def manage_scooters_menu(role_manager):
     """Scooter management submenu with RBAC, just like the main menu."""
     # Get permissions for current user
@@ -195,7 +282,7 @@ def manage_scooters_menu(role_manager):
             return
 
         if selected_option == "Modify scooter":
-            print("Modify scooter - Feature not yet implemented.")
+            modify_scooter()
             input("Press Enter to continue...")
         elif selected_option == "Add new scooter":
             add_new_scooter()

@@ -225,3 +225,45 @@ class DatabaseContext:
                 }
                 scooters.append(scooter)
             return scooters
+
+    def update_scooter_by_id(self, scooter_id, scooter):
+        """Update scooter details by ID. Returns True if updated, False otherwise."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE scooters SET
+                    brand = ?,
+                    model = ?,
+                    serial_number = ?,
+                    top_speed = ?,
+                    battery_capacity = ?,
+                    state_of_charge = ?,
+                    target_range_min = ?,
+                    target_range_max = ?,
+                    latitude = ?,
+                    longitude = ?,
+                    out_of_service_status = ?,
+                    mileage = ?,
+                    last_maintenance_date = ?
+                WHERE id = ?
+                """,
+                (
+                    scooter["brand"],
+                    scooter["model"],
+                    encrypt_field(scooter["serial_number"]),
+                    scooter["top_speed"],
+                    scooter["battery_capacity"],
+                    scooter["state_of_charge"],
+                    scooter["target_range_min"],
+                    scooter["target_range_max"],
+                    scooter["latitude"],
+                    scooter["longitude"],
+                    scooter["out_of_service_status"],
+                    scooter["mileage"],
+                    scooter["last_maintenance_date"],
+                    scooter_id,
+                ),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
