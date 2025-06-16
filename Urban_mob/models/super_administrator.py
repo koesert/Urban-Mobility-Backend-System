@@ -10,11 +10,14 @@ class SuperAdministrator:
             "manage_service_engineers",
             "manage_travelers",
             "manage_scooters",
+            "add_scooter",
+            "delete_scooter",
             "view_logs",
             "create_backup",
             "restore_backup",
             "generate_restore_codes",
             "revoke_restore_codes",
+            "update_scooter_info",
         ]
 
     def can_access(self, permission):

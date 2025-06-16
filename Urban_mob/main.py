@@ -77,9 +77,6 @@ class UrbanMobilitySystem:
         if "manage_scooters" in permissions:
             menu_options.append((option_num, "Manage Scooters"))
             option_num += 1
-        elif "update_scooter_info" in permissions:
-            menu_options.append((option_num, "Update Scooter Information"))
-            option_num += 1
 
         if "view_logs" in permissions:
             menu_options.append((option_num, "View System Logs"))

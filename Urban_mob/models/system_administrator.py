@@ -8,13 +8,16 @@ class SystemAdministrator:
         return [
             "manage_service_engineers",
             "manage_travelers",
-            "manage_scooters",
+            "add_scooter",
+            "delete_scooter",
             "view_logs",
             "create_backup",
             "use_restore_code",
             "update_own_password",
             "update_own_profile",
             "delete_own_account",
+            "update_scooter_info",
+            "manage_scooters",
         ]
 
     def can_access(self, permission):
