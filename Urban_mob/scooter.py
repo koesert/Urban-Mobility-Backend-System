@@ -124,7 +124,32 @@ def add_new_scooter():
 
 
 def delete_scooter():
-    """Delete a scooter by serial number."""
+    """Show all scooters and delete one by ID."""
+    db = DatabaseContext()
+    try:
+        scooters = db.show_all_scooters()
+        if not scooters:
+            print("There are no scooters to delete.")
+            return
+
+        print("\nAvailable scooters:")
+        for s in scooters:
+            print(
+                f"ID: {s['id']} | {s['brand']} {s['model']} | Serial: {s['serial_number']} | Status: {s['out_of_service_status']}")
+
+        scooter_id = input(
+            "Enter the ID of the scooter you want to delete: ")
+        if not scooter_id.isdigit():
+            print("Scooter ID must be a valid number.")
+            return
+        scooter_id = int(scooter_id)
+        deleted = db.delete_scooter_by_id(scooter_id)
+        if deleted:
+            print(f"Scooter with ID {scooter_id} successfully deleted.")
+        else:
+            print(f"No scooter found with ID {scooter_id}.")
+    except Exception as e:
+        print("Failed to delete scooter:", e)
 
 
 def manage_scooters_menu(role_manager):

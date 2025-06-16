@@ -179,3 +179,49 @@ class DatabaseContext:
                 ),
             )
             conn.commit()
+
+    def delete_scooter_by_id(self, scooter_id):
+        """Delete a scooter by its ID. Returns True if deleted, False if not found."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "DELETE FROM scooters WHERE id = ?",
+                (scooter_id,)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def show_all_scooters(self):
+        """Return a list of all scooters (with decrypted serial_number)."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, brand, model, serial_number, top_speed, battery_capacity, state_of_charge,
+                       target_range_min, target_range_max, latitude, longitude, out_of_service_status,
+                       mileage, last_maintenance_date, in_service_date
+                FROM scooters
+                """
+            )
+            rows = cursor.fetchall()
+            scooters = []
+            for row in rows:
+                scooter = {
+                    "id": row[0],
+                    "brand": row[1],
+                    "model": row[2],
+                    "serial_number": decrypt_field(row[3]),
+                    "top_speed": row[4],
+                    "battery_capacity": row[5],
+                    "state_of_charge": row[6],
+                    "target_range_min": row[7],
+                    "target_range_max": row[8],
+                    "latitude": row[9],
+                    "longitude": row[10],
+                    "out_of_service_status": row[11],
+                    "mileage": row[12],
+                    "last_maintenance_date": row[13],
+                    "in_service_date": row[14],
+                }
+                scooters.append(scooter)
+            return scooters
