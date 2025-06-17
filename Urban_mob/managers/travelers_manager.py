@@ -14,13 +14,10 @@ class TravelersManager:
         self.validation_helper = ValidationHelper()
         self.PREDEFINED_CITIES = self.validator.VALID_CITIES
 
-        # Verify encryption system is working
         self._verify_encryption_system()
 
     def _verify_encryption_system(self):
-        """Verify that the encryption system is working properly"""
         try:
-            # Test encryption/decryption
             test_value = "test@example.com"
             encrypted = encrypt_field(test_value)
             decrypted = decrypt_field(encrypted)
@@ -38,15 +35,58 @@ class TravelersManager:
             raise Exception(f"Encryption system initialization failed: {e}")
 
     def can_manage_travelers(self):
-        """Check if current user can manage travelers"""
         if not self.auth.current_user:
             return False
 
         user_role = self.auth.current_user["role"]
         return user_role in ["super_admin", "system_admin"]
 
+    def _validate_email(self, email: str) -> bool:
+        try:
+            self.validator.validate_email(email)
+            return True
+        except ValidationError:
+            return False
+
+    def _validate_date(self, date_str: str) -> bool:
+        try:
+            self.validator.validate_date(date_str)
+            return True
+        except ValidationError:
+            return False
+
+    def _validate_dutch_zipcode(self, zipcode: str) -> bool:
+        try:
+            self.validator.validate_dutch_zipcode(zipcode)
+            return True
+        except ValidationError:
+            return False
+
+    def _validate_dutch_mobile(self, phone: str) -> bool:
+        try:
+            self.validator.validate_dutch_mobile(phone)
+            return True
+        except ValidationError:
+            return False
+
+    def _format_dutch_mobile(self, phone: str) -> str:
+        return self.validator.validate_dutch_mobile(phone)
+
+    def _validate_driving_license(self, license_num: str) -> bool:
+        try:
+            self.validator.validate_driving_license(license_num)
+            return True
+        except ValidationError:
+            return False
+
+    def _validate_house_number(self, house_num: str) -> bool:
+        try:
+            self.validator.validate_house_number(house_num)
+            return True
+        except ValidationError:
+            return False
+
     def display_travelers_menu(self):
-        """Display travelers management menu"""
         if not self.can_manage_travelers():
             print("Access denied: Insufficient permissions!")
             return None
@@ -63,7 +103,6 @@ class TravelersManager:
         return choice
 
     def handle_travelers_menu(self):
-        """Handle travelers management menu operations"""
         while True:
             choice = self.display_travelers_menu()
 
@@ -85,7 +124,6 @@ class TravelersManager:
             input("\nPress Enter to continue...")
 
     def view_all_travelers(self):
-        """Display all travelers with decrypted data"""
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
@@ -113,12 +151,10 @@ class TravelersManager:
                         traveler
                     )
 
-                    # Decrypt sensitive data for display
                     try:
                         decrypted_email = decrypt_field(email)
                         decrypted_phone = decrypt_field(phone)
                     except Exception:
-                        # Fallback for any decryption issues
                         decrypted_email = "[ENCRYPTED]"
                         decrypted_phone = "[ENCRYPTED]"
 
@@ -135,11 +171,9 @@ class TravelersManager:
             print(f"Error retrieving travelers: {e}")
 
     def search_traveler(self):
-        """Search for a specific traveler with decrypted display"""
         try:
             search_term = input("Enter search term: ").strip()
 
-            # Security check
             self.validator._check_sql_injection(search_term, "search_term")
 
             if len(search_term) < 1:
@@ -153,7 +187,6 @@ class TravelersManager:
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
-                # Search in non-encrypted fields and encrypted email field
                 cursor.execute(
                     """
                     SELECT * FROM travelers
@@ -170,19 +203,16 @@ class TravelersManager:
 
                 travelers = cursor.fetchall()
 
-                # Also search in encrypted email field
                 cursor.execute("SELECT * FROM travelers")
                 all_travelers = cursor.fetchall()
 
-                # Check encrypted email fields
                 for traveler in all_travelers:
                     try:
-                        decrypted_email = decrypt_field(traveler[10])  # email field
+                        decrypted_email = decrypt_field(traveler[10])
                         if search_term.lower() in decrypted_email.lower():
                             if traveler not in travelers:
                                 travelers.append(traveler)
                     except Exception as e:
-                        # Skip travelers with corrupted encryption or invalid tokens
                         continue
 
                 if not travelers:
@@ -190,7 +220,7 @@ class TravelersManager:
                     return
 
                 for traveler in travelers:
-                    self._display_traveler_details(traveler)
+                    self.display_traveler_details(traveler)
                     print("-" * 50)
 
         except Exception as e:
@@ -208,10 +238,8 @@ class TravelersManager:
             traveler_data["customer_id"] = customer_id
             traveler_data["registration_date"] = datetime.now().isoformat()
 
-            # Final validation
             validated_data = self.validator.validate_traveler_data(traveler_data)
 
-            # Show summary
             self._show_traveler_summary(validated_data)
 
             confirm = self._get_yes_no_input("\nSave this traveler?")
@@ -230,23 +258,20 @@ class TravelersManager:
         except Exception as e:
             print(f"Error adding traveler: {e}")
 
-
     def update_traveler(self):
-        """Update an existing traveler with encrypted data handling"""
         customer_id = input("Enter Customer ID to update: ").strip()
 
         if not customer_id:
             print("Customer ID cannot be empty!")
             return
 
-        # First, check if traveler exists
         traveler = self._get_traveler_by_id(customer_id)
         if not traveler:
             print("Traveler not found!")
             return
 
         print("\nCurrent traveler information:")
-        self._display_traveler_details(traveler)
+        self.display_traveler_details(traveler)
 
         print("\n📝 UPDATE TRAVELER INFORMATION")
         print("Enter new information (press Enter to keep current value)")
@@ -256,26 +281,22 @@ class TravelersManager:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Collect updates
                 updates = {}
 
-                # Get current decrypted values for display
                 try:
                     current_email = decrypt_field(traveler[10])
                     current_phone = decrypt_field(traveler[11])
                     current_license = decrypt_field(traveler[12])
                 except Exception as e:
-                    # Handle encryption errors gracefully
                     print(f"Warning: Could not decrypt current traveler data: {e}")
                     current_email = "[ENCRYPTED]"
                     current_phone = "[ENCRYPTED]"
                     current_license = "[ENCRYPTED]"
 
-                # Email update with immediate validation
                 while True:
                     new_email = input(f"\nEmail ({current_email}): ").strip()
                     if not new_email:
-                        break  # Keep current value
+                        break
                     if new_email.lower() == "skip":
                         break
                     if new_email.lower() == "cancel":
@@ -292,21 +313,22 @@ class TravelersManager:
                         if not retry:
                             break
 
-                # Phone update with immediate validation
                 while True:
                     print(f"\n📱 Current Mobile Phone: {current_phone}")
                     print("   Format: +31 6 XXXXXXXX")
                     print("   Enter only the 8 digits after '+31 6'")
                     new_phone = input("Phone (+31 6): ").strip()
                     if not new_phone:
-                        break  # Keep current value
+                        break
                     if new_phone.lower() == "skip":
                         break
                     if new_phone.lower() == "cancel":
                         print("Update cancelled.")
                         return
                     try:
-                        validated_phone = self.validator.validate_dutch_mobile(new_phone)
+                        validated_phone = self.validator.validate_dutch_mobile(
+                            new_phone
+                        )
                         updates["mobile_phone"] = encrypt_field(validated_phone)
                         print("✓ Phone validated and formatted")
                         break
@@ -316,9 +338,10 @@ class TravelersManager:
                         if not retry:
                             break
 
-                # Driving License update with immediate validation
                 while True:
-                    new_license = input(f"\nDriving License ({current_license}): ").strip()
+                    new_license = input(
+                        f"\nDriving License ({current_license}): "
+                    ).strip()
                     if not new_license:
                         break
                     if new_license.lower() == "skip":
@@ -339,7 +362,6 @@ class TravelersManager:
                         if not retry:
                             break
 
-                # Street Name update with immediate validation
                 while True:
                     new_street = input(f"\nStreet Name ({traveler[6]}): ").strip()
                     if not new_street:
@@ -350,7 +372,9 @@ class TravelersManager:
                         print("Update cancelled.")
                         return
                     try:
-                        validated_street = self.validator.validate_street_name(new_street)
+                        validated_street = self.validator.validate_street_name(
+                            new_street
+                        )
                         updates["street_name"] = validated_street
                         print("✓ Street name validated")
                         break
@@ -360,7 +384,6 @@ class TravelersManager:
                         if not retry:
                             break
 
-                # House Number update with immediate validation
                 while True:
                     new_house = input(f"\nHouse Number ({traveler[7]}): ").strip()
                     if not new_house:
@@ -371,7 +394,9 @@ class TravelersManager:
                         print("Update cancelled.")
                         return
                     try:
-                        validated_house = self.validator.validate_house_number(new_house)
+                        validated_house = self.validator.validate_house_number(
+                            new_house
+                        )
                         updates["house_number"] = validated_house
                         print("✓ House number validated")
                         break
@@ -381,9 +406,10 @@ class TravelersManager:
                         if not retry:
                             break
 
-                # Zip Code update with immediate validation
                 while True:
-                    new_zip = input(f"\nZip Code ({traveler[8]}) - Format 1234AB: ").strip()
+                    new_zip = input(
+                        f"\nZip Code ({traveler[8]}) - Format 1234AB: "
+                    ).strip()
                     if not new_zip:
                         break
                     if new_zip.lower() == "skip":
@@ -402,7 +428,6 @@ class TravelersManager:
                         if not retry:
                             break
 
-                # City update with predefined list
                 while True:
                     print(f"\nCurrent City: {traveler[9]}")
                     print("Available cities:")
@@ -410,7 +435,9 @@ class TravelersManager:
                         print(f"  {i}. {city}")
                     print("  0. Keep current city")
 
-                    city_choice = input("Select city number (or enter 'cancel'): ").strip()
+                    city_choice = input(
+                        "Select city number (or enter 'cancel'): "
+                    ).strip()
                     if not city_choice or city_choice == "0":
                         break
                     if city_choice.lower() == "cancel":
@@ -433,7 +460,6 @@ class TravelersManager:
                     print("No changes made.")
                     return
 
-                # Show summary of changes (decrypt for display)
                 print("\n📋 SUMMARY OF CHANGES:")
                 for field, value in updates.items():
                     if field in ["email", "mobile_phone", "driving_license"]:
@@ -450,7 +476,6 @@ class TravelersManager:
                     print("Update cancelled.")
                     return
 
-                # Build UPDATE query
                 set_clause = ", ".join([f"{field} = ?" for field in updates.keys()])
                 values = list(updates.values()) + [customer_id]
 
@@ -476,23 +501,20 @@ class TravelersManager:
             print("\nUpdate cancelled.")
 
     def delete_traveler(self):
-        """Delete a traveler"""
         customer_id = input("Enter Customer ID to delete: ").strip()
 
         if not customer_id:
             print("Customer ID cannot be empty!")
             return
 
-        # First, check if traveler exists
         traveler = self._get_traveler_by_id(customer_id)
         if not traveler:
             print("Traveler not found!")
             return
 
         print("\nTraveler to be deleted:")
-        self._display_traveler_details(traveler)
+        self.display_traveler_details(traveler)
 
-        # Extra confirmation for deletion (more explicit)
         print("\n⚠️  WARNING: This action cannot be undone!")
         confirmation = input("Type 'DELETE' to confirm deletion: ").strip()
 
@@ -526,7 +548,6 @@ class TravelersManager:
             return None
 
     def _get_city_selection(self):
-        """Get city selection from predefined list"""
         while True:
             try:
                 print("\n🏙️ City Selection:")
@@ -561,7 +582,6 @@ class TravelersManager:
                 return None
 
     def _get_required_input(self, field_name):
-        """Get required input with retry capability"""
         while True:
             try:
                 value = input(f"{field_name}: ").strip()
@@ -577,7 +597,6 @@ class TravelersManager:
                 return None
 
     def _get_yes_no_input(self, question):
-        """Get a strict yes/no input"""
         while True:
             try:
                 response = input(f"{question} (y/n): ").strip().lower()
@@ -594,7 +613,6 @@ class TravelersManager:
     def _get_validated_input(
         self, field_name, validator, error_message, transform=None
     ):
-        """Get validated input with retry capability"""
         while True:
             try:
                 value = input(f"{field_name}: ").strip()
@@ -617,17 +635,14 @@ class TravelersManager:
                 return None
 
     def _generate_customer_id(self):
-        """Generate a unique customer ID"""
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM travelers")
             count = cursor.fetchone()[0]
 
-            # Generate ID in format CUST000001
             return f"CUST{(count + 1):06d}"
 
     def _get_traveler_by_id(self, customer_id):
-        """Get traveler by customer ID"""
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
@@ -649,14 +664,12 @@ class TravelersManager:
         print(f"   Mobile: {data['mobile_phone']}")
         print(f"   License: {data['driving_license']}")
 
-    def _display_traveler_details(self, traveler_data):
-        """Display detailed information for a specific traveler"""
+    def display_traveler_details(self, traveler_data):
         if not traveler_data:
             print("No traveler data to display.")
             return
 
         try:
-            # Unpack traveler data
             (
                 traveler_id,
                 customer_id,
@@ -678,7 +691,6 @@ class TravelersManager:
             print(f"TRAVELER DETAILS - ID: {customer_id}")
             print("=" * 50)
 
-            # Basic information (not encrypted)
             print(f"Name: {first_name} {last_name}")
             print(f"Birthday: {birthday}")
             print(f"Gender: {gender}")
@@ -687,7 +699,6 @@ class TravelersManager:
             print(f"City: {city}")
             print(f"Registration Date: {registration_date}")
 
-            # Sensitive information (encrypted) - decrypt before displaying
             try:
                 email = decrypt_field(encrypted_email)
                 mobile_phone = decrypt_field(encrypted_mobile_phone)
@@ -709,3 +720,7 @@ class TravelersManager:
             print(f"Error displaying traveler details: Invalid data format - {str(e)}")
         except Exception as e:
             print(f"Error displaying traveler details: {str(e)}")
+
+    def _display_traveler_details(self, traveler_data):
+        """Alias method for compatibility"""
+        return self.display_traveler_details(traveler_data)

@@ -110,12 +110,13 @@ class InputValidator:
         if len(name) > 50:
             raise ValidationError("first_name", "First name too long")
 
-        # Only letters, spaces, hyphens, apostrophes allowed for names
         if not re.match(r"^[a-zA-ZÀ-ÿ\s\-'\.]+$", name):
-            raise ValidationError("first_name", "First name can only contain letters, spaces, hyphens, and apostrophes")
+            raise ValidationError(
+                "first_name",
+                "First name can only contain letters, spaces, hyphens, and apostrophes",
+            )
 
-        # No numbers allowed
-        if re.search(r'\d', name):
+        if re.search(r"\d", name):
             raise ValidationError("first_name", "First name cannot contain numbers")
 
         return name
@@ -133,12 +134,13 @@ class InputValidator:
         if len(name) > 50:
             raise ValidationError("last_name", "Last name too long")
 
-        # Only letters, spaces, hyphens, apostrophes allowed for names
         if not re.match(r"^[a-zA-ZÀ-ÿ\s\-'\.]+$", name):
-            raise ValidationError("last_name", "Last name can only contain letters, spaces, hyphens, and apostrophes")
+            raise ValidationError(
+                "last_name",
+                "Last name can only contain letters, spaces, hyphens, and apostrophes",
+            )
 
-        # No numbers allowed
-        if re.search(r'\d', name):
+        if re.search(r"\d", name):
             raise ValidationError("last_name", "Last name cannot contain numbers")
 
         return name
@@ -156,13 +158,15 @@ class InputValidator:
         if len(street) > 100:
             raise ValidationError("street_name", "Street name too long")
 
-        # Street names can contain letters, numbers, spaces, hyphens, apostrophes, periods
         if not re.match(r"^[a-zA-ZÀ-ÿ0-9\s\-'\.]+$", street):
-            raise ValidationError("street_name", "Street name contains invalid characters")
+            raise ValidationError(
+                "street_name", "Street name contains invalid characters"
+            )
 
-        # Must contain at least one letter
-        if not re.search(r'[a-zA-ZÀ-ÿ]', street):
-            raise ValidationError("street_name", "Street name must contain at least one letter")
+        if not re.search(r"[a-zA-ZÀ-ÿ]", street):
+            raise ValidationError(
+                "street_name", "Street name must contain at least one letter"
+            )
 
         return street
 
@@ -173,14 +177,20 @@ class InputValidator:
         house_num = house_num.strip()
         self._check_sql_injection(house_num, "house_number")
 
+        # Reject if starts with hyphen (negative number)
+        if house_num.startswith("-"):
+            raise ValidationError("house_number", "House number cannot be negative")
+
         if not re.search(r"\d", house_num):
             raise ValidationError(
                 "house_number", "House number must contain at least one digit"
             )
 
-        # Only allow letters, numbers, hyphens
         if not re.match(r"^[a-zA-Z0-9\-]+$", house_num):
-            raise ValidationError("house_number", "House number can only contain letters, numbers, and hyphens")
+            raise ValidationError(
+                "house_number",
+                "House number can only contain letters, numbers, and hyphens",
+            )
 
         numbers = re.findall(r"\d+", house_num)
         if not numbers:
@@ -246,16 +256,28 @@ class InputValidator:
     def validate_traveler_data(self, data: Dict[str, Any]) -> Dict[str, str]:
         cleaned_data = {}
 
-        cleaned_data["first_name"] = self.validate_first_name(data.get("first_name") or "")
+        cleaned_data["first_name"] = self.validate_first_name(
+            data.get("first_name") or ""
+        )
         cleaned_data["last_name"] = self.validate_last_name(data.get("last_name") or "")
         cleaned_data["birthday"] = self.validate_date(data.get("birthday") or "")
         cleaned_data["gender"] = self.validate_gender(data.get("gender") or "")
-        cleaned_data["street_name"] = self.validate_street_name(data.get("street_name") or "")
-        cleaned_data["house_number"] = self.validate_house_number(data.get("house_number") or "")
-        cleaned_data["zip_code"] = self.validate_dutch_zipcode(data.get("zip_code") or "")
+        cleaned_data["street_name"] = self.validate_street_name(
+            data.get("street_name") or ""
+        )
+        cleaned_data["house_number"] = self.validate_house_number(
+            data.get("house_number") or ""
+        )
+        cleaned_data["zip_code"] = self.validate_dutch_zipcode(
+            data.get("zip_code") or ""
+        )
         cleaned_data["city"] = self.validate_city(data.get("city") or "")
         cleaned_data["email"] = self.validate_email(data.get("email") or "")
-        cleaned_data["mobile_phone"] = self.validate_dutch_mobile(data.get("mobile_phone") or "")
-        cleaned_data["driving_license"] = self.validate_driving_license(data.get("driving_license") or "")
+        cleaned_data["mobile_phone"] = self.validate_dutch_mobile(
+            data.get("mobile_phone") or ""
+        )
+        cleaned_data["driving_license"] = self.validate_driving_license(
+            data.get("driving_license") or ""
+        )
 
         return cleaned_data
