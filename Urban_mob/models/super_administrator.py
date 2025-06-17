@@ -15,6 +15,7 @@ class SuperAdministrator:
             "restore_backup",
             "generate_restore_codes",
             "revoke_restore_codes",
+            "update_own_password",
         ]
 
     def can_access(self, permission):
