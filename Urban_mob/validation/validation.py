@@ -61,8 +61,14 @@ class InputValidator:
         phone = phone.strip()
         self._check_sql_injection(phone, "phone")
 
-        pattern = r"^\d{8}$"
-        if not re.match(pattern, phone):
+        # Check if already formatted
+        formatted_pattern = r"^\+31 6 \d{8}$"
+        if re.match(formatted_pattern, phone):
+            return phone  # Already formatted, return as-is
+
+        # Check raw 8-digit format
+        raw_pattern = r"^\d{8}$"
+        if not re.match(raw_pattern, phone):
             raise ValidationError(
                 "phone", "Invalid phone format. Enter exactly 8 digits"
             )

@@ -234,11 +234,13 @@ class TravelersManager:
             if not traveler_data:
                 return
 
-            customer_id = self._generate_customer_id()
-            traveler_data["customer_id"] = customer_id
-            traveler_data["registration_date"] = datetime.now().isoformat()
-
+            # Validate user input first
             validated_data = self.validator.validate_traveler_data(traveler_data)
+
+            # Add system-generated fields after validation
+            customer_id = self._generate_customer_id()
+            validated_data["customer_id"] = customer_id
+            validated_data["registration_date"] = datetime.now().isoformat()
 
             self._show_traveler_summary(validated_data)
 
@@ -557,10 +559,7 @@ class TravelersManager:
 
                 choice = input("Enter city number (1-10): ").strip()
                 if not choice:
-                    print("❌ City selection is required!")
-                    retry = input("Try again? (y/n): ").lower()
-                    if retry != "y":
-                        return None
+                    print("City selection is required!")
                     continue
 
                 try:
@@ -568,15 +567,10 @@ class TravelersManager:
                     if 0 <= city_index < len(self.PREDEFINED_CITIES):
                         return self.PREDEFINED_CITIES[city_index]
                     else:
-                        print("❌ Invalid selection! Please choose 1-10")
-                        retry = input("Try again? (y/n): ").lower()
-                        if retry != "y":
-                            return None
+                        print("Invalid selection! Please choose 1-10")
                 except ValueError:
-                    print("❌ Please enter a valid number!")
-                    retry = input("Try again? (y/n): ").lower()
-                    if retry != "y":
-                        return None
+                    print("Please enter a valid number!")
+
             except KeyboardInterrupt:
                 print("\nOperation cancelled.")
                 return None
@@ -588,10 +582,7 @@ class TravelersManager:
                 if value:
                     return value
                 else:
-                    print(f"❌ {field_name} is required!")
-                    retry = self._get_yes_no_input("Try again?")
-                    if not retry:
-                        return None
+                    print(f"{field_name} is required!")
             except KeyboardInterrupt:
                 print("\nOperation cancelled.")
                 return None
@@ -605,7 +596,7 @@ class TravelersManager:
                 elif response == "n":
                     return False
                 else:
-                    print("❌ Please enter 'y' for yes or 'n' for no.")
+                    print("Please enter 'y' for yes or 'n' for no.")
             except KeyboardInterrupt:
                 print("\nOperation cancelled.")
                 return False
@@ -617,19 +608,14 @@ class TravelersManager:
             try:
                 value = input(f"{field_name}: ").strip()
                 if not value:
-                    print(f"❌ {field_name} is required!")
-                    retry = self._get_yes_no_input("Try again?")
-                    if not retry:
-                        return None
+                    print(f"{field_name} is required!")
                     continue
 
                 if validator(value):
                     return transform(value) if transform else value
                 else:
-                    print(f"❌ {error_message}")
-                    retry = self._get_yes_no_input("Try again?")
-                    if not retry:
-                        return None
+                    print(f"{error_message}")
+
             except KeyboardInterrupt:
                 print("\nOperation cancelled.")
                 return None
@@ -658,8 +644,8 @@ class TravelersManager:
         print(f"   Name: {data['first_name']} {data['last_name']}")
         print(f"   Birthday: {data['birthday']}")
         print(f"   Gender: {data['gender']}")
-        print(f"   Address: {data['house_number']} {data['street_name']}")
-        print(f"   City: {data['zip_code']} {data['city']}")
+        print(f"   Address: {data['street_name']} {data['house_number']}")
+        print(f"   City: {data['city']} {data['zip_code']}")
         print(f"   Email: {data['email']}")
         print(f"   Mobile: {data['mobile_phone']}")
         print(f"   License: {data['driving_license']}")
