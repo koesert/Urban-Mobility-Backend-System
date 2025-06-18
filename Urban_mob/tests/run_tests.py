@@ -68,6 +68,18 @@ def run_tests(test_type="all", verbose=False, coverage=False):
             ]
         )
         print("👥 Running Travelers Management Tests Only...")
+    elif test_type == "user_manager":
+        # Run user management tests
+        cmd.extend(
+            [
+                os.path.join(tests_path, "unit"),
+                os.path.join(tests_path, "integration"),
+                os.path.join(tests_path, "security"),
+                "-k",
+                "user_manager",
+            ]
+        )
+        print("👤 Running User Management Tests Only...")
     elif test_type == "auth":
         # Exclude legacy to avoid issues
         cmd.extend(
@@ -228,8 +240,11 @@ def check_test_environment():
     key_files = [
         "tests/unit/test_encryption_unit.py",
         "tests/unit/test_travelers_manager_unit.py",
+        "tests/unit/test_user_manager_unit.py",
         "tests/integration/test_travelers_integration.py",
+        "tests/integration/test_user_manager_integration.py",
         "tests/security/test_travelers_security.py",
+        "tests/security/test_user_manager_security.py",
     ]
 
     for test_file in key_files:
@@ -239,7 +254,12 @@ def check_test_environment():
             issues.append(f"{test_file} missing")
 
     # Check for source code
-    source_files = ["auth.py", "managers/travelers_manager.py", "data/encryption.py"]
+    source_files = [
+        "auth.py",
+        "managers/travelers_manager.py",
+        "managers/user_manager.py",
+        "data/encryption.py",
+    ]
 
     for source_file in source_files:
         if os.path.exists(source_file):
@@ -314,11 +334,12 @@ Examples:
   python run_tests.py                     # Run all tests
   python run_tests.py --type unit         # Run only unit tests
   python run_tests.py --type security     # Run only security tests
+  python run_tests.py --type user_manager # Run only user management tests
   python run_tests.py --coverage          # Run with coverage
   python run_tests.py --verbose           # Run with verbose output
   python run_tests.py --check            # Check test environment
   python run_tests.py --report           # Generate test report
-  python run_tests.py --file tests/unit/test_encryption_unit.py  # Run specific file
+  python run_tests.py --file tests/unit/test_user_manager_unit.py  # Run specific file
         """,
     )
 
@@ -331,6 +352,7 @@ Examples:
             "security",
             "encryption",
             "travelers",
+            "user_manager",
             "auth",
             "fast",
         ],
