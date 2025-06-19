@@ -83,8 +83,9 @@ class TestRoleManagerUnit:
 
         # Assert
         expected_permissions = [
-            "update_scooter_info",
             "search_scooters",
+            "manage_scooters",
+            "update_selected_scooter_info",
             "update_own_password",
         ]
         assert set(permissions) == set(expected_permissions)
