@@ -4,6 +4,7 @@ import tempfile
 from unittest.mock import patch
 from cryptography.fernet import Fernet, InvalidToken
 from data.encryption import encrypt_field, decrypt_field, generate_key, load_key, fernet
+from cryptography.fernet import InvalidToken
 
 
 class TestEncryptionUnit:

@@ -1,6 +1,7 @@
 from auth import AuthenticationService
 from utils import RoleManager
 from managers.travelers_manager import TravelersManager
+from managers.user_manager import UserManager
 from scooter import manage_scooters_menu
 
 
@@ -9,6 +10,7 @@ class UrbanMobilitySystem:
         self.auth = AuthenticationService()
         self.role_manager = RoleManager(self.auth)
         self.travelers_manager = TravelersManager(self.auth)
+        self.user_manager = UserManager(self.auth)
         self.running = True
 
     def display_welcome(self):
@@ -130,6 +132,13 @@ class UrbanMobilitySystem:
                 self.travelers_manager.handle_travelers_menu()
             elif selected_option == "Manage Scooters":
                 manage_scooters_menu(self.role_manager)
+            elif selected_option == "Manage System Administrators":
+                self.user_manager.handle_user_management_menu("system_admin")
+            elif selected_option == "Manage Service Engineers":
+                self.user_manager.handle_user_management_menu("service_engineer")
+            elif selected_option == "Update Password":
+                self.user_manager.update_own_password()
+                input("Press Enter to continue...")
             else:
                 # For now, just show that the feature is accessed
                 print(f"\n--- {selected_option} ---")

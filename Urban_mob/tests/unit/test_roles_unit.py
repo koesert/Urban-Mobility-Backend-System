@@ -86,9 +86,9 @@ class TestRolePermissionsUnit:
 
         # Act & Assert - Test allowed permissions
         allowed_permissions = [
-            "update_scooter_info",
             "search_scooters",
-            "update_own_password",
+            "manage_scooters",
+            "update_selected_scooter_info",
         ]
 
         for permission in allowed_permissions:
@@ -99,7 +99,6 @@ class TestRolePermissionsUnit:
             "manage_system_administrators",
             "manage_service_engineers",
             "manage_travelers",
-            "manage_scooters",  # Can update but not fully manage
             "view_logs",
             "create_backup",
         ]

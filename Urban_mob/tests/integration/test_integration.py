@@ -168,12 +168,13 @@ class TestRBACIntegration:
 
         # Service engineer should only have specific permissions
         engineer_permissions = role_manager.get_available_permissions()
-        assert "update_scooter_info" in engineer_permissions
+        assert "update_selected_scooter_info" in engineer_permissions
         assert "manage_system_administrators" not in engineer_permissions
 
         expected_engineer_permissions = {
-            "update_scooter_info",
             "search_scooters",
+            "manage_scooters",
+            "update_selected_scooter_info",
             "update_own_password",
         }
         assert set(engineer_permissions) == expected_engineer_permissions

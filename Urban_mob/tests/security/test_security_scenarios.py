@@ -87,8 +87,9 @@ class TestSecurityScenarios:
         # Should only have engineer permissions
         permissions = env["role_manager"].get_available_permissions()
         expected_engineer_permissions = {
-            "update_scooter_info",
             "search_scooters",
+            "manage_scooters",
+            "update_selected_scooter_info",
             "update_own_password",
         }
         assert set(permissions) == expected_engineer_permissions

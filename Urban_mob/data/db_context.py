@@ -1,6 +1,8 @@
 import sqlite3
 import hashlib
 import os
+import secrets
+import string
 from datetime import datetime
 from .encryption import encrypt_field, decrypt_field
 
@@ -117,7 +119,57 @@ class DatabaseContext:
             )
 
             conn.commit()
+            
+    def create_user_account(self, username, password, role, first_name, last_name, created_by=None):
+        """Create a new user account with the specified role and enforce role-based creation rules"""
+        if role not in ("super_admin", "system_admin", "service_engineer"):
+            raise ValueError("Invalid role")
 
+        # Enforce role-based creation rules
+        if role == "system_admin":
+            # Only super_admin can create system_admin
+            if created_by is None:
+                raise PermissionError("Only super_admin can create system_admin accounts")
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT role FROM users WHERE id = ?", (created_by,))
+                row = cursor.fetchone()
+                if not row or row[0] != "super_admin":
+                    raise PermissionError("Only super_admin can create system_admin accounts")
+        elif role == "service_engineer":
+            # Only system_admin or super_admin can create service_engineer
+            if created_by is None:
+                raise PermissionError("Only system_admin or super_admin can create service_engineer accounts")
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT role FROM users WHERE id = ?", (created_by,))
+                row = cursor.fetchone()
+                if not row or row[0] not in ("system_admin", "super_admin"):
+                    raise PermissionError("Only system_admin or super_admin can create service_engineer accounts")
+        elif role == "super_admin":
+            # Prevent creation of additional super_admins via this method
+            raise PermissionError("Cannot create additional super_admin accounts")
+
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO users (username, password_hash, role, first_name, last_name, created_date, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    username,
+                    password_hash,
+                    role,
+                    first_name,
+                    last_name,
+                    datetime.now().isoformat(),
+                    created_by,
+                ),
+            )
+            conn.commit()
+            
     # Example: Insert traveler with encrypted fields
     def insert_traveler(self, traveler):
         with self.get_connection() as conn:
@@ -179,6 +231,24 @@ class DatabaseContext:
                 ),
             )
             conn.commit()
+            
+    def generate_temporary_password(self, length=12):
+        """Generate a secure temporary password"""
+        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+        return ''.join(secrets.choice(alphabet) for _ in range(length))
+
+    def reset_user_password(self, username):
+        """Reset a user's password and return the new temporary password"""
+        temp_password = self.generate_temporary_password()
+        password_hash = hashlib.sha256(temp_password.encode()).hexdigest()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE users SET password_hash = ? WHERE username = ?",
+                (password_hash, username),
+            )
+            conn.commit()
+        return temp_password
 
     def delete_scooter_by_id(self, scooter_id):
         """Delete a scooter by its ID. Returns True if deleted, False if not found."""
