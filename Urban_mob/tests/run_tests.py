@@ -160,7 +160,7 @@ def run_tests(test_type="all", verbose=False, coverage=False):
 
         if result.returncode == 0:
             print("✅ ALL TESTS PASSED!")
-            print("🎉 Your Urban Mobility system is secure and functional!")
+            print("🎉 Urban Mobility system is secure and functional!")
             if coverage:
                 print("📊 Coverage report generated in htmlcov/index.html")
         else:

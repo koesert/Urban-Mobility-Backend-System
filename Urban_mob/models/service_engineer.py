@@ -6,9 +6,10 @@ class ServiceEngineer:
     def get_permissions(self):
         """Define what Service Engineer can do"""
         return [
-            "update_scooter_info",  # Can only update, not add/delete
+            "update_selected_scooter_info",  # Can only update, not add/delete
             "search_scooters",
             "update_own_password",
+            "manage_scooters",
         ]
 
     def can_access(self, permission):
