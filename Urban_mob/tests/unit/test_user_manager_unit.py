@@ -113,7 +113,9 @@ class TestUserManagerUnit:
 
     @patch("builtins.input")
     @patch("builtins.print")
-    def test_display_user_management_menu_authorized(self, mock_print, mock_input, user_manager):
+    def test_display_user_management_menu_authorized(
+        self, mock_print, mock_input, user_manager
+    ):
         """Test menu display for authorized users"""
         # Arrange
         mock_input.return_value = "6"
@@ -127,7 +129,9 @@ class TestUserManagerUnit:
         mock_print.assert_any_call("\n--- MANAGE SYSTEM ADMINS ---")
 
     @patch("builtins.print")
-    def test_display_user_management_menu_unauthorized_system_admin(self, mock_print, user_manager):
+    def test_display_user_management_menu_unauthorized_system_admin(
+        self, mock_print, user_manager
+    ):
         """Test menu access denied for unauthorized system admin management"""
         # Arrange
         user_manager.auth.current_user["role"] = "system_admin"
@@ -137,15 +141,33 @@ class TestUserManagerUnit:
 
         # Assert
         assert result is None
-        mock_print.assert_called_with("Access denied: Only Super Administrators can manage System Administrators!")
+        mock_print.assert_called_with(
+            "Access denied: Only Super Administrators can manage System Administrators!"
+        )
 
     def test_view_users_with_role_filter(self, user_manager):
         """Test viewing users with role filter"""
         # Arrange
         mock_cursor = Mock()
         mock_cursor.fetchall.return_value = [
-            (2, "test_admin", "system_admin", "Test", "Admin", "2024-01-01T10:00:00", 1),
-            (3, "test_admin2", "system_admin", "Test2", "Admin2", "2024-01-02T10:00:00", 1),
+            (
+                2,
+                "test_admin",
+                "system_admin",
+                "Test",
+                "Admin",
+                "2024-01-01T10:00:00",
+                1,
+            ),
+            (
+                3,
+                "test_admin2",
+                "system_admin",
+                "Test2",
+                "Admin2",
+                "2024-01-02T10:00:00",
+                1,
+            ),
         ]
 
         mock_conn = Mock()
@@ -306,7 +328,13 @@ class TestUserManagerUnit:
     def test_get_new_password_mismatch(self, mock_input, user_manager):
         """Test password confirmation mismatch"""
         # Arrange
-        mock_input.side_effect = ["Password123", "DifferentPass", "y", "Password123", "Password123"]
+        mock_input.side_effect = [
+            "Password123",
+            "DifferentPass",
+            "y",
+            "Password123",
+            "Password123",
+        ]
 
         # Act
         with patch("builtins.print"):
@@ -318,7 +346,15 @@ class TestUserManagerUnit:
     def test_get_user_by_id_success(self, user_manager):
         """Test getting user by ID successfully"""
         # Arrange
-        expected_user = (2, "test_user", "system_admin", "Test", "User", "2024-01-01", 1)
+        expected_user = (
+            2,
+            "test_user",
+            "system_admin",
+            "Test",
+            "User",
+            "2024-01-01",
+            1,
+        )
 
         mock_cursor = Mock()
         mock_cursor.fetchone.return_value = expected_user
@@ -385,35 +421,51 @@ class TestUserManagerUnit:
         user_manager.db.get_connection.return_value = mock_conn
 
         # Mock password generation
-        with patch.object(user_manager, '_generate_temporary_password', return_value='TempPass123!'):
+        with patch.object(
+            user_manager, "_generate_temporary_password", return_value="TempPass123!"
+        ):
             # Act
             user_manager.add_user("system_admin")
 
         # Assert
         mock_conn.commit.assert_called_once()
-        
+
         # Verify the INSERT query was called
         insert_call = mock_cursor.execute.call_args_list[-1]
         query = insert_call[0][0]
         params = insert_call[0][1]
-        
+
         assert "INSERT INTO users" in query
         assert params[0] == "new_admin"  # username
         assert params[2] == "system_admin"  # role
         assert params[3] == "New"  # first_name
-        assert params[4] == "Last"  # last_name
+        assert params[4] == "Admin"  # last_name
 
     @patch("builtins.input")
     @patch("builtins.print")
-    def test_delete_user_prevention_self_deletion(self, mock_print, mock_input, user_manager):
+    def test_delete_user_prevention_self_deletion(
+        self, mock_print, mock_input, user_manager
+    ):
         """Test prevention of self-deletion"""
         # Arrange
         user_manager.auth.current_user["id"] = 1
         mock_input.return_value = "1"
 
         # Mock the _get_user_by_id to return current user
-        with patch.object(user_manager, '_get_user_by_id', return_value=(1, "current_user", "super_admin", "Current", "User", "2024-01-01", 1)):
-            with patch.object(user_manager, 'view_users'):
+        with patch.object(
+            user_manager,
+            "_get_user_by_id",
+            return_value=(
+                1,
+                "current_user",
+                "super_admin",
+                "Current",
+                "User",
+                "2024-01-01",
+                1,
+            ),
+        ):
+            with patch.object(user_manager, "view_users"):
                 # Act
                 user_manager.delete_user("super_admin")
 
@@ -422,14 +474,33 @@ class TestUserManagerUnit:
 
     @patch("builtins.input")
     @patch("builtins.print")
-    def test_delete_user_prevention_super_admin(self, mock_print, mock_input, user_manager):
+    def test_delete_user_prevention_super_admin(
+        self, mock_print, mock_input, user_manager
+    ):
         """Test prevention of super_admin deletion"""
         # Arrange
         mock_input.return_value = "1"
 
+        # Set current user to NOT be the super_admin (avoid self-deletion check)
+        user_manager.auth.current_user["id"] = (
+            2  # Different from the user being deleted
+        )
+
         # Mock the _get_user_by_id to return super_admin user
-        with patch.object(user_manager, '_get_user_by_id', return_value=(1, "super_admin", "super_admin", "Super", "Admin", "2024-01-01", 1)):
-            with patch.object(user_manager, 'view_users'):
+        with patch.object(
+            user_manager,
+            "_get_user_by_id",
+            return_value=(
+                1,
+                "super_admin",
+                "super_admin",
+                "Super",
+                "Admin",
+                "2024-01-01",
+                1,
+            ),
+        ):
+            with patch.object(user_manager, "view_users"):
                 # Act
                 user_manager.delete_user("super_admin")
 
@@ -442,7 +513,7 @@ class TestUserManagerUnit:
         # Arrange
         user_manager.auth.is_logged_in.return_value = True
         user_manager.auth.current_user = {"id": 1, "username": "test_user"}
-        
+
         mock_input.side_effect = ["OldPass123", "NewPass123", "NewPass123"]
 
         # Mock cursor for password verification
@@ -465,7 +536,7 @@ class TestUserManagerUnit:
         # Assert
         # Should have two execute calls: one for SELECT, one for UPDATE
         assert mock_cursor.execute.call_count == 2
-        
+
         # Verify UPDATE query
         update_call = mock_cursor.execute.call_args_list[1]
         query = update_call[0][0]

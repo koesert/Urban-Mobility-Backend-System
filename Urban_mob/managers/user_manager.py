@@ -42,10 +42,14 @@ class UserManager:
     def display_user_management_menu(self, user_type):
         """Display user management menu based on user type"""
         if user_type == "system_admin" and not self.can_manage_users("system_admin"):
-            print("Access denied: Only Super Administrators can manage System Administrators!")
+            print(
+                "Access denied: Only Super Administrators can manage System Administrators!"
+            )
             return None
 
-        if user_type == "service_engineer" and not self.can_manage_users("service_engineer"):
+        if user_type == "service_engineer" and not self.can_manage_users(
+            "service_engineer"
+        ):
             print("Access denied: Insufficient permissions!")
             return None
 
@@ -64,7 +68,7 @@ class UserManager:
         """Handle user management operations"""
         role_map = {
             "system_admin": "system_admin",
-            "service_engineer": "service_engineer"
+            "service_engineer": "service_engineer",
         }
 
         target_role = role_map.get(user_type)
@@ -124,17 +128,29 @@ class UserManager:
                     print("No users found.")
                     return
 
-                print(f"\n{'ID':<5} {'Username':<15} {'Role':<20} {'Name':<25} {'Created':<20} {'Status':<10}")
+                print(
+                    f"\n{'ID':<5} {'Username':<15} {'Role':<20} {'Name':<25} {'Created':<20} {'Status':<10}"
+                )
                 print("-" * 100)
 
                 for user in users:
-                    user_id, username, role, first_name, last_name, created_date, is_active = user
+                    (
+                        user_id,
+                        username,
+                        role,
+                        first_name,
+                        last_name,
+                        created_date,
+                        is_active,
+                    ) = user
                     full_name = f"{first_name} {last_name}"
-                    role_display = role.replace('_', ' ').title()
+                    role_display = role.replace("_", " ").title()
                     status = "Active" if is_active else "Inactive"
                     created_short = created_date[:10] if created_date else "N/A"
 
-                    print(f"{user_id:<5} {username:<15} {role_display:<20} {full_name:<25} {created_short:<20} {status:<10}")
+                    print(
+                        f"{user_id:<5} {username:<15} {role_display:<20} {full_name:<25} {created_short:<20} {status:<10}"
+                    )
 
                 print(f"\nTotal users: {len(users)}")
 
@@ -237,7 +253,11 @@ class UserManager:
 
                 # Active status
                 current_status = "Active" if user[6] else "Inactive"
-                status_input = input(f"Status - Active/Inactive ({current_status}): ").strip().lower()
+                status_input = (
+                    input(f"Status - Active/Inactive ({current_status}): ")
+                    .strip()
+                    .lower()
+                )
                 if status_input in ["active", "inactive"]:
                     updates["is_active"] = 1 if status_input == "active" else 0
 
@@ -482,11 +502,22 @@ class UserManager:
                     return None
 
     def _generate_temporary_password(self):
-        """Generate a secure temporary password"""
-        # Use a combination of letters, digits, and special characters
-        characters = string.ascii_letters + string.digits + "!@#$%^&*"
-        password = ''.join(random.choice(characters) for _ in range(12))
-        return password
+        """Generate a secure temporary password with guaranteed complexity"""
+        # Ensure at least one of each character type
+        password_chars = []
+        password_chars.append(random.choice(string.ascii_lowercase))
+        password_chars.append(random.choice(string.ascii_uppercase))
+        password_chars.append(random.choice(string.digits))
+        password_chars.append(random.choice("!@#$%^&*"))
+
+        # Fill the rest randomly
+        all_chars = string.ascii_letters + string.digits + "!@#$%^&*"
+        for _ in range(8):  # Total 12 characters
+            password_chars.append(random.choice(all_chars))
+
+        # Shuffle to avoid predictable patterns
+        random.shuffle(password_chars)
+        return "".join(password_chars)
 
     def _get_new_password(self):
         """Get new password with validation"""
