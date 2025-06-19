@@ -8,7 +8,7 @@ from .encryption import encrypt_field, decrypt_field
 
 
 class DatabaseContext:
-    def __init__(self, db_path="Urban_mob/data/urban_mobility.db"):
+    def __init__(self, db_path="src/data/urban_mobility.db"):
         self.db_path = db_path
         # Create data directory if it doesn't exist
         os.makedirs(os.path.dirname(db_path), exist_ok=True)

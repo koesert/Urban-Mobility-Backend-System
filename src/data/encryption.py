@@ -2,7 +2,7 @@ from cryptography.fernet import Fernet
 import base64
 import os
 
-FERNET_KEY_PATH = os.getenv("FERNET_KEY_PATH", "Urban_mob/data/fernet.key")
+FERNET_KEY_PATH = os.getenv("FERNET_KEY_PATH", "src/data/fernet.key")
 
 
 def generate_key():
