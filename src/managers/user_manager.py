@@ -535,7 +535,7 @@ class UserManager:
             print("Password must contain at least one digit.")
             return False
 
-        special_characters = r"[~!@#$%&_-+=`|\(){}[\]:\"'<>,.?/]"
+        special_characters = r"[~!@#$%&_+=`|\(){}[\]:\"'<>,.?/-]"
         if not re.search(special_characters, password):
             print("Password must contain at least one special character.")
             return False
