@@ -3,6 +3,7 @@ import tempfile
 import os
 import gc
 import json
+import zipfile
 import shutil
 from unittest.mock import patch, Mock
 from datetime import datetime
@@ -173,15 +174,27 @@ class TestBackupIntegration:
         backup_filename = backup_manager.create_backup()
         assert backup_filename is not None
         assert backup_filename.startswith("backup_")
-        assert backup_filename.endswith(".json")
+        assert backup_filename.endswith(".zip")
 
         # Verify backup file exists
         backup_path = os.path.join(env["backup_dir"], backup_filename)
         assert os.path.exists(backup_path)
 
-        # Step 4: Verify backup contents
-        with open(backup_path, "r", encoding="utf-8") as f:
-            backup_data = json.load(f)
+        # Step 4: Verify backup contents using ZIP file
+        with zipfile.ZipFile(backup_path, "r") as zipf:
+            # Find JSON backup file
+            json_file = None
+            for file in zipf.namelist():
+                if file.endswith(".json") and file.startswith("backup_"):
+                    json_file = file
+                    break
+
+            assert json_file is not None, "No JSON backup file found in ZIP"
+
+            # Read JSON data from ZIP
+            with zipf.open(json_file) as f:
+                json_content = f.read().decode("utf-8")
+                backup_data = json.loads(json_content)
 
         assert "created_at" in backup_data
         assert "created_by" in backup_data
@@ -301,10 +314,22 @@ class TestBackupIntegration:
         backup_filename = backup_manager.create_backup()
         assert backup_filename is not None
 
-        # Verify backup contains encrypted data
+        # Verify backup contains encrypted data using ZIP file
         backup_path = os.path.join(env["backup_dir"], backup_filename)
-        with open(backup_path, "r", encoding="utf-8") as f:
-            backup_data = json.load(f)
+        with zipfile.ZipFile(backup_path, "r") as zipf:
+            # Find JSON backup file
+            json_file = None
+            for file in zipf.namelist():
+                if file.endswith(".json") and file.startswith("backup_"):
+                    json_file = file
+                    break
+
+            assert json_file is not None, "No JSON backup file found in ZIP"
+
+            # Read JSON data from ZIP
+            with zipf.open(json_file) as f:
+                json_content = f.read().decode("utf-8")
+                backup_data = json.loads(json_content)
 
         traveler_data = backup_data["tables"]["travelers"]["data"][0]
         backed_up_email = traveler_data[10]  # email field
@@ -572,10 +597,22 @@ class TestBackupIntegration:
         backup_filename = backup_manager.create_backup()
         assert backup_filename is not None
 
-        # Verify backup contains relational data
+        # Verify backup contains relational data using ZIP file
         backup_path = os.path.join(env["backup_dir"], backup_filename)
-        with open(backup_path, "r", encoding="utf-8") as f:
-            backup_data = json.load(f)
+        with zipfile.ZipFile(backup_path, "r") as zipf:
+            # Find JSON backup file
+            json_file = None
+            for file in zipf.namelist():
+                if file.endswith(".json") and file.startswith("backup_"):
+                    json_file = file
+                    break
+
+            assert json_file is not None, "No JSON backup file found in ZIP"
+
+            # Read JSON data from ZIP
+            with zipf.open(json_file) as f:
+                json_content = f.read().decode("utf-8")
+                backup_data = json.loads(json_content)
 
         users_data = backup_data["tables"]["users"]["data"]
         assert len(users_data) == initial_user_count + 1
@@ -620,16 +657,16 @@ class TestBackupIntegration:
         backup_manager = env["backup_manager"]
 
         # Test handling of corrupted backup file
-        corrupt_backup_path = os.path.join(env["backup_dir"], "corrupt_backup.json")
+        corrupt_backup_path = os.path.join(env["backup_dir"], "corrupt_backup.zip")
         with open(corrupt_backup_path, "w") as f:
             f.write("{ invalid json content")
 
         # Should handle corrupted backup gracefully
-        backup_info = backup_manager.show_backup_info("corrupt_backup.json")
+        backup_info = backup_manager.show_backup_info("corrupt_backup.zip")
         assert backup_info is None
 
         # Test restore from non-existent backup
-        restore_result = backup_manager.restore_backup("nonexistent.json")
+        restore_result = backup_manager.restore_backup("nonexistent.zip")
         assert restore_result is False
 
         # Test backup directory permission issues (simulate)

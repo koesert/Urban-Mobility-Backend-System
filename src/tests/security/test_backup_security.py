@@ -177,7 +177,9 @@ class TestBackupSecurityScenarios:
         assert backup_manager.can_use_restore_code() is False
         assert backup_manager.can_manage_restore_codes() is False
 
-    def test_backup_contains_encrypted_sensitive_data(self, secure_test_environment):
+    def test_backup_contains_encrypted_sensitive_data(
+        self, secure_test_environment
+    ):
         """Test that backups preserve encryption of sensitive data"""
         env = secure_test_environment
         env["auth"].login("super_admin", "Admin_123?")
@@ -210,8 +212,23 @@ class TestBackupSecurityScenarios:
 
         # Read backup file and verify encryption
         backup_path = os.path.join(env["backup_dir"], backup_filename)
-        with open(backup_path, "r", encoding="utf-8") as f:
-            backup_data = json.load(f)
+
+        import zipfile
+
+        with zipfile.ZipFile(backup_path, "r") as zipf:
+            # Find JSON backup file
+            json_file = None
+            for file in zipf.namelist():
+                if file.endswith(".json") and file.startswith("backup_"):
+                    json_file = file
+                    break
+
+            assert json_file is not None, "No JSON backup file found in ZIP"
+
+            # Read JSON data from ZIP
+            with zipf.open(json_file) as f:
+                json_content = f.read().decode("utf-8")
+                backup_data = json.loads(json_content)
 
         # Find traveler data in backup
         traveler_data = backup_data["tables"]["travelers"]["data"][0]
@@ -402,8 +419,22 @@ class TestBackupSecurityScenarios:
         backup_path = os.path.join(env["backup_dir"], backup_filename)
 
         # Read original backup
-        with open(backup_path, "r", encoding="utf-8") as f:
-            original_backup = json.load(f)
+        import zipfile
+
+        with zipfile.ZipFile(backup_path, "r") as zipf:
+            # Find JSON backup file
+            json_file = None
+            for file in zipf.namelist():
+                if file.endswith(".json") and file.startswith("backup_"):
+                    json_file = file
+                    break
+
+            assert json_file is not None, "No JSON backup file found in ZIP"
+
+            # Read JSON data from ZIP
+            with zipf.open(json_file) as f:
+                json_content = f.read().decode("utf-8")
+                original_backup = json.loads(json_content)
 
         # Simulate malicious modification of backup file
         malicious_backup = original_backup.copy()
@@ -423,14 +454,28 @@ class TestBackupSecurityScenarios:
         ]
         malicious_backup["tables"]["users"]["data"].append(fake_user_data)
 
-        # Write tampered backup
-        tampered_backup_path = os.path.join(env["backup_dir"], "tampered_backup.json")
-        with open(tampered_backup_path, "w", encoding="utf-8") as f:
-            json.dump(malicious_backup, f)
+        # Write tampered backup as new ZIP file
+        tampered_backup_path = os.path.join(env["backup_dir"], "tampered_backup.zip")
+        with zipfile.ZipFile(tampered_backup_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            # Write malicious JSON data
+            json_data = json.dumps(malicious_backup, indent=2, default=str)
+            zipf.writestr("backup_tampered.json", json_data.encode("utf-8"))
+
+            # Add metadata file
+            metadata = {
+                "backup_format": "urban_mobility_v1.0",
+                "created_at": malicious_backup["created_at"],
+                "created_by": malicious_backup["created_by"],
+                "json_file": "backup_tampered.json",
+                "description": "Tampered Backup",
+            }
+            zipf.writestr(
+                "backup_info.txt", json.dumps(metadata, indent=2).encode("utf-8")
+            )
 
         # Restore from tampered backup
         with patch("builtins.input", return_value="RESTORE"):
-            restore_success = backup_manager.restore_backup("tampered_backup.json")
+            restore_success = backup_manager.restore_backup("tampered_backup.zip")
 
         # Currently, the system would restore tampered data
         # In a production system, you'd want integrity checks
@@ -484,7 +529,7 @@ class TestBackupSecurityScenarios:
         # This demonstrates the current behavior - the system strips whitespace
         valid_after_strip = [
             " RESTORE",  # leading space
-            "RESTORE ",  # trailing space  
+            "RESTORE ",  # trailing space
             " RESTORE ",  # both leading and trailing space
         ]
 
@@ -504,7 +549,7 @@ class TestBackupSecurityScenarios:
             restore_result = backup_manager.restore_backup(backup_filename)
 
         assert restore_result is True
-    
+
     def test_backup_directory_traversal_prevention(self, secure_test_environment):
         """Test prevention of directory traversal attacks in backup operations"""
         env = secure_test_environment
@@ -691,8 +736,16 @@ class TestBackupSecurityScenarios:
 
         # Read backup file content
         backup_path = os.path.join(env["backup_dir"], backup_filename)
-        with open(backup_path, "r", encoding="utf-8") as f:
-            backup_content = f.read()
+
+        backup_content = ""
+        import zipfile
+
+        with zipfile.ZipFile(backup_path, "r") as zipf:
+            # Read all files in the ZIP
+            for file_name in zipf.namelist():
+                with zipf.open(file_name) as f:
+                    file_content = f.read().decode("utf-8", errors="ignore")
+                    backup_content += file_content
 
         # Read encryption key
         with open(env["key_path"], "rb") as f:
@@ -711,7 +764,19 @@ class TestBackupSecurityScenarios:
         assert "secret" not in backup_content.lower()
 
         # Verify backup file has proper structure without key exposure
-        backup_data = json.loads(backup_content)
-        assert "encryption_key" not in backup_data
-        assert "fernet_key" not in backup_data
-        assert "secret_key" not in backup_data
+        # Parse one of the JSON files to verify structure
+        with zipfile.ZipFile(backup_path, "r") as zipf:
+            json_file = None
+            for file in zipf.namelist():
+                if file.endswith(".json") and file.startswith("backup_"):
+                    json_file = file
+                    break
+
+            if json_file:
+                with zipf.open(json_file) as f:
+                    json_content = f.read().decode("utf-8")
+                    backup_data = json.loads(json_content)
+
+                assert "encryption_key" not in backup_data
+                assert "fernet_key" not in backup_data
+                assert "secret_key" not in backup_data
