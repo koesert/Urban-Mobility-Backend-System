@@ -213,7 +213,8 @@ class TestBackupMenuIntegration:
 
             # Check for access denied message
             print_calls = [call.args[0] for call in mock_print.call_args_list]
-            access_denied = any("Access denied" in str(call) for call in print_calls)
+            access_denied = any("Access denied" in str(call)
+                                for call in print_calls)
             assert access_denied
 
     @patch("builtins.input")
@@ -438,7 +439,8 @@ class TestBackupMenuIntegration:
             generate_restore_code_menu(backup_manager)
 
             # Verify no backups message
-            mock_print.assert_any_call("No backup files found. Create a backup first.")
+            mock_print.assert_any_call(
+                "No backup files found. Create a backup first.")
 
     def test_revoke_restore_code_menu_no_codes(self, menu_test_environment):
         """Test revoke restore code menu when no codes exist"""
@@ -459,7 +461,8 @@ class TestBackupMenuIntegration:
             no_codes = any(
                 "No active restore codes" in str(call) for call in print_calls
             )
-            cancelled = any("Operation cancelled" in str(call) for call in print_calls)
+            cancelled = any("Operation cancelled" in str(call)
+                            for call in print_calls)
 
             # The test should pass if no codes message is shown and operation is cancelled
             # OR if no codes message is shown (even if cancellation message isn't explicitly shown)
@@ -568,7 +571,7 @@ class TestBackupMenuIntegration:
         env = menu_test_environment
 
         # Test that backup menu functions can be imported by main system
-        from main import UrbanMobilitySystem
+        from um_members import UrbanMobilitySystem
 
         # Create main system instance
         system = UrbanMobilitySystem()
@@ -625,7 +628,8 @@ class TestBackupMenuIntegration:
 
                 if create_backup_choice:
                     # Call the menu choice handler
-                    system.handle_menu_choice(str(create_backup_choice), menu_options)
+                    system.handle_menu_choice(
+                        str(create_backup_choice), menu_options)
                     # Verify the mock was called
                     mock_create_backup.assert_called_once_with(env["auth"])
                 else:
@@ -643,5 +647,6 @@ class TestBackupMenuIntegration:
 
                     # Test the backup management option instead
                     with patch("main.handle_backup_menu") as mock_backup_menu:
-                        system.handle_menu_choice(str(backup_mgmt_choice), menu_options)
+                        system.handle_menu_choice(
+                            str(backup_mgmt_choice), menu_options)
                         mock_backup_menu.assert_called_once_with(env["auth"])
