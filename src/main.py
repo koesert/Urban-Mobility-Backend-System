@@ -3,6 +3,7 @@ from utils import RoleManager
 from managers.travelers_manager import TravelersManager
 from managers.user_manager import UserManager
 from scooter import manage_scooters_menu
+from backup_menu import create_backup_menu, restore_backup_menu, handle_backup_menu
 
 
 class UrbanMobilitySystem:
@@ -30,8 +31,7 @@ class UrbanMobilitySystem:
                 user = self.auth.get_current_user()
                 # Add safety check even though login succeeded
                 if user:
-                    print(
-                        f"\nWelcome, {user['first_name']} {user['last_name']}!")
+                    print(f"\nWelcome, {user['first_name']} {user['last_name']}!")
                     print(f"Role: {user['role'].replace('_', ' ').title()}")
                     return True
                 else:
@@ -57,8 +57,7 @@ class UrbanMobilitySystem:
 
         permissions = self.role_manager.get_available_permissions()
 
-        print(
-            f"\n--- MAIN MENU ({user['role'].replace('_', ' ').title()}) ---")
+        print(f"\n--- MAIN MENU ({user['role'].replace('_', ' ').title()}) ---")
 
         menu_options = []
         option_num = 1
@@ -90,6 +89,11 @@ class UrbanMobilitySystem:
 
         if "restore_backup" in permissions or "use_restore_code" in permissions:
             menu_options.append((option_num, "Restore Backup"))
+            option_num += 1
+
+        # Backup Management (comprehensive menu for super admins)
+        if "create_backup" in permissions and "generate_restore_codes" in permissions:
+            menu_options.append((option_num, "Backup Management"))
             option_num += 1
 
         # Always available options
@@ -139,8 +143,22 @@ class UrbanMobilitySystem:
             elif selected_option == "Update Password":
                 self.user_manager.update_own_password()
                 input("Press Enter to continue...")
+            elif selected_option == "Create Backup":
+                create_backup_menu(self.auth)
+                input("Press Enter to continue...")
+            elif selected_option == "Restore Backup":
+                restore_backup_menu(self.auth)
+                input("Press Enter to continue...")
+            elif selected_option == "Backup Management":
+                handle_backup_menu(self.auth)
+            elif selected_option == "View System Logs":
+                # Placeholder for system logs feature
+                print(f"\n--- {selected_option} ---")
+                print("This feature will be implemented by other team members.")
+                print("Access granted based on your role permissions!")
+                input("Press Enter to continue...")
             else:
-                # For now, just show that the feature is accessed
+                # For any other unimplemented features
                 print(f"\n--- {selected_option} ---")
                 print("This feature will be implemented by other team members.")
                 print("Access granted based on your role permissions!")

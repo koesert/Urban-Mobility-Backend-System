@@ -192,3 +192,5 @@ temp/
 # Encryption keys (if any are generated)
 *.key
 *.pem
+
+*.json
