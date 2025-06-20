@@ -19,6 +19,7 @@ class SuperAdministrator:
             "revoke_restore_codes",
             "update_own_password",
             "update_scooter_info",
+            "view_logs",
         ]
 
     def can_access(self, permission):

@@ -18,6 +18,7 @@ class SystemAdministrator:
             "delete_own_account",
             "update_scooter_info",
             "manage_scooters",
+            "view_logs",
         ]
 
     def can_access(self, permission):
