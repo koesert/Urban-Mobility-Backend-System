@@ -207,6 +207,12 @@ class UserManager:
             print(f"⚠️  Please share this password securely with the user.")
             print(f"⚠️  The user should change this password on first login.")
 
+            self.auth.logger.log_activity(
+                username=self.auth.current_user["username"],
+                activity="Add user",
+                details=f"User with username: {username} added."
+            )
+
         except Exception as e:
             print(f"Error adding user: {e}")
 
@@ -266,7 +272,8 @@ class UserManager:
                     return
 
                 # Build UPDATE query
-                set_clause = ", ".join([f"{field} = ?" for field in updates.keys()])
+                set_clause = ", ".join(
+                    [f"{field} = ?" for field in updates.keys()])
                 values = list(updates.values()) + [user_id]
 
                 cursor.execute(
@@ -282,6 +289,13 @@ class UserManager:
 
                 if cursor.rowcount > 0:
                     print("✅ User updated successfully!")
+
+                    self.auth.logger.log_activity(
+                        username=self.auth.current_user["username"],
+                        activity="Update user",
+                        details=f"User with user id: {user[0]} & username: {user[1]} updated."
+                    )
+
                 else:
                     print("No changes were made.")
 
@@ -335,6 +349,13 @@ class UserManager:
 
                 if cursor.rowcount > 0:
                     print("✅ User deleted successfully!")
+
+                    self.auth.logger.log_activity(
+                        username=self.auth.current_user["username"],
+                        activity="Delete user",
+                        details=f"User with ID: {user[0]} & username: {user[1]} deleted."
+                    )
+
                 else:
                     print("Error: User could not be deleted.")
 
@@ -481,7 +502,8 @@ class UserManager:
             # Check if username already exists
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+                cursor.execute(
+                    "SELECT id FROM users WHERE username = ?", (username,))
                 if cursor.fetchone():
                     print("Username already exists!")
                     if input("Try again? (y/n): ").lower() != "y":
