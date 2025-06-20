@@ -44,6 +44,43 @@ def run_tests(test_type="all", verbose=False, coverage=False):
         legacy_path = os.path.join(tests_path, "legacy")
         cmd.extend([legacy_path])
         print("📦 Running Legacy Tests Only...")
+    elif test_type == "backup":
+        # Run all backup-related tests
+        cmd.extend(
+            [
+                os.path.join(tests_path, "unit"),
+                os.path.join(tests_path, "integration"),
+                os.path.join(tests_path, "security"),
+                "-m",
+                "backup",
+            ]
+        )
+        print("💾 Running Backup System Tests Only...")
+    elif test_type == "backup_unit":
+        # Run only backup unit tests
+        cmd.extend([os.path.join(tests_path, "unit"), "-m", "backup_unit"])
+        print("🧪 Running Backup Unit Tests Only...")
+    elif test_type == "backup_integration":
+        # Run only backup integration tests
+        cmd.extend(
+            [os.path.join(tests_path, "integration"), "-m", "backup_integration"]
+        )
+        print("🔗 Running Backup Integration Tests Only...")
+    elif test_type == "backup_security":
+        # Run only backup security tests
+        cmd.extend([os.path.join(tests_path, "security"), "-m", "backup_security"])
+        print("🛡️ Running Backup Security Tests Only...")
+    elif test_type == "backup_menu":
+        # Run only backup menu tests
+        cmd.extend(
+            [
+                os.path.join(tests_path, "unit"),
+                os.path.join(tests_path, "integration"),
+                "-m",
+                "backup_menu",
+            ]
+        )
+        print("📋 Running Backup Menu Tests Only...")
     elif test_type == "encryption":
         # Exclude legacy to avoid issues
         cmd.extend(
@@ -92,6 +129,40 @@ def run_tests(test_type="all", verbose=False, coverage=False):
             ]
         )
         print("🔑 Running Authentication Tests Only...")
+    elif test_type == "rbac":
+        # Run role-based access control tests
+        cmd.extend(
+            [
+                os.path.join(tests_path, "unit"),
+                os.path.join(tests_path, "integration"),
+                os.path.join(tests_path, "security"),
+                "-m",
+                "rbac",
+            ]
+        )
+        print("🔐 Running RBAC Tests Only...")
+    elif test_type == "menu":
+        # Run menu system tests
+        cmd.extend(
+            [
+                os.path.join(tests_path, "unit"),
+                os.path.join(tests_path, "integration"),
+                "-m",
+                "menu",
+            ]
+        )
+        print("📋 Running Menu System Tests Only...")
+    elif test_type == "performance":
+        # Run performance tests
+        cmd.extend(
+            [
+                os.path.join(tests_path, "unit"),
+                os.path.join(tests_path, "integration"),
+                "-m",
+                "performance",
+            ]
+        )
+        print("⚡ Running Performance Tests Only...")
     elif test_type == "fast":
         # Exclude legacy and slow tests
         cmd.extend(
@@ -104,6 +175,16 @@ def run_tests(test_type="all", verbose=False, coverage=False):
             ]
         )
         print("⚡ Running Fast Tests Only...")
+    elif test_type == "comprehensive":
+        # Run comprehensive test suite including backup tests
+        cmd.extend(
+            [
+                os.path.join(tests_path, "unit"),
+                os.path.join(tests_path, "integration"),
+                os.path.join(tests_path, "security"),
+            ]
+        )
+        print("🎯 Running Comprehensive Test Suite (including backup system)...")
     else:
         # Default: Run all tests EXCEPT legacy (to avoid issues)
         cmd.extend(
@@ -130,6 +211,7 @@ def run_tests(test_type="all", verbose=False, coverage=False):
                 "--cov=data",
                 "--cov=utils",
                 "--cov=models",
+                "--cov=backup_menu",
                 "--cov-report=html",
                 "--cov-report=term-missing",
             ]
@@ -236,15 +318,19 @@ def check_test_environment():
         else:
             issues.append(f"{test_dir} directory missing")
 
-    # Check key test files
+    # Check key test files including backup tests
     key_files = [
         "tests/unit/test_encryption_unit.py",
         "tests/unit/test_travelers_manager_unit.py",
         "tests/unit/test_user_manager_unit.py",
+        "tests/unit/test_backup_manager_unit.py",
         "tests/integration/test_travelers_integration.py",
         "tests/integration/test_user_manager_integration.py",
+        "tests/integration/test_backup_integration.py",
         "tests/security/test_travelers_security.py",
         "tests/security/test_user_manager_security.py",
+        "tests/security/test_backup_security.py",
+        "tests/integration/test_backup_menu_integration.py",
     ]
 
     for test_file in key_files:
@@ -253,12 +339,14 @@ def check_test_environment():
         else:
             issues.append(f"{test_file} missing")
 
-    # Check for source code
+    # Check for source code including backup system
     source_files = [
         "auth.py",
         "managers/travelers_manager.py",
         "managers/user_manager.py",
+        "managers/backup_manager.py",
         "data/encryption.py",
+        "backup_menu.py",
     ]
 
     for source_file in source_files:
@@ -313,6 +401,56 @@ def create_test_report():
         return False
 
 
+def run_backup_test_suite():
+    """Run comprehensive backup system test suite"""
+
+    print("💾 Running Comprehensive Backup System Test Suite")
+    print("=" * 60)
+
+    backup_test_categories = [
+        ("backup_unit", "🧪 Backup Unit Tests"),
+        ("backup_integration", "🔗 Backup Integration Tests"),
+        ("backup_security", "🛡️ Backup Security Tests"),
+        ("backup_menu", "📋 Backup Menu Tests"),
+    ]
+
+    results = {}
+
+    for test_type, description in backup_test_categories:
+        print(f"\n{description}")
+        print("-" * 40)
+
+        success = run_tests(test_type, verbose=False, coverage=False)
+        results[test_type] = success
+
+        if success:
+            print(f"✅ {description} - PASSED")
+        else:
+            print(f"❌ {description} - FAILED")
+
+    # Summary
+    print("\n" + "=" * 60)
+    print("📊 BACKUP TEST SUITE SUMMARY")
+    print("=" * 60)
+
+    total_tests = len(backup_test_categories)
+    passed_tests = sum(1 for success in results.values() if success)
+
+    for test_type, description in backup_test_categories:
+        status = "✅ PASSED" if results[test_type] else "❌ FAILED"
+        print(f"{description}: {status}")
+
+    print(f"\nOverall Result: {passed_tests}/{total_tests} test categories passed")
+
+    if passed_tests == total_tests:
+        print("🎉 ALL BACKUP TESTS PASSED!")
+        print("💾 Backup system is fully functional and secure!")
+        return True
+    else:
+        print("⚠️ Some backup tests failed - please review above output")
+        return False
+
+
 def get_project_root():
     """Get the path to the project root directory"""
     return Path(__file__).parent.parent.absolute()
@@ -331,15 +469,22 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python run_tests.py                     # Run all tests
-  python run_tests.py --type unit         # Run only unit tests
-  python run_tests.py --type security     # Run only security tests
-  python run_tests.py --type user_manager # Run only user management tests
-  python run_tests.py --coverage          # Run with coverage
-  python run_tests.py --verbose           # Run with verbose output
-  python run_tests.py --check            # Check test environment
-  python run_tests.py --report           # Generate test report
-  python run_tests.py --file tests/unit/test_user_manager_unit.py  # Run specific file
+  python run_tests.py                          # Run all tests
+  python run_tests.py --type unit              # Run only unit tests
+  python run_tests.py --type backup            # Run only backup tests
+  python run_tests.py --type backup_unit       # Run only backup unit tests
+  python run_tests.py --type backup_integration # Run only backup integration tests
+  python run_tests.py --type backup_security   # Run only backup security tests
+  python run_tests.py --type backup_menu       # Run only backup menu tests
+  python run_tests.py --type security          # Run only security tests
+  python run_tests.py --type user_manager      # Run only user management tests
+  python run_tests.py --type comprehensive     # Run comprehensive test suite
+  python run_tests.py --coverage               # Run with coverage
+  python run_tests.py --verbose                # Run with verbose output
+  python run_tests.py --check                  # Check test environment
+  python run_tests.py --report                 # Generate test report
+  python run_tests.py --backup-suite           # Run complete backup test suite
+  python run_tests.py --file tests/unit/test_backup_manager_unit.py  # Run specific file
         """,
     )
 
@@ -355,6 +500,15 @@ Examples:
             "user_manager",
             "auth",
             "fast",
+            "comprehensive",
+            "performance",
+            "backup",
+            "backup_unit",
+            "backup_integration",
+            "backup_security",
+            "backup_menu",
+            "rbac",
+            "menu",
         ],
         default="all",
         help="Type of tests to run",
@@ -376,6 +530,12 @@ Examples:
         "--report", action="store_true", help="Generate comprehensive test report"
     )
 
+    parser.add_argument(
+        "--backup-suite",
+        action="store_true",
+        help="Run comprehensive backup test suite",
+    )
+
     parser.add_argument("--file", "-f", type=str, help="Run specific test file")
 
     args = parser.parse_args()
@@ -387,6 +547,10 @@ Examples:
 
     if args.report:
         success = create_test_report()
+        sys.exit(0 if success else 1)
+
+    if args.backup_suite:
+        success = run_backup_test_suite()
         sys.exit(0 if success else 1)
 
     if args.file:

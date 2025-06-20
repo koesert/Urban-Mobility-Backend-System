@@ -3,6 +3,7 @@ from utils import RoleManager
 from managers.travelers_manager import TravelersManager
 from managers.user_manager import UserManager
 from scooter import manage_scooters_menu
+from backup_menu import create_backup_menu, restore_backup_menu, handle_backup_menu
 
 
 class UrbanMobilitySystem:
@@ -92,6 +93,11 @@ class UrbanMobilitySystem:
             menu_options.append((option_num, "Restore Backup"))
             option_num += 1
 
+        # Backup Management (comprehensive menu for super admins)
+        if "create_backup" in permissions and "generate_restore_codes" in permissions:
+            menu_options.append((option_num, "Backup Management"))
+            option_num += 1
+
         # Always available options
         menu_options.append((option_num, "Update Password"))
         option_num += 1
@@ -175,8 +181,20 @@ class UrbanMobilitySystem:
                 except PermissionError as e:
                     print(f"\nError: {str(e)}")
                     input("Press Enter to continue...")
+
+            elif selected_option == "Create Backup":
+                create_backup_menu(self.auth)
+                input("Press Enter to continue...")
+            elif selected_option == "Restore Backup":
+                restore_backup_menu(self.auth)
+                input("Press Enter to continue...")
+            elif selected_option == "Backup Management":
+                handle_backup_menu(self.auth)
             else:
-                print(f"\nFeature '{selected_option}' is under development")
+                # For any other unimplemented features
+                print(f"\n--- {selected_option} ---")
+                print("This feature will be implemented by other team members.")
+                print("Access granted based on your role permissions!")
                 input("Press Enter to continue...")
 
         except ValueError:
