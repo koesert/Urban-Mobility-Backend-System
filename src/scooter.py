@@ -35,6 +35,11 @@ def is_valid_location(value):
         return False
 
 
+def is_rotterdam_location(latitude, longitude):
+    """Check if latitude/longitude are within the Rotterdam region."""
+    return 51.8 <= latitude <= 52.0 and 4.2 <= longitude <= 4.6
+
+
 def prompt_location(field_name):
     """Prompt user for a valid latitude or longitude with 5 decimal places."""
     value = input(f"{field_name} (5 decimal places): ")
@@ -44,6 +49,16 @@ def prompt_location(field_name):
         )
         value = input(f"{field_name} (5 decimal places): ")
     return float(value)
+
+
+def prompt_rotterdam_location():
+    """Prompt user for latitude and longitude, both with 5 decimals, and check Rotterdam bounds."""
+    while True:
+        latitude = prompt_location("Latitude")
+        longitude = prompt_location("Longitude")
+        if is_rotterdam_location(latitude, longitude):
+            return latitude, longitude
+        print("Coordinates must be within the Rotterdam region (lat: 51.8-52.0, long: 4.2-4.6). Please try again.")
 
 
 def is_valid_iso_date(date_str):
@@ -102,8 +117,7 @@ def add_new_scooter(role_manager):
     state_of_charge = prompt_int("State of Charge (%)")
     target_range_min = prompt_int("Target Range Min (km)")
     target_range_max = prompt_int("Target Range Max (km)")
-    latitude = prompt_location("Latitude")
-    longitude = prompt_location("Longitude")
+    latitude, longitude = prompt_rotterdam_location()
     mileage = prompt_int("Milage (km)")
     out_of_service_status = input(
         "Out of Service status (leave empty if not out of service): "
@@ -168,7 +182,8 @@ def delete_scooter(role_manager):
             return
         scooter_id = int(scooter_id)
         # Get scooter info before deleting
-        scooter_to_delete = next((s for s in scooters if s["id"] == scooter_id), None)
+        scooter_to_delete = next(
+            (s for s in scooters if s["id"] == scooter_id), None)
         if not scooter_to_delete:
             print(f"No scooter found with ID {scooter_id}.")
             return
@@ -264,7 +279,8 @@ def modify_scooter(role_manager):
                 if is_valid_iso_date(val):
                     return val
                 else:
-                    print(f"{field} must be in format YYYY-MM-DD. Please try again.")
+                    print(
+                        f"{field} must be in format YYYY-MM-DD. Please try again.")
 
         # Build updated_scooter dict based on permissions
         updated_scooter = {}
@@ -279,7 +295,8 @@ def modify_scooter(role_manager):
             )
             # Serial number validation
             while True:
-                serial_number = input(f"Serial Number [{scooter['serial_number']}]: ")
+                serial_number = input(
+                    f"Serial Number [{scooter['serial_number']}]: ")
                 if serial_number.strip() == "":
                     updated_scooter["serial_number"] = scooter["serial_number"]
                     break
@@ -314,12 +331,14 @@ def modify_scooter(role_manager):
         updated_scooter["target_range_max"] = prompt_int_with_default(
             "Target Range Max (km)", scooter["target_range_max"]
         )
-        updated_scooter["latitude"] = prompt_float_with_default(
-            "Latitude", scooter["latitude"]
-        )
-        updated_scooter["longitude"] = prompt_float_with_default(
-            "Longitude", scooter["longitude"]
-        )
+        while True:
+            lat = prompt_float_with_default("Latitude", scooter["latitude"])
+            lon = prompt_float_with_default("Longitude", scooter["longitude"])
+            if is_rotterdam_location(lat, lon):
+                updated_scooter["latitude"] = lat
+                updated_scooter["longitude"] = lon
+                break
+            print("Coordinates must be within the Rotterdam region (lat: 51.8-52.0, long: 4.2-4.6). Please try again.")
         updated_scooter["out_of_service_status"] = prompt_str_with_default(
             "Out of Service status", scooter["out_of_service_status"]
         )
