@@ -3,6 +3,7 @@ import random
 import string
 from datetime import datetime
 from data.db_context import DatabaseContext
+from data.encryption import encrypt_field, decrypt_field
 
 
 class UserManager:
@@ -181,16 +182,17 @@ class UserManager:
             # Hash the password
             password_hash = hashlib.sha256(temp_password.encode()).hexdigest()
 
-            # Insert user
+            # Insert user with encrypted username
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
-                    INSERT INTO users (username, password_hash, role, first_name, last_name, created_date, created_by, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                    INSERT INTO users (username, username_encrypted, password_hash, role, first_name, last_name, created_date, created_by, is_active)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
                 """,
                     (
                         username,
+                        encrypt_field(username),
                         password_hash,
                         role,
                         first_name,
@@ -508,7 +510,7 @@ class UserManager:
             return None
 
     def _get_unique_username(self):
-        """Get a unique username from user input"""
+        """Get a unique username from user input (case-insensitive check)"""
         while True:
             username = input("Username: ").strip()
             if not username:
@@ -517,12 +519,24 @@ class UserManager:
                     return None
                 continue
 
-            # Check if username already exists
+            # Check if username already exists (case-insensitive)
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT id FROM users WHERE username = ?", (username,))
-                if cursor.fetchone():
+                cursor.execute("SELECT id, username_encrypted FROM users")
+                existing_users = cursor.fetchall()
+                
+                username_exists = False
+                for _, encrypted_username in existing_users:
+                    if encrypted_username:
+                        try:
+                            decrypted = decrypt_field(encrypted_username)
+                            if decrypted.lower() == username.lower():
+                                username_exists = True
+                                break
+                        except:
+                            continue
+                
+                if username_exists:
                     print("Username already exists!")
                     if input("Try again? (y/n): ").lower() != "y":
                         return None
