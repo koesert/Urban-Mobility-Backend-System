@@ -158,114 +158,122 @@ class TestBackupManagerUnit:
 
         # Create comprehensive mock for database operations
         mock_cursor = Mock()
-        mock_cursor.execute = Mock()
 
-        # Define all the data that will be returned by fetchall calls
-        mock_data_sequence = [
-            # Users SELECT
-            [
-                (
-                    1,
-                    "super_admin",
-                    "hash",
-                    "super_admin",
-                    "Super",
-                    "Admin",
-                    "2024-01-01",
-                    1,
-                    1,
-                )
-            ],
-            # Users PRAGMA table_info
-            [
-                ("id",),
-                ("username",),
-                ("password_hash",),
-                ("role",),
-                ("first_name",),
-                ("last_name",),
-                ("created_date",),
-                ("created_by",),
-                ("is_active",),
-            ],
-            # Travelers SELECT
-            [
-                (
-                    1,
-                    "CUST001",
-                    "John",
-                    "Doe",
-                    "01-01-1990",
-                    "Male",
-                    "Main St",
-                    "1",
-                    "1000AA",
-                    "Amsterdam",
-                    "encrypted_email",
-                    "encrypted_phone",
-                    "encrypted_license",
-                    "2024-01-01",
-                )
-            ],
-            # Travelers PRAGMA table_info
-            [
-                ("id",),
-                ("customer_id",),
-                ("first_name",),
-                ("last_name",),
-                ("birthday",),
-                ("gender",),
-                ("street_name",),
-                ("house_number",),
-                ("zip_code",),
-                ("city",),
-                ("email",),
-                ("mobile_phone",),
-                ("driving_license",),
-                ("registration_date",),
-            ],
-            # Scooters SELECT
-            [
-                (
-                    1,
-                    "Brand",
-                    "Model",
-                    "encrypted_serial",
-                    25,
-                    1000,
-                    80,
-                    20,
-                    40,
-                    51.92250,
-                    4.47917,
-                    "",
-                    100.0,
-                    "2024-01-01",
-                    "2024-01-01",
-                )
-            ],
-            # Scooters PRAGMA table_info
-            [
-                ("id",),
-                ("brand",),
-                ("model",),
-                ("serial_number",),
-                ("top_speed",),
-                ("battery_capacity",),
-                ("state_of_charge",),
-                ("target_range_min",),
-                ("target_range_max",),
-                ("latitude",),
-                ("longitude",),
-                ("out_of_service_status",),
-                ("mileage",),
-                ("last_maintenance_date",),
-                ("in_service_date",),
-            ],
+        # Set up the fetchall calls to return data in the correct sequence
+        # The create_backup method makes these calls in order:
+        # 1. SELECT * FROM users
+        # 2. PRAGMA table_info(users)
+        # 3. SELECT * FROM travelers
+        # 4. PRAGMA table_info(travelers)
+        # 5. SELECT * FROM scooters
+        # 6. PRAGMA table_info(scooters)
+
+        users_data = [
+            (
+                1,
+                "super_admin",
+                "hash",
+                "super_admin",
+                "Super",
+                "Admin",
+                "2024-01-01",
+                1,
+                1,
+            )
+        ]
+        users_columns = [
+            (0, "id", "INTEGER", 0, None, 1),
+            (1, "username", "TEXT", 0, None, 0),
+            (2, "password_hash", "TEXT", 0, None, 0),
+            (3, "role", "TEXT", 0, None, 0),
+            (4, "first_name", "TEXT", 0, None, 0),
+            (5, "last_name", "TEXT", 0, None, 0),
+            (6, "created_date", "TEXT", 0, None, 0),
+            (7, "created_by", "INTEGER", 0, None, 0),
+            (8, "is_active", "INTEGER", 0, None, 0),
         ]
 
-        # Use side_effect with the predefined sequence
-        mock_cursor.fetchall.side_effect = mock_data_sequence
+        travelers_data = [
+            (
+                1,
+                "CUST001",
+                "John",
+                "Doe",
+                "01-01-1990",
+                "Male",
+                "Main St",
+                "1",
+                "1000AA",
+                "Amsterdam",
+                "encrypted_email",
+                "encrypted_phone",
+                "encrypted_license",
+                "2024-01-01",
+            )
+        ]
+        travelers_columns = [
+            (0, "id", "INTEGER", 0, None, 1),
+            (1, "customer_id", "TEXT", 0, None, 0),
+            (2, "first_name", "TEXT", 0, None, 0),
+            (3, "last_name", "TEXT", 0, None, 0),
+            (4, "birthday", "TEXT", 0, None, 0),
+            (5, "gender", "TEXT", 0, None, 0),
+            (6, "street_name", "TEXT", 0, None, 0),
+            (7, "house_number", "TEXT", 0, None, 0),
+            (8, "zip_code", "TEXT", 0, None, 0),
+            (9, "city", "TEXT", 0, None, 0),
+            (10, "email", "TEXT", 0, None, 0),
+            (11, "mobile_phone", "TEXT", 0, None, 0),
+            (12, "driving_license", "TEXT", 0, None, 0),
+            (13, "registration_date", "TEXT", 0, None, 0),
+        ]
+
+        scooters_data = [
+            (
+                1,
+                "Brand",
+                "Model",
+                "encrypted_serial",
+                25,
+                1000,
+                80,
+                20,
+                40,
+                51.92250,
+                4.47917,
+                "",
+                100.0,
+                "2024-01-01",
+                "2024-01-01",
+            )
+        ]
+        scooters_columns = [
+            (0, "id", "INTEGER", 0, None, 1),
+            (1, "brand", "TEXT", 0, None, 0),
+            (2, "model", "TEXT", 0, None, 0),
+            (3, "serial_number", "TEXT", 0, None, 0),
+            (4, "top_speed", "INTEGER", 0, None, 0),
+            (5, "battery_capacity", "INTEGER", 0, None, 0),
+            (6, "state_of_charge", "INTEGER", 0, None, 0),
+            (7, "target_range_min", "INTEGER", 0, None, 0),
+            (8, "target_range_max", "INTEGER", 0, None, 0),
+            (9, "latitude", "REAL", 0, None, 0),
+            (10, "longitude", "REAL", 0, None, 0),
+            (11, "out_of_service_status", "TEXT", 0, None, 0),
+            (12, "mileage", "REAL", 0, None, 0),
+            (13, "last_maintenance_date", "TEXT", 0, None, 0),
+            (14, "in_service_date", "TEXT", 0, None, 0),
+        ]
+
+        # Set up the fetchall calls in the correct sequence
+        mock_cursor.fetchall.side_effect = [
+            users_data,  # SELECT * FROM users
+            users_columns,  # PRAGMA table_info(users)
+            travelers_data,  # SELECT * FROM travelers
+            travelers_columns,  # PRAGMA table_info(travelers)
+            scooters_data,  # SELECT * FROM scooters
+            scooters_columns,  # PRAGMA table_info(scooters)
+        ]
 
         # Mock connection with proper context manager behavior
         mock_conn = Mock()
@@ -275,7 +283,7 @@ class TestBackupManagerUnit:
 
         backup_manager.db.get_connection.return_value = mock_conn
 
-        # Mock ZIP file operations
+        # Mock ZIP file operations with proper context manager support
         mock_zip_instance = Mock()
         mock_zip_instance.writestr = Mock()
         mock_zip_instance.__enter__ = Mock(return_value=mock_zip_instance)
@@ -379,16 +387,20 @@ class TestBackupManagerUnit:
             },
         }
 
-        # Mock ZIP file reading
+        # Mock ZIP file reading with proper context manager support
         mock_zip_instance = Mock()
         mock_zip_instance.namelist.return_value = [
             "backup_20240101_120000.json",
             "backup_info.txt",
         ]
+        mock_zip_instance.__enter__ = Mock(return_value=mock_zip_instance)
+        mock_zip_instance.__exit__ = Mock(return_value=None)
 
-        # Mock opening files within ZIP
+        # Mock file objects with proper context manager support
         mock_json_file = Mock()
         mock_json_file.read.return_value = json.dumps(mock_backup_data).encode("utf-8")
+        mock_json_file.__enter__ = Mock(return_value=mock_json_file)
+        mock_json_file.__exit__ = Mock(return_value=None)
 
         mock_metadata_file = Mock()
         mock_metadata = {
@@ -396,6 +408,8 @@ class TestBackupManagerUnit:
             "description": "Urban Mobility System Database Backup",
         }
         mock_metadata_file.read.return_value = json.dumps(mock_metadata).encode("utf-8")
+        mock_metadata_file.__enter__ = Mock(return_value=mock_metadata_file)
+        mock_metadata_file.__exit__ = Mock(return_value=None)
 
         def mock_open_side_effect(filename):
             if filename.endswith(".json"):
@@ -405,8 +419,6 @@ class TestBackupManagerUnit:
             return Mock()
 
         mock_zip_instance.open.side_effect = mock_open_side_effect
-        mock_zip_instance.__enter__ = Mock(return_value=mock_zip_instance)
-        mock_zip_instance.__exit__ = Mock(return_value=None)
         mock_zipfile.return_value = mock_zip_instance
 
         # Act
@@ -557,7 +569,7 @@ class TestBackupManagerUnit:
         # Arrange
         mock_exists.return_value = True
 
-        # Mock ZIP file validation
+        # Mock ZIP file validation with proper context manager support
         mock_zip_instance = Mock()
         mock_zip_instance.namelist.return_value = ["backup_20240101_120000.json"]
         mock_zip_instance.__enter__ = Mock(return_value=mock_zip_instance)
@@ -745,15 +757,26 @@ class TestBackupManagerUnit:
         mock_exists.return_value = True
         mock_input.return_value = "CANCEL"
 
-        # Mock ZIP file reading
-        mock_backup_data = {"tables": {"users": {"columns": ["id"], "data": [[1]]}}}
+        # Mock backup data in ZIP format
+        mock_backup_data = {
+            "created_at": "2024-01-01T12:00:00",
+            "created_by": "super_admin",
+            "tables": {"users": {"columns": ["id"], "data": [[1]]}},
+        }
+
+        # Mock ZIP file reading with proper context manager support
         mock_zip_instance = Mock()
         mock_zip_instance.namelist.return_value = ["backup_20240101_120000.json"]
-        mock_json_file = Mock()
-        mock_json_file.read.return_value = json.dumps(mock_backup_data).encode("utf-8")
-        mock_zip_instance.open.return_value = mock_json_file
         mock_zip_instance.__enter__ = Mock(return_value=mock_zip_instance)
         mock_zip_instance.__exit__ = Mock(return_value=None)
+
+        # Mock file object with proper context manager support
+        mock_json_file = Mock()
+        mock_json_file.read.return_value = json.dumps(mock_backup_data).encode("utf-8")
+        mock_json_file.__enter__ = Mock(return_value=mock_json_file)
+        mock_json_file.__exit__ = Mock(return_value=None)
+
+        mock_zip_instance.open.return_value = mock_json_file
         mock_zipfile.return_value = mock_zip_instance
 
         # Act
@@ -791,22 +814,29 @@ class TestBackupManagerUnit:
 
         # Mock backup data in ZIP format
         mock_backup_data = {
+            "created_at": "2024-01-01T12:00:00",
+            "created_by": "super_admin",
             "tables": {
                 "users": {"columns": ["id", "username"], "data": [[1, "test_user"]]}
-            }
+            },
         }
 
-        # Mock ZIP file operations
+        # Mock ZIP file operations with proper context manager support
         mock_zip_instance = Mock()
         mock_zip_instance.namelist.return_value = ["backup_20240101_120000.json"]
-        mock_json_file = Mock()
-        mock_json_file.read.return_value = json.dumps(mock_backup_data).encode("utf-8")
-        mock_zip_instance.open.return_value = mock_json_file
         mock_zip_instance.__enter__ = Mock(return_value=mock_zip_instance)
         mock_zip_instance.__exit__ = Mock(return_value=None)
+
+        # Mock file object with proper context manager support
+        mock_json_file = Mock()
+        mock_json_file.read.return_value = json.dumps(mock_backup_data).encode("utf-8")
+        mock_json_file.__enter__ = Mock(return_value=mock_json_file)
+        mock_json_file.__exit__ = Mock(return_value=None)
+
+        mock_zip_instance.open.return_value = mock_json_file
         mock_zipfile.return_value = mock_zip_instance
 
-        # Mock database operations
+        # Mock database operations with proper context manager support
         mock_cursor = Mock()
         mock_conn = Mock()
         mock_conn.cursor.return_value = mock_cursor
