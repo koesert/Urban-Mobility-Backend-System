@@ -13,6 +13,7 @@ class DatabaseContext:
         # Create data directory if it doesn't exist
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self.init_database()
+        self.migrate_database()
         self.create_super_admin()
 
     def get_connection(self):
@@ -25,11 +26,13 @@ class DatabaseContext:
             cursor = conn.cursor()
 
             # Users table - stores all system users (not travelers)
+            # Now includes username_encrypted field
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT UNIQUE NOT NULL,
+                    username_encrypted TEXT,
                     password_hash TEXT NOT NULL,
                     role TEXT NOT NULL CHECK (role IN ('super_admin', 'system_admin', 'service_engineer')),
                     first_name TEXT,
@@ -89,15 +92,54 @@ class DatabaseContext:
 
             conn.commit()
 
+    def migrate_database(self):
+        """Migrate existing database to add username_encrypted column and encrypt existing usernames"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Check if username_encrypted column exists
+            cursor.execute("PRAGMA table_info(users)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            if "username_encrypted" not in columns:
+                # Add the column
+                cursor.execute("ALTER TABLE users ADD COLUMN username_encrypted TEXT")
+                
+                # Encrypt existing usernames
+                cursor.execute("SELECT id, username FROM users")
+                users = cursor.fetchall()
+                
+                for user_id, username in users:
+                    encrypted_username = encrypt_field(username)
+                    cursor.execute(
+                        "UPDATE users SET username_encrypted = ? WHERE id = ?",
+                        (encrypted_username, user_id)
+                    )
+                
+                conn.commit()
+
     def create_super_admin(self):
         """Create hard-coded super admin account"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
-            # Check if super admin already exists
-            cursor.execute(
-                "SELECT id FROM users WHERE username = ?", ("super_admin",))
-            if cursor.fetchone():
+            # Check if super admin already exists (case-insensitive check)
+            cursor.execute("SELECT id, username_encrypted FROM users WHERE role = 'super_admin'")
+            existing_admins = cursor.fetchall()
+            
+            # Check for existing super_admin by decrypting usernames
+            super_admin_exists = False
+            for _, encrypted_username in existing_admins:
+                if encrypted_username:
+                    try:
+                        decrypted = decrypt_field(encrypted_username)
+                        if decrypted.lower() == "super_admin":
+                            super_admin_exists = True
+                            break
+                    except:
+                        continue
+            
+            if super_admin_exists:
                 return  # Super admin already exists
 
             # Hash the password Admin_123?
@@ -105,11 +147,12 @@ class DatabaseContext:
 
             cursor.execute(
                 """
-                INSERT INTO users (username, password_hash, role, first_name, last_name, created_date)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO users (username, username_encrypted, password_hash, role, first_name, last_name, created_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     "super_admin",
+                    encrypt_field("super_admin"),
                     password_hash,
                     "super_admin",
                     "Super",
@@ -150,16 +193,32 @@ class DatabaseContext:
             # Prevent creation of additional super_admins via this method
             raise PermissionError("Cannot create additional super_admin accounts")
 
+        # Check if username already exists (case-insensitive)
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, username_encrypted FROM users")
+            existing_users = cursor.fetchall()
+            
+            for _, encrypted_username in existing_users:
+                if encrypted_username:
+                    try:
+                        decrypted = decrypt_field(encrypted_username)
+                        if decrypted.lower() == username.lower():
+                            raise ValueError("Username already exists")
+                    except:
+                        continue
+
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                INSERT INTO users (username, password_hash, role, first_name, last_name, created_date, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users (username, username_encrypted, password_hash, role, first_name, last_name, created_date, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     username,
+                    encrypt_field(username),
                     password_hash,
                     role,
                     first_name,
@@ -241,14 +300,33 @@ class DatabaseContext:
         """Reset a user's password and return the new temporary password"""
         temp_password = self.generate_temporary_password()
         password_hash = hashlib.sha256(temp_password.encode()).hexdigest()
+        
+        # Find user by encrypted username (case-insensitive)
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE users SET password_hash = ? WHERE username = ?",
-                (password_hash, username),
-            )
-            conn.commit()
-        return temp_password
+            cursor.execute("SELECT id, username_encrypted FROM users")
+            users = cursor.fetchall()
+            
+            user_id = None
+            for uid, encrypted_username in users:
+                if encrypted_username:
+                    try:
+                        decrypted = decrypt_field(encrypted_username)
+                        if decrypted.lower() == username.lower():
+                            user_id = uid
+                            break
+                    except:
+                        continue
+            
+            if user_id:
+                cursor.execute(
+                    "UPDATE users SET password_hash = ? WHERE id = ?",
+                    (password_hash, user_id),
+                )
+                conn.commit()
+                return temp_password
+            else:
+                raise ValueError("User not found")
 
     def delete_scooter_by_id(self, scooter_id):
         """Delete a scooter by its ID. Returns True if deleted, False if not found."""
