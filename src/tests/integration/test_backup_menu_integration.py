@@ -112,10 +112,10 @@ class TestBackupMenuIntegration:
             print_calls = [call.args[0] for call in mock_print.call_args_list]
             menu_text = " ".join(str(call) for call in print_calls)
 
-            # Super admin should see all options
-            assert "1. Create Backup" in menu_text
-            assert "2. Restore Backup" in menu_text
-            assert "3. View Backup Information" in menu_text
+            # Super admin should see all options - FIXED text
+            assert "1. Create ZIP Backup" in menu_text  # FIXED
+            assert "2. Restore from ZIP Backup" in menu_text
+            assert "3. View ZIP Backup Information" in menu_text
             assert "4. Manage Restore Codes" in menu_text
             assert "5. Back to Main Menu" in menu_text
 
@@ -163,13 +163,15 @@ class TestBackupMenuIntegration:
             print_calls = [call.args[0] for call in mock_print.call_args_list]
             menu_text = " ".join(str(call) for call in print_calls)
 
-            # System admin should see limited options
-            assert "1. Create Backup" in menu_text
-            assert "2. Restore Backup" in menu_text
-            assert "3. View Backup Information" in menu_text
+            # System admin should see limited options - FIXED text
+            assert "1. Create ZIP Backup" in menu_text  # FIXED
+            assert "2. Restore from ZIP Backup" in menu_text
+            assert "3. View ZIP Backup Information" in menu_text
             # Should NOT see manage restore codes
             assert "Manage Restore Codes" not in menu_text
             assert "4. Back to Main Menu" in menu_text
+
+            assert choice == "4"
 
             assert choice == "4"
 
@@ -316,11 +318,11 @@ class TestBackupMenuIntegration:
 
             handle_restore_menu(backup_manager)
 
-            # Verify backup was listed
+            # Verify backup was listed - FIXED text
             print_calls = [call.args[0] for call in mock_print.call_args_list]
             menu_text = " ".join(str(call) for call in print_calls)
 
-            assert "AVAILABLE BACKUPS" in menu_text
+            assert "AVAILABLE ZIP BACKUPS" in menu_text
             assert backup_filename in menu_text
 
     def test_handle_restore_menu_no_backups(self, menu_test_environment):
@@ -335,7 +337,7 @@ class TestBackupMenuIntegration:
             handle_restore_menu(backup_manager)
 
             # Verify no backups message
-            mock_print.assert_any_call("No backup files found.")
+            mock_print.assert_any_call("No ZIP backup files found.")
 
     def test_handle_restore_codes_menu_super_admin(self, menu_test_environment):
         """Test restore codes menu for super administrator"""
@@ -419,11 +421,11 @@ class TestBackupMenuIntegration:
 
             generate_restore_code_menu(backup_manager)
 
-            # Verify backup was listed and code was generated
+            # Verify backup was listed and code was generated - FIXED text
             print_calls = [call.args[0] for call in mock_print.call_args_list]
             menu_text = " ".join(str(call) for call in print_calls)
 
-            assert "SELECT BACKUP FOR RESTORE CODE" in menu_text
+            assert "SELECT ZIP BACKUP FOR RESTORE CODE" in menu_text  # FIXED
             assert backup_filename in menu_text
             assert "Restore code generated successfully" in menu_text
 
@@ -440,7 +442,8 @@ class TestBackupMenuIntegration:
 
             # Verify no backups message
             mock_print.assert_any_call(
-                "No backup files found. Create a backup first.")
+                "No ZIP backup files found. Create a backup first."
+        )
 
     def test_revoke_restore_code_menu_no_codes(self, menu_test_environment):
         """Test revoke restore code menu when no codes exist"""
@@ -616,7 +619,7 @@ class TestBackupMenuIntegration:
 
         # Test menu choice handling for backup operations
         # Mock the backup menu function at the module level where it's imported
-        with patch("main.create_backup_menu") as mock_create_backup:
+        with patch("um_members.create_backup_menu") as mock_create_backup:
             # Mock input to provide confirmation for backup creation
             with patch("builtins.input", return_value="y"):
                 # Find create backup option

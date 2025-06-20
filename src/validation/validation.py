@@ -16,7 +16,7 @@ class SecurityError(ValidationError):
     """Specific error for security violations"""
 
     def __init__(
-        self, field_name: str, message: str, attempted_value: str = None
+        self, field_name: str, message: str, attempted_value: Optional[str] = None
     ):
         super().__init__(field_name, message)
         self.attempted_value = attempted_value
@@ -99,7 +99,7 @@ class InputValidator:
         event_type: str,
         field_name: str,
         value: str,
-        pattern_matched: str = None,
+        pattern_matched: Optional[str] = None,
     ):
         if self.log_security_events:
             event = {

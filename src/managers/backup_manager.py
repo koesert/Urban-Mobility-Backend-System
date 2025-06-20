@@ -4,6 +4,8 @@ import sqlite3
 import hashlib
 import secrets
 import string
+import zipfile
+import tempfile
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -51,7 +53,7 @@ class BackupManager:
         return user_role == "super_admin"
 
     def create_backup(self) -> Optional[str]:
-        """Create a backup of the database"""
+        """Create a ZIP backup of the database"""
         if not self.can_create_backup():
             print("Access denied: You don't have permission to create backups!")
             return None
@@ -59,7 +61,7 @@ class BackupManager:
         try:
             # Generate backup filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_filename = f"backup_{timestamp}.json"
+            backup_filename = f"backup_{timestamp}.zip"
             backup_path = os.path.join(self.backup_dir, backup_filename)
 
             # Create backup data structure
@@ -109,9 +111,26 @@ class BackupManager:
                     "data": scooters_data,
                 }
 
-            # Write backup to file
-            with open(backup_path, "w", encoding="utf-8") as f:
-                json.dump(backup_data, f, indent=2, default=str)
+            # Create ZIP file with JSON data inside
+            with zipfile.ZipFile(backup_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+                # Convert backup data to JSON string
+                json_data = json.dumps(backup_data, indent=2, default=str)
+
+                # Add JSON data to ZIP file
+                json_filename = f"backup_{timestamp}.json"
+                zipf.writestr(json_filename, json_data.encode("utf-8"))
+
+                # Add metadata file
+                metadata = {
+                    "backup_format": "urban_mobility_v1.0",
+                    "created_at": backup_data["created_at"],
+                    "created_by": backup_data["created_by"],
+                    "json_file": json_filename,
+                    "description": "Urban Mobility System Database Backup",
+                }
+                zipf.writestr(
+                    "backup_info.txt", json.dumps(metadata, indent=2).encode("utf-8")
+                )
 
             print(f"✅ Backup created successfully!")
             print(f"   File: {backup_filename}")
@@ -119,6 +138,7 @@ class BackupManager:
             print(f"   Users: {len(backup_data['tables']['users']['data'])}")
             print(f"   Travelers: {len(backup_data['tables']['travelers']['data'])}")
             print(f"   Scooters: {len(backup_data['tables']['scooters']['data'])}")
+            print(f"   Format: ZIP compressed")
 
             return backup_filename
 
@@ -127,11 +147,11 @@ class BackupManager:
             return None
 
     def list_backups(self) -> List[str]:
-        """List available backup files"""
+        """List available ZIP backup files"""
         try:
             backup_files = []
             for filename in os.listdir(self.backup_dir):
-                if filename.startswith("backup_") and filename.endswith(".json"):
+                if filename.startswith("backup_") and filename.endswith(".zip"):
                     backup_files.append(filename)
 
             return sorted(backup_files, reverse=True)  # Newest first
@@ -141,7 +161,7 @@ class BackupManager:
             return []
 
     def show_backup_info(self, backup_filename: str) -> Optional[Dict]:
-        """Show information about a backup file"""
+        """Show information about a ZIP backup file"""
         try:
             backup_path = os.path.join(self.backup_dir, backup_filename)
 
@@ -149,22 +169,62 @@ class BackupManager:
                 print(f"Backup file not found: {backup_filename}")
                 return None
 
-            with open(backup_path, "r", encoding="utf-8") as f:
-                backup_data = json.load(f)
+            # Extract and read backup data from ZIP
+            with zipfile.ZipFile(backup_path, "r") as zipf:
+                # List files in ZIP
+                file_list = zipf.namelist()
+
+                # Look for JSON backup file
+                json_file = None
+                for file in file_list:
+                    if file.endswith(".json") and file.startswith("backup_"):
+                        json_file = file
+                        break
+
+                if not json_file:
+                    print(f"No valid backup data found in ZIP file: {backup_filename}")
+                    return None
+
+                # Read JSON data
+                with zipf.open(json_file) as f:
+                    json_content = f.read().decode("utf-8")
+                    backup_data = json.loads(json_content)
+
+                # Try to read metadata if available
+                metadata = None
+                if "backup_info.txt" in file_list:
+                    with zipf.open("backup_info.txt") as f:
+                        try:
+                            metadata_content = f.read().decode("utf-8")
+                            metadata = json.loads(metadata_content)
+                        except:
+                            pass
 
             print(f"\n📋 BACKUP INFORMATION")
             print(f"   File: {backup_filename}")
+            print(f"   Format: ZIP compressed backup")
             print(f"   Created: {backup_data.get('created_at', 'Unknown')}")
             print(f"   Created by: {backup_data.get('created_by', 'Unknown')}")
             print(f"   Version: {backup_data.get('version', 'Unknown')}")
+
+            # Show ZIP file info
+            backup_size = os.path.getsize(backup_path)
+            print(f"   File size: {backup_size:,} bytes")
+            print(f"   Contains: {len(file_list)} file(s)")
 
             if "tables" in backup_data:
                 for table_name, table_data in backup_data["tables"].items():
                     record_count = len(table_data.get("data", []))
                     print(f"   {table_name.title()}: {record_count} records")
 
+            if metadata:
+                print(f"   Description: {metadata.get('description', 'N/A')}")
+
             return backup_data
 
+        except zipfile.BadZipFile:
+            print(f"Error: {backup_filename} is not a valid ZIP file")
+            return None
         except Exception as e:
             print(f"Error reading backup info: {e}")
             return None
@@ -172,7 +232,7 @@ class BackupManager:
     def restore_backup(
         self, backup_filename: str, restore_code: Optional[str] = None
     ) -> bool:
-        """Restore database from backup"""
+        """Restore database from ZIP backup"""
         # Check permissions
         if restore_code:
             # Using restore code - system admin or super admin
@@ -198,11 +258,31 @@ class BackupManager:
                 print(f"❌ Backup file not found: {backup_filename}")
                 return False
 
-            # Load backup data
-            with open(backup_path, "r", encoding="utf-8") as f:
-                backup_data = json.load(f)
+            # Extract and load backup data from ZIP
+            with zipfile.ZipFile(backup_path, "r") as zipf:
+                # Find JSON backup file
+                json_file = None
+                for file in zipf.namelist():
+                    if file.endswith(".json") and file.startswith("backup_"):
+                        json_file = file
+                        break
+
+                if not json_file:
+                    print(
+                        f"❌ No valid backup data found in ZIP file: {backup_filename}"
+                    )
+                    return False
+
+                # Read JSON data
+                with zipf.open(json_file) as f:
+                    json_content = f.read().decode("utf-8")
+                    backup_data = json.loads(json_content)
 
             print(f"⚠️  WARNING: This will replace ALL current data!")
+            print(f"   Backup file: {backup_filename}")
+            print(f"   Created: {backup_data.get('created_at', 'Unknown')}")
+            print(f"   Created by: {backup_data.get('created_by', 'Unknown')}")
+
             confirm = input("Type 'RESTORE' to confirm: ").strip()
 
             if confirm != "RESTORE":
@@ -241,26 +321,45 @@ class BackupManager:
             if restore_code:
                 self._invalidate_restore_code(restore_code)
 
-            print("✅ Database restored successfully!")
+            print("✅ Database restored successfully from ZIP backup!")
             print("⚠️  Please restart the application to ensure proper functionality.")
 
             return True
 
+        except zipfile.BadZipFile:
+            print(f"❌ Error: {backup_filename} is not a valid ZIP file")
+            return False
         except Exception as e:
             print(f"❌ Error restoring backup: {e}")
             return False
 
     def generate_restore_code(self, backup_filename: str) -> Optional[str]:
-        """Generate a restore code for a specific backup"""
+        """Generate a restore code for a specific ZIP backup"""
         if not self.can_manage_restore_codes():
             print("Access denied: Only Super Administrator can generate restore codes!")
             return None
 
         try:
-            # Verify backup exists
+            # Verify backup exists and is valid ZIP
             backup_path = os.path.join(self.backup_dir, backup_filename)
             if not os.path.exists(backup_path):
                 print(f"❌ Backup file not found: {backup_filename}")
+                return None
+
+            # Verify it's a valid ZIP backup
+            try:
+                with zipfile.ZipFile(backup_path, "r") as zipf:
+                    # Check if it contains a valid backup JSON file
+                    json_files = [
+                        f
+                        for f in zipf.namelist()
+                        if f.endswith(".json") and f.startswith("backup_")
+                    ]
+                    if not json_files:
+                        print(f"❌ Invalid backup file: {backup_filename}")
+                        return None
+            except zipfile.BadZipFile:
+                print(f"❌ Invalid ZIP file: {backup_filename}")
                 return None
 
             # Generate secure restore code
@@ -277,6 +376,7 @@ class BackupManager:
             print(f"✅ Restore code generated successfully!")
             print(f"   Code: {code}")
             print(f"   Backup: {backup_filename}")
+            print(f"   Format: ZIP compressed backup")
             print(f"   ⚠️  This code can only be used once!")
             print(f"   ⚠️  Keep this code secure!")
 
@@ -301,8 +401,9 @@ class BackupManager:
 
         for code, info in self.restore_codes.items():
             status = "USED" if info["used"] else "ACTIVE"
+            backup_type = "ZIP" if info["backup_file"].endswith(".zip") else "Legacy"
             print(f"Code: {code}")
-            print(f"   Backup: {info['backup_file']}")
+            print(f"   Backup: {info['backup_file']} ({backup_type})")
             print(f"   Created: {info['created_at']}")
             print(f"   Status: {status}")
             print("-" * 40)

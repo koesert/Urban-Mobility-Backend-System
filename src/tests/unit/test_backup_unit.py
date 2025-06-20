@@ -2,6 +2,7 @@ import pytest
 import os
 import tempfile
 import json
+import zipfile
 import gc
 from unittest.mock import Mock, patch, MagicMock, call
 from datetime import datetime
@@ -136,140 +137,143 @@ class TestBackupManagerUnit:
         )
 
     @patch("managers.backup_manager.datetime")
-    @patch("managers.backup_manager.os.makedirs")
+    @patch("managers.backup_manager.zipfile.ZipFile")
     @patch("managers.backup_manager.os.path.join")
-    @patch("builtins.open", create=True)
-    @patch("managers.backup_manager.json.dump")
     @patch("builtins.print")
     def test_create_backup_success(
         self,
         mock_print,
-        mock_json_dump,
-        mock_open,
         mock_join,
-        mock_makedirs,
+        mock_zipfile,
         mock_datetime,
         backup_manager,
     ):
-        """Test successful backup creation with comprehensive error handling"""
+        """Test successful backup creation with ZIP format"""
 
         # Arrange
         backup_manager.auth.current_user["role"] = "super_admin"
         mock_datetime.now.return_value.strftime.return_value = "20240101_120000"
         mock_datetime.now.return_value.isoformat.return_value = "2024-01-01T12:00:00"
-        mock_join.return_value = "/test/backups/backup_20240101_120000.json"
-        mock_makedirs.return_value = None
+        mock_join.return_value = "/test/backups/backup_20240101_120000.zip"
 
         # Create comprehensive mock for database operations
         mock_cursor = Mock()
-        mock_cursor.execute = Mock()
 
-        # Define all the data that will be returned by fetchall calls
-        mock_data_sequence = [
-            # Users SELECT
-            [
-                (
-                    1,
-                    "super_admin",
-                    "hash",
-                    "super_admin",
-                    "Super",
-                    "Admin",
-                    "2024-01-01",
-                    1,
-                    1,
-                )
-            ],
-            # Users PRAGMA table_info
-            [
-                ("id",),
-                ("username",),
-                ("password_hash",),
-                ("role",),
-                ("first_name",),
-                ("last_name",),
-                ("created_date",),
-                ("created_by",),
-                ("is_active",),
-            ],
-            # Travelers SELECT
-            [
-                (
-                    1,
-                    "CUST001",
-                    "John",
-                    "Doe",
-                    "01-01-1990",
-                    "Male",
-                    "Main St",
-                    "1",
-                    "1000AA",
-                    "Amsterdam",
-                    "encrypted_email",
-                    "encrypted_phone",
-                    "encrypted_license",
-                    "2024-01-01",
-                )
-            ],
-            # Travelers PRAGMA table_info
-            [
-                ("id",),
-                ("customer_id",),
-                ("first_name",),
-                ("last_name",),
-                ("birthday",),
-                ("gender",),
-                ("street_name",),
-                ("house_number",),
-                ("zip_code",),
-                ("city",),
-                ("email",),
-                ("mobile_phone",),
-                ("driving_license",),
-                ("registration_date",),
-            ],
-            # Scooters SELECT
-            [
-                (
-                    1,
-                    "Brand",
-                    "Model",
-                    "encrypted_serial",
-                    25,
-                    1000,
-                    80,
-                    20,
-                    40,
-                    51.92250,
-                    4.47917,
-                    "",
-                    100.0,
-                    "2024-01-01",
-                    "2024-01-01",
-                )
-            ],
-            # Scooters PRAGMA table_info
-            [
-                ("id",),
-                ("brand",),
-                ("model",),
-                ("serial_number",),
-                ("top_speed",),
-                ("battery_capacity",),
-                ("state_of_charge",),
-                ("target_range_min",),
-                ("target_range_max",),
-                ("latitude",),
-                ("longitude",),
-                ("out_of_service_status",),
-                ("mileage",),
-                ("last_maintenance_date",),
-                ("in_service_date",),
-            ],
+        # Set up the fetchall calls to return data in the correct sequence
+        # The create_backup method makes these calls in order:
+        # 1. SELECT * FROM users
+        # 2. PRAGMA table_info(users)
+        # 3. SELECT * FROM travelers
+        # 4. PRAGMA table_info(travelers)
+        # 5. SELECT * FROM scooters
+        # 6. PRAGMA table_info(scooters)
+
+        users_data = [
+            (
+                1,
+                "super_admin",
+                "hash",
+                "super_admin",
+                "Super",
+                "Admin",
+                "2024-01-01",
+                1,
+                1,
+            )
+        ]
+        users_columns = [
+            (0, "id", "INTEGER", 0, None, 1),
+            (1, "username", "TEXT", 0, None, 0),
+            (2, "password_hash", "TEXT", 0, None, 0),
+            (3, "role", "TEXT", 0, None, 0),
+            (4, "first_name", "TEXT", 0, None, 0),
+            (5, "last_name", "TEXT", 0, None, 0),
+            (6, "created_date", "TEXT", 0, None, 0),
+            (7, "created_by", "INTEGER", 0, None, 0),
+            (8, "is_active", "INTEGER", 0, None, 0),
         ]
 
-        # Use side_effect with the predefined sequence
-        mock_cursor.fetchall.side_effect = mock_data_sequence
+        travelers_data = [
+            (
+                1,
+                "CUST001",
+                "John",
+                "Doe",
+                "01-01-1990",
+                "Male",
+                "Main St",
+                "1",
+                "1000AA",
+                "Amsterdam",
+                "encrypted_email",
+                "encrypted_phone",
+                "encrypted_license",
+                "2024-01-01",
+            )
+        ]
+        travelers_columns = [
+            (0, "id", "INTEGER", 0, None, 1),
+            (1, "customer_id", "TEXT", 0, None, 0),
+            (2, "first_name", "TEXT", 0, None, 0),
+            (3, "last_name", "TEXT", 0, None, 0),
+            (4, "birthday", "TEXT", 0, None, 0),
+            (5, "gender", "TEXT", 0, None, 0),
+            (6, "street_name", "TEXT", 0, None, 0),
+            (7, "house_number", "TEXT", 0, None, 0),
+            (8, "zip_code", "TEXT", 0, None, 0),
+            (9, "city", "TEXT", 0, None, 0),
+            (10, "email", "TEXT", 0, None, 0),
+            (11, "mobile_phone", "TEXT", 0, None, 0),
+            (12, "driving_license", "TEXT", 0, None, 0),
+            (13, "registration_date", "TEXT", 0, None, 0),
+        ]
+
+        scooters_data = [
+            (
+                1,
+                "Brand",
+                "Model",
+                "encrypted_serial",
+                25,
+                1000,
+                80,
+                20,
+                40,
+                51.92250,
+                4.47917,
+                "",
+                100.0,
+                "2024-01-01",
+                "2024-01-01",
+            )
+        ]
+        scooters_columns = [
+            (0, "id", "INTEGER", 0, None, 1),
+            (1, "brand", "TEXT", 0, None, 0),
+            (2, "model", "TEXT", 0, None, 0),
+            (3, "serial_number", "TEXT", 0, None, 0),
+            (4, "top_speed", "INTEGER", 0, None, 0),
+            (5, "battery_capacity", "INTEGER", 0, None, 0),
+            (6, "state_of_charge", "INTEGER", 0, None, 0),
+            (7, "target_range_min", "INTEGER", 0, None, 0),
+            (8, "target_range_max", "INTEGER", 0, None, 0),
+            (9, "latitude", "REAL", 0, None, 0),
+            (10, "longitude", "REAL", 0, None, 0),
+            (11, "out_of_service_status", "TEXT", 0, None, 0),
+            (12, "mileage", "REAL", 0, None, 0),
+            (13, "last_maintenance_date", "TEXT", 0, None, 0),
+            (14, "in_service_date", "TEXT", 0, None, 0),
+        ]
+
+        # Set up the fetchall calls in the correct sequence
+        mock_cursor.fetchall.side_effect = [
+            users_data,  # SELECT * FROM users
+            users_columns,  # PRAGMA table_info(users)
+            travelers_data,  # SELECT * FROM travelers
+            travelers_columns,  # PRAGMA table_info(travelers)
+            scooters_data,  # SELECT * FROM scooters
+            scooters_columns,  # PRAGMA table_info(scooters)
+        ]
 
         # Mock connection with proper context manager behavior
         mock_conn = Mock()
@@ -279,72 +283,57 @@ class TestBackupManagerUnit:
 
         backup_manager.db.get_connection.return_value = mock_conn
 
-        # Mock file operations to prevent actual file I/O
-        mock_file_handle = Mock()
-        mock_open.return_value.__enter__ = Mock(return_value=mock_file_handle)
-        mock_open.return_value.__exit__ = Mock(return_value=None)
+        # Mock ZIP file operations with proper context manager support
+        mock_zip_instance = Mock()
+        mock_zip_instance.writestr = Mock()
+        mock_zip_instance.__enter__ = Mock(return_value=mock_zip_instance)
+        mock_zip_instance.__exit__ = Mock(return_value=None)
+        mock_zipfile.return_value = mock_zip_instance
 
-        # Act - wrap in try-catch to see any exceptions
-        try:
-            result = backup_manager.create_backup()
-            print(f"DEBUG: create_backup returned: {result}")
-        except Exception as e:
-            print(f"DEBUG: Exception occurred: {e}")
-            print(f"DEBUG: Exception type: {type(e)}")
-            import traceback
-
-            traceback.print_exc()
-            raise
+        # Act
+        result = backup_manager.create_backup()
 
         # Assert
-        assert (
-            result == "backup_20240101_120000.json"
-        ), f"Expected backup filename, got: {result}"
+        assert result == "backup_20240101_120000.zip"  # ZIP extension
 
-        # Verify all the mocked calls were made correctly
-        assert (
-            mock_cursor.execute.call_count == 6
-        ), f"Expected 6 execute calls, got {mock_cursor.execute.call_count}"
-        assert (
-            mock_cursor.fetchall.call_count == 6
-        ), f"Expected 6 fetchall calls, got {mock_cursor.fetchall.call_count}"
+        # Verify database operations
+        assert mock_cursor.execute.call_count == 6
+        assert mock_cursor.fetchall.call_count == 6
 
-        # Verify file operations
-        mock_open.assert_called_once_with(
-            "/test/backups/backup_20240101_120000.json", "w", encoding="utf-8"
+        # Verify ZIP file operations
+        mock_zipfile.assert_called_once_with(
+            "/test/backups/backup_20240101_120000.zip", "w", zipfile.ZIP_DEFLATED
         )
-        mock_json_dump.assert_called_once()
+        assert mock_zip_instance.writestr.call_count == 2  # JSON data + metadata
 
         # Verify success message was printed
         print_calls = [call.args[0] for call in mock_print.call_args_list]
         success_messages = [
             call for call in print_calls if "Backup created successfully" in str(call)
         ]
-        assert (
-            len(success_messages) > 0
-        ), f"Expected success message, got print calls: {print_calls}"
+        assert len(success_messages) > 0
 
-        @patch("os.listdir")
-        def test_list_backups_success(self, mock_listdir, backup_manager):
-            """Test successful backup listing"""
-            # Arrange
-            mock_listdir.return_value = [
-                "backup_20240101_120000.json",
-                "backup_20240102_140000.json",
-                "other_file.txt",
-                "backup_20240103_160000.json",
-            ]
+    @patch("os.listdir")
+    def test_list_backups_success(self, mock_listdir, backup_manager):
+        """Test successful backup listing with ZIP files"""
+        # Arrange
+        mock_listdir.return_value = [
+            "backup_20240101_120000.zip",  # ZIP files
+            "backup_20240102_140000.zip",
+            "other_file.txt",
+            "backup_20240103_160000.zip",
+        ]
 
-            # Act
-            result = backup_manager.list_backups()
+        # Act
+        result = backup_manager.list_backups()
 
-            # Assert
-            expected = [
-                "backup_20240103_160000.json",  # Newest first
-                "backup_20240102_140000.json",
-                "backup_20240101_120000.json",
-            ]
-            assert result == expected
+        # Assert
+        expected = [
+            "backup_20240103_160000.zip",  # Newest first
+            "backup_20240102_140000.zip",
+            "backup_20240101_120000.zip",
+        ]
+        assert result == expected
 
     @patch("os.listdir")
     def test_list_backups_empty_directory(self, mock_listdir, backup_manager):
@@ -375,15 +364,18 @@ class TestBackupManagerUnit:
         mock_print.assert_called_with("Error listing backups: Directory not found")
 
     @patch("os.path.exists")
-    @patch("builtins.open", create=True)
-    @patch("json.load")
+    @patch("os.path.getsize")
+    @patch("managers.backup_manager.zipfile.ZipFile")
     @patch("builtins.print")
     def test_show_backup_info_success(
-        self, mock_print, mock_json_load, mock_open, mock_exists, backup_manager
+        self, mock_print, mock_zipfile, mock_getsize, mock_exists, backup_manager
     ):
-        """Test successful backup info display"""
+        """Test successful backup info display for ZIP file"""
         # Arrange
         mock_exists.return_value = True
+        mock_getsize.return_value = 1024  # 1KB file
+
+        # Mock backup data
         mock_backup_data = {
             "created_at": "2024-01-01T12:00:00",
             "created_by": "super_admin",
@@ -394,16 +386,50 @@ class TestBackupManagerUnit:
                 "scooters": {"data": [1]},
             },
         }
-        mock_json_load.return_value = mock_backup_data
+
+        # Mock ZIP file reading with proper context manager support
+        mock_zip_instance = Mock()
+        mock_zip_instance.namelist.return_value = [
+            "backup_20240101_120000.json",
+            "backup_info.txt",
+        ]
+        mock_zip_instance.__enter__ = Mock(return_value=mock_zip_instance)
+        mock_zip_instance.__exit__ = Mock(return_value=None)
+
+        # Mock file objects with proper context manager support
+        mock_json_file = Mock()
+        mock_json_file.read.return_value = json.dumps(mock_backup_data).encode("utf-8")
+        mock_json_file.__enter__ = Mock(return_value=mock_json_file)
+        mock_json_file.__exit__ = Mock(return_value=None)
+
+        mock_metadata_file = Mock()
+        mock_metadata = {
+            "backup_format": "urban_mobility_v1.0",
+            "description": "Urban Mobility System Database Backup",
+        }
+        mock_metadata_file.read.return_value = json.dumps(mock_metadata).encode("utf-8")
+        mock_metadata_file.__enter__ = Mock(return_value=mock_metadata_file)
+        mock_metadata_file.__exit__ = Mock(return_value=None)
+
+        def mock_open_side_effect(filename):
+            if filename.endswith(".json"):
+                return mock_json_file
+            elif filename == "backup_info.txt":
+                return mock_metadata_file
+            return Mock()
+
+        mock_zip_instance.open.side_effect = mock_open_side_effect
+        mock_zipfile.return_value = mock_zip_instance
 
         # Act
-        result = backup_manager.show_backup_info("backup_test.json")
+        result = backup_manager.show_backup_info("backup_test.zip")
 
         # Assert
         assert result == mock_backup_data
         # Check that the print was called with the expected message
         print_calls = [call.args[0] for call in mock_print.call_args_list]
         assert any("📋 BACKUP INFORMATION" in str(call) for call in print_calls)
+        assert any("ZIP compressed backup" in str(call) for call in print_calls)
 
     @patch("os.path.exists")
     @patch("builtins.print")
@@ -415,11 +441,29 @@ class TestBackupManagerUnit:
         mock_exists.return_value = False
 
         # Act
-        result = backup_manager.show_backup_info("nonexistent.json")
+        result = backup_manager.show_backup_info("nonexistent.zip")
 
         # Assert
         assert result is None
-        mock_print.assert_called_with("Backup file not found: nonexistent.json")
+        mock_print.assert_called_with("Backup file not found: nonexistent.zip")
+
+    @patch("os.path.exists")
+    @patch("managers.backup_manager.zipfile.ZipFile")
+    @patch("builtins.print")
+    def test_show_backup_info_invalid_zip(
+        self, mock_print, mock_zipfile, mock_exists, backup_manager
+    ):
+        """Test backup info for invalid ZIP file"""
+        # Arrange
+        mock_exists.return_value = True
+        mock_zipfile.side_effect = zipfile.BadZipFile("Not a zip file")
+
+        # Act
+        result = backup_manager.show_backup_info("corrupt.zip")
+
+        # Assert
+        assert result is None
+        mock_print.assert_called_with("Error: corrupt.zip is not a valid ZIP file")
 
     def test_generate_secure_code(self, backup_manager):
         """Test secure code generation"""
@@ -439,7 +483,7 @@ class TestBackupManagerUnit:
         # Arrange
         test_code = "TEST12345678"
         backup_manager.restore_codes[test_code] = {
-            "backup_file": "test_backup.json",
+            "backup_file": "test_backup.zip",
             "created_at": "2024-01-01T12:00:00",
             "created_by": "super_admin",
             "used": False,
@@ -453,7 +497,7 @@ class TestBackupManagerUnit:
         # Arrange
         test_code = "USED12345678"
         backup_manager.restore_codes[test_code] = {
-            "backup_file": "test_backup.json",
+            "backup_file": "test_backup.zip",
             "created_at": "2024-01-01T12:00:00",
             "created_by": "super_admin",
             "used": True,
@@ -472,7 +516,7 @@ class TestBackupManagerUnit:
         # Arrange
         test_code = "VALID12345678"
         backup_manager.restore_codes[test_code] = {
-            "backup_file": "test_backup.json",
+            "backup_file": "test_backup.zip",
             "created_at": "2024-01-01T12:00:00",
             "created_by": "super_admin",
             "used": False,
@@ -491,7 +535,7 @@ class TestBackupManagerUnit:
         backup_manager.auth.current_user["role"] = "system_admin"
 
         # Act
-        result = backup_manager.generate_restore_code("test_backup.json")
+        result = backup_manager.generate_restore_code("test_backup.zip")
 
         # Assert
         assert result is None
@@ -509,31 +553,57 @@ class TestBackupManagerUnit:
         mock_exists.return_value = False
 
         # Act
-        result = backup_manager.generate_restore_code("nonexistent.json")
+        result = backup_manager.generate_restore_code("nonexistent.zip")
 
         # Assert
         assert result is None
-        mock_print.assert_called_with("❌ Backup file not found: nonexistent.json")
+        mock_print.assert_called_with("❌ Backup file not found: nonexistent.zip")
 
     @patch("os.path.exists")
+    @patch("managers.backup_manager.zipfile.ZipFile")
     @patch("builtins.print")
     def test_generate_restore_code_success(
-        self, mock_print, mock_exists, backup_manager
+        self, mock_print, mock_zipfile, mock_exists, backup_manager
     ):
-        """Test successful restore code generation"""
+        """Test successful restore code generation for ZIP backup"""
         # Arrange
         mock_exists.return_value = True
 
+        # Mock ZIP file validation with proper context manager support
+        mock_zip_instance = Mock()
+        mock_zip_instance.namelist.return_value = ["backup_20240101_120000.json"]
+        mock_zip_instance.__enter__ = Mock(return_value=mock_zip_instance)
+        mock_zip_instance.__exit__ = Mock(return_value=None)
+        mock_zipfile.return_value = mock_zip_instance
+
         # Act
-        result = backup_manager.generate_restore_code("test_backup.json")
+        result = backup_manager.generate_restore_code("test_backup.zip")
 
         # Assert
         assert result is not None
         assert len(result) == 12
         assert result in backup_manager.restore_codes
-        assert backup_manager.restore_codes[result]["backup_file"] == "test_backup.json"
+        assert backup_manager.restore_codes[result]["backup_file"] == "test_backup.zip"
         assert backup_manager.restore_codes[result]["used"] is False
         mock_print.assert_any_call("✅ Restore code generated successfully!")
+
+    @patch("os.path.exists")
+    @patch("managers.backup_manager.zipfile.ZipFile")
+    @patch("builtins.print")
+    def test_generate_restore_code_invalid_zip(
+        self, mock_print, mock_zipfile, mock_exists, backup_manager
+    ):
+        """Test restore code generation for invalid ZIP file"""
+        # Arrange
+        mock_exists.return_value = True
+        mock_zipfile.side_effect = zipfile.BadZipFile("Not a zip file")
+
+        # Act
+        result = backup_manager.generate_restore_code("invalid.zip")
+
+        # Assert
+        assert result is None
+        mock_print.assert_called_with("❌ Invalid ZIP file: invalid.zip")
 
     @patch("builtins.print")
     def test_list_restore_codes_permission_denied(self, mock_print, backup_manager):
@@ -560,16 +630,16 @@ class TestBackupManagerUnit:
 
     @patch("builtins.print")
     def test_list_restore_codes_with_codes(self, mock_print, backup_manager):
-        """Test listing active restore codes"""
+        """Test listing active restore codes for ZIP backups"""
         # Arrange
         backup_manager.restore_codes = {
             "CODE12345678": {
-                "backup_file": "backup1.json",
+                "backup_file": "backup1.zip",
                 "created_at": "2024-01-01T12:00:00",
                 "used": False,
             },
             "USED87654321": {
-                "backup_file": "backup2.json",
+                "backup_file": "backup2.zip",
                 "created_at": "2024-01-02T14:00:00",
                 "used": True,
             },
@@ -579,9 +649,11 @@ class TestBackupManagerUnit:
         backup_manager.list_restore_codes()
 
         # Assert
-        # Check that the print was called with the expected header
         print_calls = [call.args[0] for call in mock_print.call_args_list]
         assert any("📋 ACTIVE RESTORE CODES" in str(call) for call in print_calls)
+        # Should indicate ZIP format
+        all_output = " ".join(str(call) for call in print_calls)
+        assert "ZIP" in all_output
 
     @patch("builtins.print")
     def test_revoke_restore_code_permission_denied(self, mock_print, backup_manager):
@@ -604,7 +676,7 @@ class TestBackupManagerUnit:
         # Arrange
         test_code = "REVOKE123456"
         backup_manager.restore_codes[test_code] = {
-            "backup_file": "test.json",
+            "backup_file": "test.zip",
             "created_at": "2024-01-01T12:00:00",
             "used": False,
         }
@@ -636,7 +708,7 @@ class TestBackupManagerUnit:
         backup_manager.auth.current_user["role"] = "system_admin"
 
         # Act
-        result = backup_manager.restore_backup("test_backup.json")
+        result = backup_manager.restore_backup("test_backup.zip")
 
         # Assert
         assert result is False
@@ -651,7 +723,7 @@ class TestBackupManagerUnit:
         backup_manager.auth.current_user["role"] = "system_admin"
 
         # Act
-        result = backup_manager.restore_backup("test_backup.json", "INVALID123")
+        result = backup_manager.restore_backup("test_backup.zip", "INVALID123")
 
         # Assert
         assert result is False
@@ -667,27 +739,48 @@ class TestBackupManagerUnit:
         mock_exists.return_value = False
 
         # Act
-        result = backup_manager.restore_backup("nonexistent.json")
+        result = backup_manager.restore_backup("nonexistent.zip")
 
         # Assert
         assert result is False
-        mock_print.assert_called_with("❌ Backup file not found: nonexistent.json")
+        mock_print.assert_called_with("❌ Backup file not found: nonexistent.zip")
 
     @patch("os.path.exists")
     @patch("builtins.input")
+    @patch("managers.backup_manager.zipfile.ZipFile")
     @patch("builtins.print")
     def test_restore_backup_user_cancellation(
-        self, mock_print, mock_input, mock_exists, backup_manager
+        self, mock_print, mock_zipfile, mock_input, mock_exists, backup_manager
     ):
         """Test restore cancellation by user"""
         # Arrange
         mock_exists.return_value = True
         mock_input.return_value = "CANCEL"
 
-        # Mock open and json.load
-        with patch("builtins.open", create=True), patch("json.load"):
-            # Act
-            result = backup_manager.restore_backup("test_backup.json")
+        # Mock backup data in ZIP format
+        mock_backup_data = {
+            "created_at": "2024-01-01T12:00:00",
+            "created_by": "super_admin",
+            "tables": {"users": {"columns": ["id"], "data": [[1]]}},
+        }
+
+        # Mock ZIP file reading with proper context manager support
+        mock_zip_instance = Mock()
+        mock_zip_instance.namelist.return_value = ["backup_20240101_120000.json"]
+        mock_zip_instance.__enter__ = Mock(return_value=mock_zip_instance)
+        mock_zip_instance.__exit__ = Mock(return_value=None)
+
+        # Mock file object with proper context manager support
+        mock_json_file = Mock()
+        mock_json_file.read.return_value = json.dumps(mock_backup_data).encode("utf-8")
+        mock_json_file.__enter__ = Mock(return_value=mock_json_file)
+        mock_json_file.__exit__ = Mock(return_value=None)
+
+        mock_zip_instance.open.return_value = mock_json_file
+        mock_zipfile.return_value = mock_zip_instance
+
+        # Act
+        result = backup_manager.restore_backup("test_backup.zip")
 
         # Assert
         assert result is False
@@ -695,19 +788,17 @@ class TestBackupManagerUnit:
 
     @patch("os.path.exists")
     @patch("builtins.input")
-    @patch("builtins.open", create=True)
-    @patch("json.load")
+    @patch("managers.backup_manager.zipfile.ZipFile")
     @patch("builtins.print")
     def test_restore_backup_success_with_code(
         self,
         mock_print,
-        mock_json_load,
-        mock_open,
+        mock_zipfile,
         mock_input,
         mock_exists,
         backup_manager,
     ):
-        """Test successful restore with restore code"""
+        """Test successful restore with restore code from ZIP backup"""
         # Arrange
         mock_exists.return_value = True
         mock_input.return_value = "RESTORE"
@@ -715,21 +806,37 @@ class TestBackupManagerUnit:
         # Setup restore code
         test_code = "VALID12345678"
         backup_manager.restore_codes[test_code] = {
-            "backup_file": "test_backup.json",
+            "backup_file": "test_backup.zip",
             "created_at": "2024-01-01T12:00:00",
             "created_by": "super_admin",
             "used": False,
         }
 
-        # Mock backup data
+        # Mock backup data in ZIP format
         mock_backup_data = {
+            "created_at": "2024-01-01T12:00:00",
+            "created_by": "super_admin",
             "tables": {
                 "users": {"columns": ["id", "username"], "data": [[1, "test_user"]]}
-            }
+            },
         }
-        mock_json_load.return_value = mock_backup_data
 
-        # Mock database operations
+        # Mock ZIP file operations with proper context manager support
+        mock_zip_instance = Mock()
+        mock_zip_instance.namelist.return_value = ["backup_20240101_120000.json"]
+        mock_zip_instance.__enter__ = Mock(return_value=mock_zip_instance)
+        mock_zip_instance.__exit__ = Mock(return_value=None)
+
+        # Mock file object with proper context manager support
+        mock_json_file = Mock()
+        mock_json_file.read.return_value = json.dumps(mock_backup_data).encode("utf-8")
+        mock_json_file.__enter__ = Mock(return_value=mock_json_file)
+        mock_json_file.__exit__ = Mock(return_value=None)
+
+        mock_zip_instance.open.return_value = mock_json_file
+        mock_zipfile.return_value = mock_zip_instance
+
+        # Mock database operations with proper context manager support
         mock_cursor = Mock()
         mock_conn = Mock()
         mock_conn.cursor.return_value = mock_cursor
@@ -741,26 +848,28 @@ class TestBackupManagerUnit:
         backup_manager.auth.current_user["role"] = "system_admin"
 
         # Act
-        result = backup_manager.restore_backup("test_backup.json", test_code)
+        result = backup_manager.restore_backup("test_backup.zip", test_code)
 
         # Assert
         assert result is True
         assert backup_manager.restore_codes[test_code]["used"] is True
-        mock_print.assert_any_call("✅ Database restored successfully!")
+        mock_print.assert_any_call("✅ Database restored successfully from ZIP backup!")
         mock_conn.commit.assert_called_once()
 
     @patch("os.path.exists")
+    @patch("managers.backup_manager.zipfile.ZipFile")
     @patch("builtins.print")
-    def test_restore_backup_database_error(
-        self, mock_print, mock_exists, backup_manager
+    def test_restore_backup_invalid_zip_file(
+        self, mock_print, mock_zipfile, mock_exists, backup_manager
     ):
-        """Test restore with database error"""
+        """Test restore with invalid ZIP file"""
         # Arrange
-        mock_exists.return_value = False
+        mock_exists.return_value = True
+        mock_zipfile.side_effect = zipfile.BadZipFile("Not a valid ZIP file")
 
         # Act
-        result = backup_manager.restore_backup("test_backup.json")
+        result = backup_manager.restore_backup("corrupt.zip")
 
         # Assert
         assert result is False
-        mock_print.assert_called_with("❌ Backup file not found: test_backup.json")
+        mock_print.assert_called_with("❌ Error: corrupt.zip is not a valid ZIP file")

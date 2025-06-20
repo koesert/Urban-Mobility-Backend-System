@@ -33,25 +33,26 @@ def display_backup_menu(backup_manager):
         return "5"
 
     print(f"\n--- BACKUP MANAGEMENT ({user['role'].replace('_', ' ').title()}) ---")
+    print("📦 ZIP Format Backups")
 
     menu_options = []
     option_num = 1
 
     # Create backup - available to super admin and system admin
     if backup_manager.can_create_backup():
-        print(f"{option_num}. Create Backup")
+        print(f"{option_num}. Create ZIP Backup")
         menu_options.append(option_num)
         option_num += 1
 
     # Restore backup - available to super admin directly, system admin with codes
     if backup_manager.can_restore_backup() or backup_manager.can_use_restore_code():
-        print(f"{option_num}. Restore Backup")
+        print(f"{option_num}. Restore from ZIP Backup")
         menu_options.append(option_num)
         option_num += 1
 
     # List backups - available to anyone who can create or restore
     if backup_manager.can_create_backup() or backup_manager.can_use_restore_code():
-        print(f"{option_num}. View Backup Information")
+        print(f"{option_num}. View ZIP Backup Information")
         menu_options.append(option_num)
         option_num += 1
 
@@ -77,15 +78,24 @@ def handle_restore_menu(backup_manager):
     backups = backup_manager.list_backups()
 
     if not backups:
-        print("No backup files found.")
+        print("No ZIP backup files found.")
         return
 
-    print("\n--- AVAILABLE BACKUPS ---")
+    print("\n--- AVAILABLE ZIP BACKUPS ---")
     for i, backup in enumerate(backups, 1):
-        print(f"{i}. {backup}")
+        # Show file size for ZIP files
+        backup_path = f"{backup_manager.backup_dir}/{backup}"
+        try:
+            import os
+
+            size = os.path.getsize(backup_path)
+            size_str = f" ({size:,} bytes)"
+        except:
+            size_str = ""
+        print(f"{i}. {backup}{size_str}")
 
     try:
-        choice = int(input(f"\nSelect backup to restore (1-{len(backups)}): "))
+        choice = int(input(f"\nSelect ZIP backup to restore (1-{len(backups)}): "))
         if 1 <= choice <= len(backups):
             selected_backup = backups[choice - 1]
 
@@ -121,20 +131,31 @@ def handle_restore_menu(backup_manager):
 
 
 def list_and_show_backups(backup_manager):
-    """List backups and show detailed information"""
+    """List ZIP backups and show detailed information"""
     backups = backup_manager.list_backups()
 
     if not backups:
-        print("No backup files found.")
+        print("No ZIP backup files found.")
         return
 
-    print("\n--- AVAILABLE BACKUPS ---")
+    print("\n--- AVAILABLE ZIP BACKUPS ---")
     for i, backup in enumerate(backups, 1):
-        print(f"{i}. {backup}")
+        # Show file size and creation date
+        backup_path = f"{backup_manager.backup_dir}/{backup}"
+        try:
+            import os
+            import datetime
+
+            size = os.path.getsize(backup_path)
+            mtime = os.path.getmtime(backup_path)
+            date_str = datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
+            print(f"{i}. {backup} ({size:,} bytes, {date_str})")
+        except:
+            print(f"{i}. {backup}")
 
     try:
         choice = int(
-            input(f"\nSelect backup for details (1-{len(backups)}, 0 for all): ")
+            input(f"\nSelect ZIP backup for details (1-{len(backups)}, 0 for all): ")
         )
 
         if choice == 0:
@@ -163,6 +184,7 @@ def handle_restore_codes_menu(backup_manager):
 
     while True:
         print("\n--- RESTORE CODES MANAGEMENT ---")
+        print("📦 For ZIP Format Backups")
         print("1. Generate Restore Code")
         print("2. List Active Codes")
         print("3. Revoke Restore Code")
@@ -191,15 +213,24 @@ def generate_restore_code_menu(backup_manager):
     backups = backup_manager.list_backups()
 
     if not backups:
-        print("No backup files found. Create a backup first.")
+        print("No ZIP backup files found. Create a backup first.")
         return
 
-    print("\n--- SELECT BACKUP FOR RESTORE CODE ---")
+    print("\n--- SELECT ZIP BACKUP FOR RESTORE CODE ---")
     for i, backup in enumerate(backups, 1):
-        print(f"{i}. {backup}")
+        # Show additional info for ZIP files
+        backup_path = f"{backup_manager.backup_dir}/{backup}"
+        try:
+            import os
+
+            size = os.path.getsize(backup_path)
+            size_str = f" ({size:,} bytes)"
+        except:
+            size_str = ""
+        print(f"{i}. {backup}{size_str}")
 
     try:
-        choice = int(input(f"\nSelect backup (1-{len(backups)}): "))
+        choice = int(input(f"\nSelect ZIP backup (1-{len(backups)}): "))
         if 1 <= choice <= len(backups):
             selected_backup = backups[choice - 1]
             backup_manager.generate_restore_code(selected_backup)
@@ -230,15 +261,18 @@ def revoke_restore_code_menu(backup_manager):
 
 
 def create_backup_menu(auth_service):
-    """Simple create backup function for main menu"""
+    """Simple create ZIP backup function for main menu"""
     backup_manager = BackupManager(auth_service)
 
     if not backup_manager.can_create_backup():
         print("Access denied: You don't have permission to create backups!")
         return
 
-    print("\n--- CREATE BACKUP ---")
-    confirm = input("Create a backup of the current database? (y/n): ").lower().strip()
+    print("\n--- CREATE ZIP BACKUP ---")
+    print("📦 This will create a compressed ZIP backup containing all database data")
+    confirm = (
+        input("Create a ZIP backup of the current database? (y/n): ").lower().strip()
+    )
 
     if confirm == "y":
         backup_manager.create_backup()
@@ -247,7 +281,7 @@ def create_backup_menu(auth_service):
 
 
 def restore_backup_menu(auth_service):
-    """Simple restore backup function for main menu"""
+    """Simple restore ZIP backup function for main menu"""
     backup_manager = BackupManager(auth_service)
 
     if not (
@@ -255,6 +289,9 @@ def restore_backup_menu(auth_service):
     ):
         print("Access denied: You don't have permission to restore backups!")
         return
+
+    print("\n--- RESTORE FROM ZIP BACKUP ---")
+    print("📦 Select a ZIP backup file to restore from")
 
     # Redirect to full backup menu for restore operations
     handle_restore_menu(backup_manager)
