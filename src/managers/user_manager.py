@@ -1,6 +1,7 @@
 import hashlib
 import random
 import string
+import re
 from datetime import datetime
 from data.db_context import DatabaseContext
 
@@ -507,12 +508,48 @@ class UserManager:
         except Exception:
             return None
 
+    def _validate_username(self, username):
+        """Validate username: 8-10 chars, starts with letter/underscore, allowed chars"""
+        if not (8 <= len(username) <= 10):
+            print("Username must be 8-10 characters long.")
+            return False
+        if not re.match(r"^[A-Za-z_][A-Za-z0-9_]{7,9}$", username):
+            print("Username must start with a letter or underscore and contain only letters, digits, or underscores.")
+            return False
+        return True
+
+    def _validate_password(self, password):
+        """Validate password complexity: 12-30 chars, must contain upper, lower, digit, special char"""
+        if not (12 <= len(password) <= 30):
+            print("Password must be 12-30 characters long.")
+            return False
+        if not re.search(r"[A-Z]", password):
+            print("Password must contain at least one uppercase letter.")
+            return False
+        if not re.search(r"[a-z]", password):
+            print("Password must contain at least one lowercase letter.")
+            return False
+        if not re.search(r"\d", password):
+            print("Password must contain at least one digit.")
+            return False
+
+        special_characters = r"[~!@#$%&_-+=`|\(){}[\]:\"'<>,.?/]"
+        if not re.search(special_characters, password):
+            print("Password must contain at least one special character.")
+            return False
+        return True
+
     def _get_unique_username(self):
         """Get a unique username from user input"""
         while True:
             username = input("Username: ").strip()
             if not username:
                 print("Username cannot be empty!")
+                if input("Try again? (y/n): ").lower() != "y":
+                    return None
+                continue
+
+            if not self._validate_username(username):
                 if input("Try again? (y/n): ").lower() != "y":
                     return None
                 continue
@@ -543,34 +580,36 @@ class UserManager:
 
     def _generate_temporary_password(self):
         """Generate a secure temporary password with guaranteed complexity"""
-        # Ensure at least one of each character type
-        password_chars = []
-        password_chars.append(random.choice(string.ascii_lowercase))
-        password_chars.append(random.choice(string.ascii_uppercase))
-        password_chars.append(random.choice(string.digits))
-        password_chars.append(random.choice("!@#$%^&*"))
+        while True:
+            password_chars = []
+            password_chars.append(random.choice(string.ascii_lowercase))
+            password_chars.append(random.choice(string.ascii_uppercase))
+            password_chars.append(random.choice(string.digits))
+            password_chars.append(random.choice("!@#$%^&*"))
 
-        # Fill the rest randomly
-        all_chars = string.ascii_letters + string.digits + "!@#$%^&*"
-        for _ in range(8):  # Total 12 characters
-            password_chars.append(random.choice(all_chars))
+            # Fill the rest randomly
+            all_chars = string.ascii_letters + string.digits + "!@#$%^&*"
+            for _ in range(8):  # Total 12 characters
+                password_chars.append(random.choice(all_chars))
 
-        # Shuffle to avoid predictable patterns
-        random.shuffle(password_chars)
-        return "".join(password_chars)
+            # Shuffle to avoid predictable patterns
+            random.shuffle(password_chars)
+            password = "".join(password_chars)
+            if self._validate_password(password):
+                return password
 
     def _get_new_password(self):
         """Get new password with validation"""
         while True:
-            password = input("New Password (min 8 characters): ").strip()
+            password = input(
+                "New Password (12-30 chars, upper/lower/digit/special): ").strip()
             if not password:
                 print("Password cannot be empty!")
                 if input("Try again? (y/n): ").lower() != "y":
                     return None
                 continue
 
-            if len(password) < 8:
-                print("Password must be at least 8 characters long!")
+            if not self._validate_password(password):
                 if input("Try again? (y/n): ").lower() != "y":
                     return None
                 continue
