@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from data.encryption import decrypt_field, encrypt_field
-from validation.validation import InputValidator, ValidationError
+from validation.validation import InputValidator, ValidationError, SecurityError
 from validation.validation_helper import ValidationHelper
 
 
@@ -283,6 +283,10 @@ class TravelersManager:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
 
+                ALLOWED_FIELDS = [
+                    'email', 'mobile_phone', 'driving_license',
+                    'street_name', 'house_number', 'zip_code', 'city'
+                ]
                 updates = {}
 
                 try:
@@ -295,11 +299,10 @@ class TravelersManager:
                     current_phone = "[ENCRYPTED]"
                     current_license = "[ENCRYPTED]"
 
+                # Email
                 while True:
                     new_email = input(f"\nEmail ({current_email}): ").strip()
-                    if not new_email:
-                        break
-                    if new_email.lower() == "skip":
+                    if not new_email or new_email.lower() == "skip":
                         break
                     if new_email.lower() == "cancel":
                         print("Update cancelled.")
@@ -311,110 +314,88 @@ class TravelersManager:
                         break
                     except ValidationError as e:
                         print(f"✗ {e.message}")
-                        retry = self._get_yes_no_input("Try again?")
-                        if not retry:
+                        if not self._get_yes_no_input("Try again?"):
                             break
 
+                # Mobile Phone
                 while True:
                     print(f"\n📱 Current Mobile Phone: {current_phone}")
                     print("   Format: +31 6 XXXXXXXX")
                     print("   Enter only the 8 digits after '+31 6'")
                     new_phone = input("Phone (+31 6): ").strip()
-                    if not new_phone:
-                        break
-                    if new_phone.lower() == "skip":
+                    if not new_phone or new_phone.lower() == "skip":
                         break
                     if new_phone.lower() == "cancel":
                         print("Update cancelled.")
                         return
                     try:
-                        validated_phone = self.validator.validate_dutch_mobile(
-                            new_phone
-                        )
+                        validated_phone = self.validator.validate_dutch_mobile(new_phone)
                         updates["mobile_phone"] = encrypt_field(validated_phone)
                         print("✓ Phone validated and formatted")
                         break
                     except ValidationError as e:
                         print(f"✗ {e.message}")
-                        retry = self._get_yes_no_input("Try again?")
-                        if not retry:
+                        if not self._get_yes_no_input("Try again?"):
                             break
 
+                # Driving License
                 while True:
-                    new_license = input(
-                        f"\nDriving License ({current_license}): "
-                    ).strip()
-                    if not new_license:
-                        break
-                    if new_license.lower() == "skip":
+                    new_license = input(f"\nDriving License ({current_license}): ").strip()
+                    if not new_license or new_license.lower() == "skip":
                         break
                     if new_license.lower() == "cancel":
                         print("Update cancelled.")
                         return
                     try:
-                        validated_license = self.validator.validate_driving_license(
-                            new_license
-                        )
+                        validated_license = self.validator.validate_driving_license(new_license)
                         updates["driving_license"] = encrypt_field(validated_license)
                         print("✓ Driving license validated")
                         break
                     except ValidationError as e:
                         print(f"✗ {e.message}")
-                        retry = self._get_yes_no_input("Try again?")
-                        if not retry:
+                        if not self._get_yes_no_input("Try again?"):
                             break
 
+                # Street Name
                 while True:
                     new_street = input(f"\nStreet Name ({traveler[6]}): ").strip()
-                    if not new_street:
-                        break
-                    if new_street.lower() == "skip":
+                    if not new_street or new_street.lower() == "skip":
                         break
                     if new_street.lower() == "cancel":
                         print("Update cancelled.")
                         return
                     try:
-                        validated_street = self.validator.validate_street_name(
-                            new_street
-                        )
+                        validated_street = self.validator.validate_street_name(new_street)
                         updates["street_name"] = validated_street
                         print("✓ Street name validated")
                         break
                     except ValidationError as e:
                         print(f"✗ {e.message}")
-                        retry = self._get_yes_no_input("Try again?")
-                        if not retry:
+                        if not self._get_yes_no_input("Try again?"):
                             break
 
+                # House Number
                 while True:
                     new_house = input(f"\nHouse Number ({traveler[7]}): ").strip()
-                    if not new_house:
-                        break
-                    if new_house.lower() == "skip":
+                    if not new_house or new_house.lower() == "skip":
                         break
                     if new_house.lower() == "cancel":
                         print("Update cancelled.")
                         return
                     try:
-                        validated_house = self.validator.validate_house_number(
-                            new_house
-                        )
+                        validated_house = self.validator.validate_house_number(new_house)
                         updates["house_number"] = validated_house
                         print("✓ House number validated")
                         break
                     except ValidationError as e:
                         print(f"✗ {e.message}")
-                        retry = self._get_yes_no_input("Try again?")
-                        if not retry:
+                        if not self._get_yes_no_input("Try again?"):
                             break
 
+                # Zip Code
                 while True:
-                    new_zip = input(
-                        f"\nZip Code ({traveler[8]}) - Format 1234AB: "
-                    ).strip()
-                    if not new_zip:
-                        break
-                    if new_zip.lower() == "skip":
+                    new_zip = input(f"\nZip Code ({traveler[8]}) - Format 1234AB: ").strip()
+                    if not new_zip or new_zip.lower() == "skip":
                         break
                     if new_zip.lower() == "cancel":
                         print("Update cancelled.")
@@ -426,26 +407,22 @@ class TravelersManager:
                         break
                     except ValidationError as e:
                         print(f"✗ {e.message}")
-                        retry = self._get_yes_no_input("Try again?")
-                        if not retry:
+                        if not self._get_yes_no_input("Try again?"):
                             break
 
+                # City
                 while True:
                     print(f"\nCurrent City: {traveler[9]}")
                     print("Available cities:")
                     for i, city in enumerate(self.PREDEFINED_CITIES, 1):
                         print(f"  {i}. {city}")
                     print("  0. Keep current city")
-
-                    city_choice = input(
-                        "Select city number (or enter 'cancel'): "
-                    ).strip()
+                    city_choice = input("Select city number (or enter 'cancel'): ").strip()
                     if not city_choice or city_choice == "0":
                         break
                     if city_choice.lower() == "cancel":
                         print("Update cancelled.")
                         return
-
                     try:
                         city_index = int(city_choice) - 1
                         if 0 <= city_index < len(self.PREDEFINED_CITIES):
@@ -462,12 +439,18 @@ class TravelersManager:
                     print("No changes made.")
                     return
 
+                # Ensure only allowed fields are updated
+                for field in updates.keys():
+                    if field not in ALLOWED_FIELDS:
+                        print(f"Error: Field '{field}' is not allowed to be updated")
+                        return
+
                 print("\n📋 SUMMARY OF CHANGES:")
                 for field, value in updates.items():
                     if field in ["email", "mobile_phone", "driving_license"]:
                         try:
                             display_value = decrypt_field(value)
-                        except Exception as e:
+                        except Exception:
                             display_value = "[ENCRYPTED VALUE]"
                     else:
                         display_value = value
@@ -478,24 +461,23 @@ class TravelersManager:
                     print("Update cancelled.")
                     return
 
-                set_clause = ", ".join([f"{field} = ?" for field in updates.keys()])
-                values = list(updates.values()) + [customer_id]
+                # Build safe UPDATE query
+                query_parts = []
+                values = []
+                for field in ALLOWED_FIELDS:
+                    if field in updates:
+                        query_parts.append(f"{field} = ?")
+                        values.append(updates[field])
+                if query_parts:
+                    query = f"UPDATE travelers SET {', '.join(query_parts)} WHERE customer_id = ?"
+                    values.append(customer_id)
+                    cursor.execute(query, values)
+                    conn.commit()
 
-                cursor.execute(
-                    f"""
-                    UPDATE travelers
-                    SET {set_clause}
-                    WHERE customer_id = ?
-                """,
-                    values,
-                )
-
-                conn.commit()
-
-                if cursor.rowcount > 0:
-                    print("✅ Traveler updated successfully!")
-                else:
-                    print("No changes were made.")
+                    if cursor.rowcount > 0:
+                        print("✅ Traveler updated successfully!")
+                    else:
+                        print("No changes were made.")
 
         except Exception as e:
             print(f"Error updating traveler: {e}")

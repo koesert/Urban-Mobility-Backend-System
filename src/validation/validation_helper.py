@@ -1,11 +1,12 @@
-from validation.validation import InputValidator, ValidationError
+from validation.validation import InputValidator, ValidationError, SecurityError
 from typing import Dict
 
 
 class ValidationHelper:
 
     def __init__(self):
-        self.validator = InputValidator()
+        # Use the enhanced validator with security logging enabled
+        self.validator = InputValidator(log_security_events=True)
 
     def get_validated_input(
         self,
@@ -22,6 +23,13 @@ class ValidationHelper:
                 validated_value = validator_method(user_input)
                 print(f"✓ {field_name.replace('_', ' ').title()} validated")
                 return validated_value
+
+            except SecurityError as e:
+                # Handle security violations specifically
+                print(f"🚫 SECURITY VIOLATION: {e.message}")
+                print("This incident has been logged.")
+                # For security violations, don't allow retry
+                raise KeyboardInterrupt("Security violation - input terminated")
 
             except ValidationError as e:
                 print(f"✗ {e.message}")
@@ -44,6 +52,7 @@ class ValidationHelper:
     def validate_traveler_interactive(self) -> Dict[str, str]:
         try:
             print("\n--- Enter your data ---")
+            print("🔒 All inputs are validated for security\n")
 
             data = {}
 
@@ -81,10 +90,22 @@ class ValidationHelper:
             )
 
             print("\n✓ All data collection completed successfully!")
+
+            # Log security report if any events occurred
+            security_events = self.validator.get_security_report()
+            if security_events:
+                print(f"\n⚠️  {len(security_events)} security events were detected and blocked during input.")
+
             return data
 
-        except KeyboardInterrupt:
-            print("\nData collection cancelled")
+        except KeyboardInterrupt as e:
+            # Check if it was a security violation
+            if "Security violation" in str(e):
+                print("\n🚫 Data collection terminated due to security violation")
+                # Log final security report
+                self._print_security_summary()
+            else:
+                print("\nData collection cancelled")
             raise
 
     def _get_gender_selection(self) -> str:
@@ -138,3 +159,23 @@ class ValidationHelper:
                     raise KeyboardInterrupt("User cancelled")
                 else:
                     print("Please enter 'y' for yes or 'n' for no.")
+
+    def _print_security_summary(self):
+        """Print summary of security events"""
+        security_events = self.validator.get_security_report()
+        if security_events:
+            print("\n📊 Security Event Summary:")
+            print(f"Total security events: {len(security_events)}")
+
+            # Group by event type
+            event_types = {}
+            for event in security_events:
+                event_type = event['event_type']
+                if event_type not in event_types:
+                    event_types[event_type] = 0
+                event_types[event_type] += 1
+
+            for event_type, count in event_types.items():
+                print(f"  - {event_type}: {count} time(s)")
+        else:
+            print("No security events detected.")

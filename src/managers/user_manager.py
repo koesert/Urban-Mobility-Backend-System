@@ -238,6 +238,9 @@ class UserManager:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
 
+                # Define allowed fields that can be updated
+                ALLOWED_FIELDS = ['first_name', 'last_name', 'is_active']
+                
                 # Collect updates
                 updates = {}
 
@@ -265,18 +268,33 @@ class UserManager:
                     print("No changes made.")
                     return
 
-                # Build UPDATE query
-                set_clause = ", ".join([f"{field} = ?" for field in updates.keys()])
-                values = list(updates.values()) + [user_id]
+                # Validate that all update fields are in allowed list
+                for field in updates.keys():
+                    if field not in ALLOWED_FIELDS:
+                        print(f"Error: Field '{field}' is not allowed to be updated")
+                        return
 
-                cursor.execute(
-                    f"""
-                    UPDATE users
-                    SET {set_clause}
-                    WHERE id = ?
-                """,
-                    values,
-                )
+                # Build UPDATE query using only validated fields
+                if len(updates) == 1:
+                    field = list(updates.keys())[0]
+                    cursor.execute(
+                        f"UPDATE users SET {field} = ? WHERE id = ?",
+                        (updates[field], user_id)
+                    )
+                elif len(updates) == 2:
+                    fields = list(updates.keys())
+                    cursor.execute(
+                        f"UPDATE users SET {fields[0]} = ?, {fields[1]} = ? WHERE id = ?",
+                        (updates[fields[0]], updates[fields[1]], user_id)
+                    )
+                elif len(updates) == 3:
+                    cursor.execute(
+                        "UPDATE users SET first_name = ?, last_name = ?, is_active = ? WHERE id = ?",
+                        (updates.get('first_name', user[3]), 
+                         updates.get('last_name', user[4]), 
+                         updates.get('is_active', user[6]), 
+                         user_id)
+                    )
 
                 conn.commit()
 
