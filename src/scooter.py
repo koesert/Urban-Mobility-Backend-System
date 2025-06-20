@@ -1,5 +1,6 @@
 import re
 from data.db_context import DatabaseContext
+from data.encryption import decrypt_field
 from datetime import datetime
 
 
@@ -125,6 +126,11 @@ def add_new_scooter(role_manager):
     try:
         db.insert_scooter(scooter)
         print("Scooter added successfully!")
+        role_manager.auth.logger.log_activity(
+            username=role_manager.auth.current_user["username"],
+            activity="Add Scooter",
+            details=f"Scooter with serial number: {serial_number} added."
+        )
     except Exception as e:
         print("Failed to add scooter:", e)
 
@@ -147,7 +153,7 @@ def delete_scooter(role_manager):
         print("\nAvailable scooters:")
         for s in scooters:
             print(
-                f"ID: {s['id']} | {s['brand']} {s['model']} | Serial: {s['serial_number']} | Status: {s['out_of_service_status']}")
+                f"ID: {s['id']} | Brand: {s['brand']} | Model: {s['model']} | Serial number: {s['serial_number']} | Status: {s['out_of_service_status']}")
 
         scooter_id = input(
             "Enter the ID of the scooter you want to delete: ")
@@ -158,6 +164,11 @@ def delete_scooter(role_manager):
         deleted = db.delete_scooter_by_id(scooter_id)
         if deleted:
             print(f"Scooter with ID {scooter_id} successfully deleted.")
+            role_manager.auth.logger.log_activity(
+                username=role_manager.auth.current_user["username"],
+                activity="Delete Scooter",
+                details=f"Scooter with ID: {scooter_id} & serial number: {decrypt_field(deleted['serial_number'])} deleted."
+            )
         else:
             print(f"No scooter found with ID {scooter_id}.")
     except Exception as e:
@@ -184,8 +195,7 @@ def modify_scooter(role_manager):
         print("\nAvailable scooters:")
         for s in scooters:
             print(
-                f"ID: {s['id']} | {s['brand']} {s['model']} | Serial: {s['serial_number']} | Status: {s['out_of_service_status']}"
-            )
+                f"ID: {s['id']} | Brand: {s['brand']} | Model: {s['model']} | Serial number: {s['serial_number']} | Status: {s['out_of_service_status']}")
 
         scooter_id = input("Enter the ID of the scooter you want to modify: ")
         if not scooter_id.isdigit():
@@ -301,6 +311,12 @@ def modify_scooter(role_manager):
         updated = db.update_scooter_by_id(scooter_id, updated_scooter)
         if updated:
             print(f"Scooter with ID {scooter_id} successfully updated.")
+
+            role_manager.auth.logger.log_activity(
+                username=role_manager.auth.current_user["username"],
+                activity="Modify Scooter",
+                details=f"Scooter with ID: {scooter_id} & serial number: {serial_number} modified."
+            )
         else:
             print(f"Failed to update scooter with ID {scooter_id}.")
 

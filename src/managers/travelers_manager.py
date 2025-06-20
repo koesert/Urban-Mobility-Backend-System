@@ -235,7 +235,8 @@ class TravelersManager:
                 return
 
             # Validate user input first
-            validated_data = self.validator.validate_traveler_data(traveler_data)
+            validated_data = self.validator.validate_traveler_data(
+                traveler_data)
 
             # Add system-generated fields after validation
             customer_id = self._generate_customer_id()
@@ -253,7 +254,14 @@ class TravelersManager:
 
             print(f"\nTraveler added successfully!")
             print(f"Customer ID: {customer_id}")
-            print(f"Name: {validated_data['first_name']} {validated_data['last_name']}")
+            print(
+                f"Name: {validated_data['first_name']} {validated_data['last_name']}")
+
+            self.auth.logger.log_activity(
+                username=self.auth.current_user["username"],
+                activity="Add traveler",
+                details=f"Traveler with customer ID: {customer_id} added."
+            )
 
         except ValidationError as e:
             print(f"Validation failed: {e.message}")
@@ -294,7 +302,8 @@ class TravelersManager:
                     current_phone = decrypt_field(traveler[11])
                     current_license = decrypt_field(traveler[12])
                 except Exception as e:
-                    print(f"Warning: Could not decrypt current traveler data: {e}")
+                    print(
+                        f"Warning: Could not decrypt current traveler data: {e}")
                     current_email = "[ENCRYPTED]"
                     current_phone = "[ENCRYPTED]"
                     current_license = "[ENCRYPTED]"
@@ -308,7 +317,8 @@ class TravelersManager:
                         print("Update cancelled.")
                         return
                     try:
-                        validated_email = self.validator.validate_email(new_email)
+                        validated_email = self.validator.validate_email(
+                            new_email)
                         updates["email"] = encrypt_field(validated_email)
                         print("✓ Email validated")
                         break
@@ -329,8 +339,11 @@ class TravelersManager:
                         print("Update cancelled.")
                         return
                     try:
-                        validated_phone = self.validator.validate_dutch_mobile(new_phone)
-                        updates["mobile_phone"] = encrypt_field(validated_phone)
+                        validated_phone = self.validator.validate_dutch_mobile(
+                            new_phone
+                        )
+                        updates["mobile_phone"] = encrypt_field(
+                            validated_phone)
                         print("✓ Phone validated and formatted")
                         break
                     except ValidationError as e:
@@ -340,15 +353,19 @@ class TravelersManager:
 
                 # Driving License
                 while True:
-                    new_license = input(f"\nDriving License ({current_license}): ").strip()
+                    new_license = input(
+                        f"\nDriving License ({current_license}): ").strip()
                     if not new_license or new_license.lower() == "skip":
                         break
                     if new_license.lower() == "cancel":
                         print("Update cancelled.")
                         return
                     try:
-                        validated_license = self.validator.validate_driving_license(new_license)
-                        updates["driving_license"] = encrypt_field(validated_license)
+                        validated_license = self.validator.validate_driving_license(
+                            new_license
+                        )
+                        updates["driving_license"] = encrypt_field(
+                            validated_license)
                         print("✓ Driving license validated")
                         break
                     except ValidationError as e:
@@ -358,14 +375,18 @@ class TravelersManager:
 
                 # Street Name
                 while True:
-                    new_street = input(f"\nStreet Name ({traveler[6]}): ").strip()
-                    if not new_street or new_street.lower() == "skip":
+                    new_street = input(
+                        f"\nStreet Name ({traveler[6]}): ").strip()
+                    if not new_street:
+                        break
+                    if new_street.lower() == "skip":
                         break
                     if new_street.lower() == "cancel":
                         print("Update cancelled.")
                         return
                     try:
-                        validated_street = self.validator.validate_street_name(new_street)
+                        validated_street = self.validator.validate_street_name(
+                            new_street)
                         updates["street_name"] = validated_street
                         print("✓ Street name validated")
                         break
@@ -376,14 +397,18 @@ class TravelersManager:
 
                 # House Number
                 while True:
-                    new_house = input(f"\nHouse Number ({traveler[7]}): ").strip()
-                    if not new_house or new_house.lower() == "skip":
+                    new_house = input(
+                        f"\nHouse Number ({traveler[7]}): ").strip()
+                    if not new_house:
+                        break
+                    if new_house.lower() == "skip":
                         break
                     if new_house.lower() == "cancel":
                         print("Update cancelled.")
                         return
                     try:
-                        validated_house = self.validator.validate_house_number(new_house)
+                        validated_house = self.validator.validate_house_number(
+                            new_house)
                         updates["house_number"] = validated_house
                         print("✓ House number validated")
                         break
@@ -394,14 +419,16 @@ class TravelersManager:
 
                 # Zip Code
                 while True:
-                    new_zip = input(f"\nZip Code ({traveler[8]}) - Format 1234AB: ").strip()
+                    new_zip = input(
+                        f"\nZip Code ({traveler[8]}) - Format 1234AB: ").strip()
                     if not new_zip or new_zip.lower() == "skip":
                         break
                     if new_zip.lower() == "cancel":
                         print("Update cancelled.")
                         return
                     try:
-                        validated_zip = self.validator.validate_dutch_zipcode(new_zip)
+                        validated_zip = self.validator.validate_dutch_zipcode(
+                            new_zip)
                         updates["zip_code"] = validated_zip
                         print("✓ Zip code validated")
                         break
@@ -417,7 +444,8 @@ class TravelersManager:
                     for i, city in enumerate(self.PREDEFINED_CITIES, 1):
                         print(f"  {i}. {city}")
                     print("  0. Keep current city")
-                    city_choice = input("Select city number (or enter 'cancel'): ").strip()
+                    city_choice = input(
+                        "Select city number (or enter 'cancel'): ").strip()
                     if not city_choice or city_choice == "0":
                         break
                     if city_choice.lower() == "cancel":
@@ -442,7 +470,8 @@ class TravelersManager:
                 # Ensure only allowed fields are updated
                 for field in updates.keys():
                     if field not in ALLOWED_FIELDS:
-                        print(f"Error: Field '{field}' is not allowed to be updated")
+                        print(
+                            f"Error: Field '{field}' is not allowed to be updated")
                         return
 
                 print("\n📋 SUMMARY OF CHANGES:")
@@ -454,7 +483,8 @@ class TravelersManager:
                             display_value = "[ENCRYPTED VALUE]"
                     else:
                         display_value = value
-                    print(f"   {field.replace('_', ' ').title()}: {display_value}")
+                    print(
+                        f"   {field.replace('_', ' ').title()}: {display_value}")
 
                 confirm = self._get_yes_no_input("\nConfirm these changes?")
                 if not confirm:
@@ -476,6 +506,12 @@ class TravelersManager:
 
                     if cursor.rowcount > 0:
                         print("✅ Traveler updated successfully!")
+
+                        self.auth.logger.log_activity(
+                            username=self.auth.current_user["username"],
+                            activity="Update traveler",
+                            details=f"Traveler with customer ID: {customer_id} updated."
+                        )
                     else:
                         print("No changes were made.")
 
@@ -510,12 +546,19 @@ class TravelersManager:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "DELETE FROM travelers WHERE customer_id = ?", (customer_id,)
+                    "DELETE FROM travelers WHERE customer_id = ?", (
+                        customer_id,)
                 )
                 conn.commit()
 
                 if cursor.rowcount > 0:
                     print("✅ Traveler deleted successfully!")
+
+                    self.auth.logger.log_activity(
+                        username=self.auth.current_user["username"],
+                        activity="Delete traveler",
+                        details=f"Traveler with customer ID: {customer_id} deleted."
+                    )
                 else:
                     print("Error: Traveler could not be deleted.")
 
@@ -685,7 +728,8 @@ class TravelersManager:
             print("=" * 50)
 
         except ValueError as e:
-            print(f"Error displaying traveler details: Invalid data format - {str(e)}")
+            print(
+                f"Error displaying traveler details: Invalid data format - {str(e)}")
         except Exception as e:
             print(f"Error displaying traveler details: {str(e)}")
 

@@ -31,7 +31,8 @@ class UrbanMobilitySystem:
                 user = self.auth.get_current_user()
                 # Add safety check even though login succeeded
                 if user:
-                    print(f"\nWelcome, {user['first_name']} {user['last_name']}!")
+                    print(
+                        f"\nWelcome, {user['first_name']} {user['last_name']}!")
                     print(f"Role: {user['role'].replace('_', ' ').title()}")
                     return True
                 else:
@@ -57,7 +58,8 @@ class UrbanMobilitySystem:
 
         permissions = self.role_manager.get_available_permissions()
 
-        print(f"\n--- MAIN MENU ({user['role'].replace('_', ' ').title()}) ---")
+        print(
+            f"\n--- MAIN MENU ({user['role'].replace('_', ' ').title()}) ---")
 
         menu_options = []
         option_num = 1
@@ -139,10 +141,47 @@ class UrbanMobilitySystem:
             elif selected_option == "Manage System Administrators":
                 self.user_manager.handle_user_management_menu("system_admin")
             elif selected_option == "Manage Service Engineers":
-                self.user_manager.handle_user_management_menu("service_engineer")
+                self.user_manager.handle_user_management_menu(
+                    "service_engineer")
             elif selected_option == "Update Password":
                 self.user_manager.update_own_password()
                 input("Press Enter to continue...")
+            elif selected_option == "View System Logs":
+                try:
+                    logs = self.auth.get_logs(self.role_manager)
+                    if not logs:
+                        print("\nNo log entries found.")
+                    else:
+                        print("\nSystem Logs:")
+                        # Format logs as a table with headers
+                        # Prepare headers and rows
+                        headers = ["No.", "Date", "Time", "Username",
+                                   "Activity", "Details", "Suspicious"]
+                        rows = [
+                            (log["no"], log["date"], log["time"], log["username"],
+                             log["activity"], log["details"], log["suspicious"])
+                            for log in logs
+                        ]
+
+                        # Define column widths (adjust as needed)
+                        col_widths = [max(len(str(row[i])) for row in [
+                                          headers] + rows) for i in range(len(headers))]
+
+                        # Print header
+                        header_row = " | ".join(
+                            f"{headers[i]:<{col_widths[i]}}" for i in range(len(headers)))
+                        print(header_row)
+                        print("-" * len(header_row))
+
+                        # Print rows
+                        for row in rows:
+                            print(" | ".join(
+                                f"{str(row[i]):<{col_widths[i]}}" for i in range(len(row))))
+                    input("\nPress Enter to continue...")
+                except PermissionError as e:
+                    print(f"\nError: {str(e)}")
+                    input("Press Enter to continue...")
+
             elif selected_option == "Create Backup":
                 create_backup_menu(self.auth)
                 input("Press Enter to continue...")
@@ -151,12 +190,6 @@ class UrbanMobilitySystem:
                 input("Press Enter to continue...")
             elif selected_option == "Backup Management":
                 handle_backup_menu(self.auth)
-            elif selected_option == "View System Logs":
-                # Placeholder for system logs feature
-                print(f"\n--- {selected_option} ---")
-                print("This feature will be implemented by other team members.")
-                print("Access granted based on your role permissions!")
-                input("Press Enter to continue...")
             else:
                 # For any other unimplemented features
                 print(f"\n--- {selected_option} ---")

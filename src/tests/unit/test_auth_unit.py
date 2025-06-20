@@ -173,3 +173,34 @@ class TestAuthenticationServiceUnit:
         call_args = mock_cursor.execute.call_args
         assert len(call_args[0]) == 2  # Query and parameters
         assert isinstance(call_args[0][1], tuple)  # Parameters as tuple
+
+    def test_get_logs_permission_denied(self, auth_service):
+        """Test get_logs raises PermissionError if user lacks permission"""
+        # Arrange
+        auth_service.current_user = {
+            "id": 1, "username": "test", "role": "service_engineer"}
+        mock_role_manager = Mock()
+        mock_role_manager.check_permission.return_value = False
+
+        # Act & Assert
+        with pytest.raises(PermissionError):
+            auth_service.get_logs(mock_role_manager)
+
+    def test_get_logs_permission_granted(self, auth_service):
+        """Test get_logs returns logs if user has permission"""
+        # Arrange
+        auth_service.current_user = {
+            "id": 1, "username": "admin", "role": "super_admin"}
+        mock_role_manager = Mock()
+        mock_role_manager.check_permission.return_value = True
+
+        # Patch logger.read_logs to return dummy logs
+        dummy_logs = [{"no": 1, "activity": "Logged in"}]
+        auth_service.logger.read_logs = Mock(return_value=dummy_logs)
+
+        # Act
+        logs = auth_service.get_logs(mock_role_manager)
+
+        # Assert
+        assert logs == dummy_logs
+        auth_service.logger.read_logs.assert_called_once_with("super_admin")

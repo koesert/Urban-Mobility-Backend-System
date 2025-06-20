@@ -207,6 +207,12 @@ class UserManager:
             print(f"⚠️  Please share this password securely with the user.")
             print(f"⚠️  The user should change this password on first login.")
 
+            self.auth.logger.log_activity(
+                username=self.auth.current_user["username"],
+                activity="Add user",
+                details=f"User with username: {username} added."
+            )
+
         except Exception as e:
             print(f"Error adding user: {e}")
 
@@ -240,7 +246,7 @@ class UserManager:
 
                 # Define allowed fields that can be updated
                 ALLOWED_FIELDS = ['first_name', 'last_name', 'is_active']
-                
+
                 # Collect updates
                 updates = {}
 
@@ -271,7 +277,8 @@ class UserManager:
                 # Validate that all update fields are in allowed list
                 for field in updates.keys():
                     if field not in ALLOWED_FIELDS:
-                        print(f"Error: Field '{field}' is not allowed to be updated")
+                        print(
+                            f"Error: Field '{field}' is not allowed to be updated")
                         return
 
                 # Build UPDATE query using only validated fields
@@ -290,9 +297,9 @@ class UserManager:
                 elif len(updates) == 3:
                     cursor.execute(
                         "UPDATE users SET first_name = ?, last_name = ?, is_active = ? WHERE id = ?",
-                        (updates.get('first_name', user[3]), 
-                         updates.get('last_name', user[4]), 
-                         updates.get('is_active', user[6]), 
+                        (updates.get('first_name', user[3]),
+                         updates.get('last_name', user[4]),
+                         updates.get('is_active', user[6]),
                          user_id)
                     )
 
@@ -300,6 +307,13 @@ class UserManager:
 
                 if cursor.rowcount > 0:
                     print("✅ User updated successfully!")
+
+                    self.auth.logger.log_activity(
+                        username=self.auth.current_user["username"],
+                        activity="Update user",
+                        details=f"User with user id: {user[0]} & username: {user[1]} updated."
+                    )
+
                 else:
                     print("No changes were made.")
 
@@ -353,6 +367,13 @@ class UserManager:
 
                 if cursor.rowcount > 0:
                     print("✅ User deleted successfully!")
+
+                    self.auth.logger.log_activity(
+                        username=self.auth.current_user["username"],
+                        activity="Delete user",
+                        details=f"User with ID: {user[0]} & username: {user[1]} deleted."
+                    )
+
                 else:
                     print("Error: User could not be deleted.")
 
@@ -499,7 +520,8 @@ class UserManager:
             # Check if username already exists
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+                cursor.execute(
+                    "SELECT id FROM users WHERE username = ?", (username,))
                 if cursor.fetchone():
                     print("Username already exists!")
                     if input("Try again? (y/n): ").lower() != "y":
