@@ -343,36 +343,3 @@ class InputValidator:
 
     def clear_security_log(self):
         self.security_log.clear()
-
-
-# Example usage and testing
-if __name__ == "__main__":
-    validator = InputValidator(log_security_events=True)
-    test_inputs = [
-        ("email", "admin@test.com'; DROP TABLE users; --"),
-        ("first_name", "John'; INSERT INTO admin VALUES('hacker'); --"),
-        ("street_name", "Main Street' UNION SELECT * FROM passwords --"),
-        ("last_name", "Smith', $ne: null"),
-        ("house_number", "123; rm -rf /"),
-        ("first_name", "<script>alert('xss')</script>"),
-        ("email", "test@еxample.com"),
-        ("street_name", "../../etc/passwd"),
-        ("email", "test%27@example.com%20OR%201=1"),
-        ("email", "valid.user@example.com"),
-        ("first_name", "María José"),
-        ("mobile_phone", "12345678"),
-    ]
-    print("🔒 Testing Enhanced SQL Injection Prevention\n")
-    for field, value in test_inputs:
-        try:
-            validate_method = getattr(validator, f"validate_{field}")
-            result = validate_method(value)
-            print(f"✅ {field}: '{value}' -> VALID: '{result}'")
-        except SecurityError as e:
-            print(f"🚫 {field}: '{value}' -> BLOCKED (Security): {e.message}")
-        except ValidationError as e:
-            print(f"❌ {field}: '{value}' -> INVALID: {e.message}")
-        print()
-    print("\n📊 Security Event Report:")
-    for event in validator.get_security_report():
-        print(f"  - {event['timestamp']}: {event['event_type']} in {event['field_name']}: {event['attempted_value']}")
