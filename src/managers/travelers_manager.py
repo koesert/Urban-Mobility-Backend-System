@@ -174,7 +174,7 @@ class TravelersManager:
         try:
             search_term = input("Enter search term: ").strip()
 
-            self.validator._check_sql_injection(search_term, "search_term")
+            self.validator._check_sql_injection_advanced(search_term, "search_term")
 
             if len(search_term) < 1:
                 print("Search term cannot be empty!")
