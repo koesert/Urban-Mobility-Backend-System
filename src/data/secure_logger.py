@@ -3,7 +3,7 @@ import io
 from datetime import datetime
 from .encryption import encrypt_field, decrypt_field
 
-LOG_FILE_PATH = "secure_audit.log"
+LOG_FILE_PATH = "src/data/logs/secure_audit.log"
 
 
 class SuspiciousLogAlert:
