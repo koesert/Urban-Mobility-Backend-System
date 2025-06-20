@@ -368,6 +368,77 @@ def modify_scooter(role_manager):
         print("Failed to modify scooter:", e)
 
 
+def search_scooters(role_manager):
+    """Search scooters by partial key matching across multiple fields."""
+
+    db = DatabaseContext()
+    print("\n--- Search Scooters ---")
+    search_key = input("Enter search term (partial match across all fields): ").strip()
+
+    if not search_key:
+        print("Search term cannot be empty.")
+        return
+
+    try:
+        all_scooters = db.show_all_scooters()
+        if not all_scooters:
+            print("No scooters available to search.")
+            return
+
+        # Convert search key to lowercase for case-insensitive matching
+        search_key_lower = search_key.lower()
+
+        # Search across all relevant fields
+        matching_scooters = []
+        for scooter in all_scooters:
+            # Convert all searchable fields to strings and check for partial matches
+            searchable_fields = [
+                str(scooter['id']),
+                str(scooter['brand']),
+                str(scooter['model']),
+                str(scooter['serial_number']),
+                str(scooter['state_of_charge']),
+                str(scooter['latitude']),
+                str(scooter['longitude']),
+                str(scooter['out_of_service_status']),
+                str(scooter['mileage']),
+                str(scooter['top_speed']),
+                str(scooter['battery_capacity']),
+                str(scooter['target_range_min']),
+                str(scooter['target_range_max']),
+                str(scooter['last_maintenance_date']),
+                str(scooter['in_service_date'])
+            ]
+
+            # Check if search key appears in any field (case-insensitive)
+            if any(search_key_lower in field.lower() for field in searchable_fields):
+                matching_scooters.append(scooter)
+
+        # Display results
+        if not matching_scooters:
+            print(f"No scooters found matching '{search_key}'.")
+            return
+
+        print(f"\n--- Search Results for '{search_key}' ({len(matching_scooters)} found) ---")
+        print(f"{'ID':<4} {'Brand':<12} {'Model':<12} {'Serial':<15} {'Battery':<8} {'Location':<20} {'Status':<15}")
+        print("-" * 95)
+
+        for s in matching_scooters:
+            location_str = f"{s['latitude']:.3f},{s['longitude']:.3f}"
+            status_str = s['out_of_service_status'] if s['out_of_service_status'] else "In Service"
+            print(f"{s['id']:<4} {s['brand']:<12} {s['model']:<12} {s['serial_number']:<15} {s['state_of_charge']}%{'':<4} {location_str:<20} {status_str:<15}")
+
+        # Log the search activity
+        role_manager.auth.logger.log_activity(
+            username=role_manager.auth.current_user["username"],
+            activity="Search Scooters",
+            details=f"Searched scooters with term '{search_key}', found {len(matching_scooters)} results."
+        )
+
+    except Exception as e:
+        print(f"Error during search: {e}")
+
+
 def manage_scooters_menu(role_manager):
     """Scooter management submenu with RBAC, just like the main menu."""
     # Get permissions for current user
@@ -379,6 +450,8 @@ def manage_scooters_menu(role_manager):
 
     # Always possible for Service Engineer, System Admin, Super Admin
     if "update_scooter_info" in permissions or "manage_scooters" in permissions:
+        menu_options.append((option_num, "Search scooters"))
+        option_num += 1
         menu_options.append((option_num, "Modify scooter"))
         option_num += 1
 
@@ -410,7 +483,10 @@ def manage_scooters_menu(role_manager):
             print("Invalid choice!")
             return
 
-        if selected_option == "Modify scooter":
+        if selected_option == "Search scooters":
+            search_scooters(role_manager)
+            input("Press Enter to continue...")
+        elif selected_option == "Modify scooter":
             modify_scooter(role_manager)
             input("Press Enter to continue...")
         elif selected_option == "Add new scooter":
