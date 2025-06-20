@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from data.encryption import decrypt_field, encrypt_field
-from validation.validation import InputValidator, ValidationError
+from validation.validation import InputValidator, ValidationError, SecurityError
 from validation.validation_helper import ValidationHelper
 
 
