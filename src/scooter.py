@@ -13,7 +13,9 @@ def prompt_serial_number():
     """Prompt user for a valid serial number."""
     serial_number = input("Serial Number: ")
     while not is_valid_serial_number(serial_number):
-        print("Serial Number must be 10 to 17 alphanumeric characters (A-Z, a-z, 0-9). Please try again.")
+        print(
+            "Serial Number must be 10 to 17 alphanumeric characters (A-Z, a-z, 0-9). Please try again."
+        )
         serial_number = input("Serial Number: ")
     return serial_number
 
@@ -26,7 +28,7 @@ def is_valid_location(value):
         if re.fullmatch(r"-?\d+\.\d{5}$", value):
             return True
         # Accept also if user enters e.g. 51.00000 (trailing zeros)
-        if '.' in value and len(value.split('.')[-1]) == 5:
+        if "." in value and len(value.split(".")[-1]) == 5:
             return True
         return False
     except ValueError:
@@ -37,7 +39,9 @@ def prompt_location(field_name):
     """Prompt user for a valid latitude or longitude with 5 decimal places."""
     value = input(f"{field_name} (5 decimal places): ")
     while not is_valid_location(value):
-        print(f"{field_name} must be a number with exactly 5 decimal places (e.g., 51.92250). Please try again.")
+        print(
+            f"{field_name} must be a number with exactly 5 decimal places (e.g., 51.92250). Please try again."
+        )
         value = input(f"{field_name} (5 decimal places): ")
     return float(value)
 
@@ -56,7 +60,8 @@ def prompt_iso_date(field_name):
     date_str = input(f"{field_name} (YYYY-MM-DD): ")
     while date_str and not is_valid_iso_date(date_str):
         print(
-            f"{field_name} must be in format YYYY-MM-DD (e.g., 2024-06-12). Please try again.")
+            f"{field_name} must be in format YYYY-MM-DD (e.g., 2024-06-12). Please try again."
+        )
         date_str = input(f"{field_name} (YYYY-MM-DD): ")
     return date_str
 
@@ -101,7 +106,8 @@ def add_new_scooter(role_manager):
     longitude = prompt_location("Longitude")
     mileage = prompt_int("Milage (km)")
     out_of_service_status = input(
-        "Out of Service status (leave empty if not out of service): ")
+        "Out of Service status (leave empty if not out of service): "
+    )
     last_maintenance_date = prompt_iso_date("Last Maintenance Date")
     in_service_date = datetime.now().isoformat()
 
@@ -129,7 +135,7 @@ def add_new_scooter(role_manager):
         role_manager.auth.logger.log_activity(
             username=role_manager.auth.current_user["username"],
             activity="Add Scooter",
-            details=f"Scooter with serial number: {serial_number} added."
+            details=f"Scooter with serial number: {serial_number} added.",
         )
     except Exception as e:
         print("Failed to add scooter:", e)
@@ -153,24 +159,30 @@ def delete_scooter(role_manager):
         print("\nAvailable scooters:")
         for s in scooters:
             print(
-                f"ID: {s['id']} | Brand: {s['brand']} | Model: {s['model']} | Serial number: {s['serial_number']} | Status: {s['out_of_service_status']}")
+                f"ID: {s['id']} | Brand: {s['brand']} | Model: {s['model']} | Serial number: {s['serial_number']} | Status: {s['out_of_service_status']}"
+            )
 
-        scooter_id = input(
-            "Enter the ID of the scooter you want to delete: ")
+        scooter_id = input("Enter the ID of the scooter you want to delete: ")
         if not scooter_id.isdigit():
             print("Scooter ID must be a valid number.")
             return
         scooter_id = int(scooter_id)
+        # Get scooter info before deleting
+        scooter_to_delete = next((s for s in scooters if s["id"] == scooter_id), None)
+        if not scooter_to_delete:
+            print(f"No scooter found with ID {scooter_id}.")
+            return
+
         deleted = db.delete_scooter_by_id(scooter_id)
         if deleted:
             print(f"Scooter with ID {scooter_id} successfully deleted.")
             role_manager.auth.logger.log_activity(
                 username=role_manager.auth.current_user["username"],
                 activity="Delete Scooter",
-                details=f"Scooter with ID: {scooter_id} & serial number: {decrypt_field(deleted['serial_number'])} deleted."
+                details=f"Scooter with ID: {scooter_id} & serial number: {scooter_to_delete['serial_number']} deleted.",
             )
         else:
-            print(f"No scooter found with ID {scooter_id}.")
+            print(f"Failed to delete scooter with ID {scooter_id}.")
     except Exception as e:
         print("Failed to delete scooter:", e)
 
@@ -195,7 +207,8 @@ def modify_scooter(role_manager):
         print("\nAvailable scooters:")
         for s in scooters:
             print(
-                f"ID: {s['id']} | Brand: {s['brand']} | Model: {s['model']} | Serial number: {s['serial_number']} | Status: {s['out_of_service_status']}")
+                f"ID: {s['id']} | Brand: {s['brand']} | Model: {s['model']} | Serial number: {s['serial_number']} | Status: {s['out_of_service_status']}"
+            )
 
         scooter_id = input("Enter the ID of the scooter you want to modify: ")
         if not scooter_id.isdigit():
@@ -230,11 +243,12 @@ def modify_scooter(role_manager):
                 try:
                     float_val = float(val)
                     # Check for 5 decimal places
-                    if '.' in val and len(val.split('.')[-1]) == 5:
+                    if "." in val and len(val.split(".")[-1]) == 5:
                         return float_val
                     else:
                         print(
-                            f"{field} must have exactly 5 decimal places. Please try again.")
+                            f"{field} must have exactly 5 decimal places. Please try again."
+                        )
                 except ValueError:
                     print(f"{field} must be a valid number. Please try again.")
 
@@ -250,8 +264,7 @@ def modify_scooter(role_manager):
                 if is_valid_iso_date(val):
                     return val
                 else:
-                    print(
-                        f"{field} must be in format YYYY-MM-DD. Please try again.")
+                    print(f"{field} must be in format YYYY-MM-DD. Please try again.")
 
         # Build updated_scooter dict based on permissions
         updated_scooter = {}
@@ -259,13 +272,14 @@ def modify_scooter(role_manager):
         # Fields editable by all (Super Admin/System Admin)
         if can_update_all:
             updated_scooter["brand"] = prompt_str_with_default(
-                "Brand", scooter["brand"])
+                "Brand", scooter["brand"]
+            )
             updated_scooter["model"] = prompt_str_with_default(
-                "Model", scooter["model"])
+                "Model", scooter["model"]
+            )
             # Serial number validation
             while True:
-                serial_number = input(
-                    f"Serial Number [{scooter['serial_number']}]: ")
+                serial_number = input(f"Serial Number [{scooter['serial_number']}]: ")
                 if serial_number.strip() == "":
                     updated_scooter["serial_number"] = scooter["serial_number"]
                     break
@@ -274,11 +288,14 @@ def modify_scooter(role_manager):
                     break
                 else:
                     print(
-                        "Serial Number must be 10 to 17 alphanumeric characters (A-Z, a-z, 0-9). Please try again.")
+                        "Serial Number must be 10 to 17 alphanumeric characters (A-Z, a-z, 0-9). Please try again."
+                    )
             updated_scooter["top_speed"] = prompt_int_with_default(
-                "Top Speed (km/h)", scooter["top_speed"])
+                "Top Speed (km/h)", scooter["top_speed"]
+            )
             updated_scooter["battery_capacity"] = prompt_int_with_default(
-                "Battery Capacity (Wh)", scooter["battery_capacity"])
+                "Battery Capacity (Wh)", scooter["battery_capacity"]
+            )
         else:
             # Keep current values for fields not allowed to edit
             updated_scooter["brand"] = scooter["brand"]
@@ -289,21 +306,29 @@ def modify_scooter(role_manager):
 
         # Fields editable by both roles
         updated_scooter["state_of_charge"] = prompt_int_with_default(
-            "State of Charge (%)", scooter["state_of_charge"])
+            "State of Charge (%)", scooter["state_of_charge"]
+        )
         updated_scooter["target_range_min"] = prompt_int_with_default(
-            "Target Range Min (km)", scooter["target_range_min"])
+            "Target Range Min (km)", scooter["target_range_min"]
+        )
         updated_scooter["target_range_max"] = prompt_int_with_default(
-            "Target Range Max (km)", scooter["target_range_max"])
+            "Target Range Max (km)", scooter["target_range_max"]
+        )
         updated_scooter["latitude"] = prompt_float_with_default(
-            "Latitude", scooter["latitude"])
+            "Latitude", scooter["latitude"]
+        )
         updated_scooter["longitude"] = prompt_float_with_default(
-            "Longitude", scooter["longitude"])
+            "Longitude", scooter["longitude"]
+        )
         updated_scooter["out_of_service_status"] = prompt_str_with_default(
-            "Out of Service status", scooter["out_of_service_status"])
+            "Out of Service status", scooter["out_of_service_status"]
+        )
         updated_scooter["mileage"] = prompt_float_with_default(
-            "Mileage (km)", scooter["mileage"])
+            "Mileage (km)", scooter["mileage"]
+        )
         updated_scooter["last_maintenance_date"] = prompt_date_with_default(
-            "Last Maintenance Date", scooter["last_maintenance_date"])
+            "Last Maintenance Date", scooter["last_maintenance_date"]
+        )
 
         # Keep unchanged fields
         updated_scooter["in_service_date"] = scooter["in_service_date"]
@@ -315,7 +340,7 @@ def modify_scooter(role_manager):
             role_manager.auth.logger.log_activity(
                 username=role_manager.auth.current_user["username"],
                 activity="Modify Scooter",
-                details=f"Scooter with ID: {scooter_id} & serial number: {serial_number} modified."
+                details=f"Scooter with ID: {scooter_id} & serial number: {serial_number} modified.",
             )
         else:
             print(f"Failed to update scooter with ID {scooter_id}.")
