@@ -359,7 +359,7 @@ def modify_scooter(role_manager):
             role_manager.auth.logger.log_activity(
                 username=role_manager.auth.current_user["username"],
                 activity="Modify Scooter",
-                details=f"Scooter with ID: {scooter_id} & serial number: {serial_number} modified.",
+                details=f"Scooter with ID: {scooter_id} & serial number: {updated_scooter['serial_number']} modified.",
             )
         else:
             print(f"Failed to update scooter with ID {scooter_id}.")
