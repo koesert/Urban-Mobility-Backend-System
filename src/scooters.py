@@ -1,22 +1,3 @@
-"""
-Scooter management with role-based field access control.
-
-Features:
-- Encrypted serial numbers in database
-- Input validation for all fields
-- SQL injection prevention with prepared statements
-- Activity logging for all actions
-- Role-based field access (Service Engineers have limited field access)
-
-Functions:
-- add_scooter() - Create new scooter (Super/System Admin only)
-- update_scooter() - Update scooter (role-based field restrictions)
-- delete_scooter() - Delete scooter (Super/System Admin only)
-- search_scooters() - Search with partial keys
-- get_scooter_by_serial() - Get specific scooter
-- list_all_scooters() - Display all scooters
-"""
-
 from database import get_connection, encrypt_username, decrypt_username
 from validation import ValidationError
 from auth import get_current_user, check_permission

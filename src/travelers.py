@@ -1,22 +1,3 @@
-"""
-Traveler management with encrypted sensitive data.
-
-Features:
-- Encrypted sensitive fields (email, phone, driving license)
-- Input validation for all fields
-- SQL injection prevention with prepared statements
-- Activity logging for all actions
-- Partial key search functionality
-
-Functions:
-- add_traveler() - Create new traveler
-- update_traveler() - Update traveler information
-- delete_traveler() - Delete traveler record
-- search_travelers() - Search with partial keys
-- get_traveler_by_id() - Get specific traveler
-- list_all_travelers() - Display all travelers
-"""
-
 import uuid
 from database import get_connection, encrypt_field, decrypt_field
 from validation import (
