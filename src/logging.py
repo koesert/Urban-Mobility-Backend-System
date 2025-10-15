@@ -242,6 +242,21 @@ def get_unread_suspicious_count():
     return unread_count
 
 
+def check_suspicious_activities():
+    """
+    Check for unread suspicious activities (alias for get_unread_suspicious_count).
+
+    Returns:
+        int: Number of unread suspicious activities
+
+    Example:
+        count = check_suspicious_activities()
+        if count > 0:
+            print(f"⚠️  {count} suspicious activities detected!")
+    """
+    return get_unread_suspicious_count()
+
+
 def mark_logs_as_read():
     """
     Mark all current logs as read.

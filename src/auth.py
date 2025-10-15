@@ -14,6 +14,7 @@ current_session = {
     "user_id": None,
     "username": None,
     "role": None,
+    "role_name": None,
     "first_name": None,
     "last_name": None,
 }
@@ -108,6 +109,7 @@ def login(username, password):
     current_session["user_id"] = user_id
     current_session["username"] = username_db
     current_session["role"] = role
+    current_session["role_name"] = get_role_name(role)
     current_session["first_name"] = first_name
     current_session["last_name"] = last_name
 
@@ -134,6 +136,7 @@ def logout():
     current_session["user_id"] = None
     current_session["username"] = None
     current_session["role"] = None
+    current_session["role_name"] = None
     current_session["first_name"] = None
     current_session["last_name"] = None
 
