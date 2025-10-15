@@ -66,7 +66,7 @@ def validate_password(password):
     Rules:
     - 12-30 characters
     - At least 1 lowercase, 1 uppercase, 1 digit
-    - At least 1 special character: ~!@#$%&_-+=`|\(){}[]:;'<>,.?/
+    - At least 1 special character: ~!@#$%&_-+=`|\\(){}[]:;'<>,.?/
 
     Args:
         password (str): Password to validate
