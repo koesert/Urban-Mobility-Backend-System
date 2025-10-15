@@ -189,6 +189,9 @@ logs/
 temp/
 *.log
 
+# Data folder (contains database, keys, logs, backups)
+src/data/
+
 # Encryption keys (if any are generated)
 *.key
 *.pem
