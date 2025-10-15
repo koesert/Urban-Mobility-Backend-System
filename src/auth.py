@@ -6,6 +6,7 @@ from database import (
     verify_password,
 )
 from validation import validate_username, validate_password, ValidationError
+from logging import log_activity
 
 # Current user session state
 current_session = {
@@ -56,6 +57,12 @@ def login(username, password):
     try:
         username = validate_username(username)
     except ValidationError as e:
+        log_activity(
+            "unknown",
+            "Unsuccessful login",
+            f"Invalid username format: {username}",
+            suspicious=True,
+        )
         return False, f"Invalid username: {e}"
 
     conn = get_connection()
@@ -76,12 +83,24 @@ def login(username, password):
     conn.close()
 
     if not user:
+        log_activity(
+            "unknown",
+            "Unsuccessful login",
+            f"username: '{username}' not found",
+            suspicious=True,
+        )
         return False, "Invalid username or password"
 
     user_id, encrypted_username_db, password_hash_db, role, first_name, last_name = user
     username_db = decrypt_username(encrypted_username_db)
 
     if not verify_password(password, username_db, password_hash_db):
+        log_activity(
+            "unknown",
+            "Unsuccessful login",
+            f"username: '{username_db}' used with wrong password",
+            suspicious=True,
+        )
         return False, "Invalid username or password"
 
     # Login successful - create session
@@ -91,6 +110,8 @@ def login(username, password):
     current_session["role"] = role
     current_session["first_name"] = first_name
     current_session["last_name"] = last_name
+
+    log_activity(username_db, "Logged in")
 
     return True, f"Welcome {first_name} {last_name}!"
 
@@ -106,6 +127,8 @@ def logout():
         return False, "No user is currently logged in"
 
     username = current_session["username"]
+
+    log_activity(username, "Logged out")
 
     current_session["logged_in"] = False
     current_session["user_id"] = None
@@ -249,6 +272,12 @@ def update_password(old_password, new_password):
 
     if not verify_password(old_password, username, current_password_hash):
         conn.close()
+        log_activity(
+            username,
+            "Password change failed",
+            "Incorrect current password",
+            suspicious=True,
+        )
         return False, "Incorrect current password"
 
     try:
@@ -274,6 +303,8 @@ def update_password(old_password, new_password):
 
     conn.commit()
     conn.close()
+
+    log_activity(username, "Password updated")
 
     return True, "Password updated successfully"
 
@@ -382,7 +413,7 @@ def list_users_by_role(role=None):
 # Testing and demonstration
 if __name__ == "__main__":
     print("=" * 60)
-    print("AUTHENTICATION SYSTEM TESTING")
+    print("AUTHENTICATION SYSTEM TESTING (WITH LOGGING)")
     print("=" * 60)
 
     print("\n--- Test 1: Super Admin Login ---")
@@ -431,5 +462,12 @@ if __name__ == "__main__":
     print(f"Still logged in? {is_logged_in()}")
 
     print("\n" + "=" * 60)
-    print("✓ Authentication system ready!")
+    print("✓ Authentication system with logging ready!")
     print("=" * 60)
+
+    # Show logged activities
+    print("\n--- Logged Activities ---")
+    from logging import get_all_logs, display_logs
+
+    logs = get_all_logs()
+    display_logs(logs)
