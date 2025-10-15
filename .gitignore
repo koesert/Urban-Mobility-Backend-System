@@ -194,3 +194,5 @@ temp/
 *.pem
 
 *.json
+
+*.bin
