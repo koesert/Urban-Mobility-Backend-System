@@ -1,36 +1,3 @@
-"""
-Urban Mobility Backend System - Main Program
-
-Entry point for the Urban Mobility Backend System.
-Provides console-based interface with role-based menus.
-
-Features:
-- Login/logout system
-- Role-based access control (Super Admin, System Admin, Service Engineer)
-- Complete CRUD operations for users, travelers, and scooters
-- Activity logging and monitoring
-- Backup and restore functionality
-- Input validation and SQL injection prevention
-- Password hashing (SHA-256)
-- Data encryption (symmetric)
-
-Users:
-- Super Administrator (hardcoded): username='super_admin', password='Admin_123?'
-- System Administrators (created by Super Admin)
-- Service Engineers (created by Super/System Admin)
-
-Security:
-- All SQL queries use prepared statements (L02)
-- All passwords hashed with SHA-256 (L05)
-- All inputs validated (L03)
-- All sensitive data encrypted (Assignment)
-- All activities logged (Assignment)
-
-How to run:
-    python um_members.py
-"""
-
-# Standard library imports
 import os
 import sys
 from pathlib import Path
