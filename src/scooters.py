@@ -1,15 +1,20 @@
 from database import get_connection, encrypt_username, decrypt_username
-from validation import ValidationError
+from validation import (
+    ValidationError,
+    validate_serial_number,
+    validate_scooter_type,
+    validate_battery_level,
+    validate_location,
+)
 from auth import get_current_user, check_permission
 from logging import log_activity
 
-
 def add_scooter(serial_number, scooter_type, battery_level, status, location):
     """
-    Create new scooter record (Super Admin or System Admin only).
+    Create new scooter record.
 
-    Validates inputs, encrypts serial number, uses prepared statements,
-    and logs activity.
+    Validates inputs using validation.py functions, encrypts serial number,
+    uses prepared statements, and logs activity.
 
     Args:
         serial_number (str): Serial number (will be encrypted)
@@ -24,33 +29,30 @@ def add_scooter(serial_number, scooter_type, battery_level, status, location):
     Example:
         success, msg = add_scooter("SC123456", "Model X", 100, "available", "Amsterdam Central")
     """
-    # Check permission (Super Admin or System Admin only)
+    # Check permission
     if not check_permission("manage_scooters"):
         return False, "Access denied. Insufficient permissions to add scooters"
 
     current_user = get_current_user()
 
-    # Validate inputs
+    # Validate inputs using validation.py functions
     try:
-        # Validate serial number (simple check)
-        if not serial_number or len(serial_number) < 5:
-            raise ValidationError("Serial number must be at least 5 characters")
+        # Validate serial number with proper format and length checks
+        serial_number = validate_serial_number(serial_number)
 
-        # Validate battery level
-        if not isinstance(battery_level, int) or not (0 <= battery_level <= 100):
-            raise ValidationError("Battery level must be between 0 and 100")
+        # Validate scooter type
+        scooter_type = validate_scooter_type(scooter_type)
 
-        # Validate status
+        # Validate battery level (handles int conversion and range)
+        battery_level = validate_battery_level(battery_level)
+
+        # Validate location
+        location = validate_location(location)
+
+        # Validate status (enum validation)
         valid_statuses = ["available", "in_use", "maintenance"]
         if status not in valid_statuses:
             raise ValidationError(f"Status must be one of: {', '.join(valid_statuses)}")
-
-        # Validate type and location (basic)
-        if not scooter_type or len(scooter_type) < 2:
-            raise ValidationError("Scooter type must be at least 2 characters")
-
-        if not location or len(location) < 2:
-            raise ValidationError("Location must be at least 2 characters")
 
     except ValidationError as e:
         return False, f"Validation error: {e}"
@@ -182,10 +184,9 @@ def update_scooter(serial_number, **updates):
 
     for field, value in updates.items():
         try:
-            # Validate based on field type
+            # Validate based on field type using validation.py functions (L03)
             if field == "battery_level":
-                if not isinstance(value, int) or not (0 <= value <= 100):
-                    raise ValidationError("Battery level must be between 0 and 100")
+                value = validate_battery_level(value)
             elif field == "status":
                 valid_statuses = ["available", "in_use", "maintenance"]
                 if value not in valid_statuses:
@@ -193,11 +194,9 @@ def update_scooter(serial_number, **updates):
                         f"Status must be one of: {', '.join(valid_statuses)}"
                     )
             elif field == "type":
-                if not value or len(value) < 2:
-                    raise ValidationError("Type must be at least 2 characters")
+                value = validate_scooter_type(value)
             elif field == "location":
-                if not value or len(value) < 2:
-                    raise ValidationError("Location must be at least 2 characters")
+                value = validate_location(value)
             elif field == "last_service_date":
                 # Basic date validation (DD-MM-YYYY format)
                 if not value or len(value) != 10:

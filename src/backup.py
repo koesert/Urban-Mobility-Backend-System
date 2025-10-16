@@ -295,21 +295,35 @@ def revoke_restore_code(restore_code):
         conn.close()
         return False, "No restore codes exist"
 
-    encrypted_code = encrypt_field(restore_code)
-
-    # Prepared statement to find code
+    # Get all restore codes and find matching one
+    # Note: Cannot search encrypted field directly because Fernet is non-deterministic
     cursor.execute(
-        "SELECT id, backup_filename, target_username FROM restore_codes WHERE code = ?",
-        (encrypted_code,),
+        "SELECT id, code, backup_filename, target_username FROM restore_codes WHERE used = 0"
     )
 
-    result = cursor.fetchone()
+    results = cursor.fetchall()
 
-    if not result:
+    if not results:
+        conn.close()
+        return False, "No active restore codes found"
+
+    # Find matching code by decrypting each one
+    code_id = None
+    encrypted_backup = None
+    encrypted_target = None
+
+    for row in results:
+        row_id, encrypted_code, enc_backup, enc_target = row
+        decrypted_code = decrypt_field(encrypted_code)
+        if decrypted_code == restore_code:
+            code_id = row_id
+            encrypted_backup = enc_backup
+            encrypted_target = enc_target
+            break
+
+    if not code_id:
         conn.close()
         return False, f"Restore code not found"
-
-    code_id, encrypted_backup, encrypted_target = result
 
     # Prepared statement for DELETE
     cursor.execute("DELETE FROM restore_codes WHERE id = ?", (code_id,))

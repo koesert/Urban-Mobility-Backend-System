@@ -42,6 +42,23 @@ from backup import (
     list_restore_codes,
 )
 from validation import ValidationError
+from validation import (
+    validate_email,
+    validate_phone,
+    validate_zipcode,
+    validate_date,
+    validate_city,
+    validate_gender,
+    validate_driving_license,
+    validate_name,
+    validate_house_number,
+    validate_username,
+    validate_password,
+    validate_serial_number,
+    validate_scooter_type,
+    validate_battery_level,
+    validate_location,
+)
 
 
 def clear_screen():
@@ -71,6 +88,112 @@ def print_user_info():
 def wait_for_enter():
     """Wait for user to press Enter."""
     input("\nPress Enter to continue...")
+
+
+def prompt_with_validation(prompt_text, validator_func):
+    """
+    Prompt user for input with immediate validation loop.
+
+    Keeps asking until valid input is provided. Shows error message
+    and repeats the same prompt on validation failure.
+
+    Args:
+        prompt_text (str): Text to show to user (e.g., "Email: ")
+        validator_func (callable): Validation function from validation.py
+
+    Returns:
+        Validated value (type depends on validator function)
+
+    Example:
+        email = prompt_with_validation("Email: ", validate_email)
+    """
+    while True:
+        user_input = input(prompt_text).strip()
+        try:
+            # Call validator function
+            validated_value = validator_func(user_input)
+            return validated_value
+        except ValidationError as e:
+            # Show error and repeat the same prompt
+            print(f"❌ Error: {e}\n")
+
+
+def prompt_integer_with_validation(prompt_text, validator_func):
+    """
+    Prompt user for integer input with immediate validation loop.
+
+    Similar to prompt_with_validation but handles integer conversion
+    and validation (e.g., battery level, house number).
+
+    Args:
+        prompt_text (str): Text to show to user
+        validator_func (callable): Validation function that accepts int or str
+
+    Returns:
+        int: Validated integer value
+
+    Example:
+        battery = prompt_integer_with_validation("Battery level (0-100): ", validate_battery_level)
+    """
+    while True:
+        user_input = input(prompt_text).strip()
+        try:
+            # Validator will handle conversion and range checking
+            validated_value = validator_func(user_input)
+            return validated_value
+        except ValidationError as e:
+            print(f"❌ Error: {e}\n")
+        except ValueError:
+            print(f"❌ Error: Please enter a valid number\n")
+
+
+def validate_unique_username(username):
+    """
+    Validate username and check if it doesn't already exist.
+
+    Args:
+        username (str): Username to validate
+
+    Returns:
+        str: Validated username
+
+    Raises:
+        ValidationError: If username is invalid or already exists
+    """
+    # First do normal validation
+    username = validate_username(username)
+    
+    # Then check if it exists
+    all_users = list_all_users()
+    for user in all_users:
+        if user['username'] == username:
+            raise ValidationError(f"Username '{username}' already exists")
+    
+    return username
+
+
+def validate_unique_serial_number(serial_number):
+    """
+    Validate serial number and check if it doesn't already exist.
+
+    Args:
+        serial_number (str): Serial number to validate
+
+    Returns:
+        str: Validated serial number
+
+    Raises:
+        ValidationError: If serial number is invalid or already exists
+    """
+    # First do normal validation
+    serial_number = validate_serial_number(serial_number)
+    
+    # Then check if it exists
+    scooter = get_scooter_by_serial(serial_number)
+    if scooter:
+        raise ValidationError(f"Serial number '{serial_number}' already exists")
+    
+    return serial_number
 
 
 def show_main_menu():
@@ -282,19 +405,29 @@ def service_engineer_scooter_menu():
 
 
 def create_system_admin_ui():
-    """Create new System Administrator."""
+    """Create new System Administrator with per-field validation."""
     clear_screen()
     print_header("CREATE NEW SYSTEM ADMINISTRATOR")
     print_user_info()
 
+    print("\nEnter System Administrator information:")
     print("\nUsername requirements:")
     print("  - Length: 8-10 characters")
     print("  - Start with letter or '_'")
     print("  - Can contain: a-z, 0-9, _, ', .")
 
-    username = input("\nEnter username: ").strip()
-    first_name = input("Enter first name: ").strip()
-    last_name = input("Enter last name: ").strip()
+    # Username - validated with immediate feedback including uniqueness check
+    username = prompt_with_validation("\nEnter username: ", validate_unique_username)
+
+    # First name - validated
+    first_name = prompt_with_validation(
+        "Enter first name: ", lambda x: validate_name(x, "First name")
+    )
+
+    # Last name - validated
+    last_name = prompt_with_validation(
+        "Enter last name: ", lambda x: validate_name(x, "Last name")
+    )
 
     success, msg, temp_password = create_system_admin(username, first_name, last_name)
 
@@ -380,8 +513,33 @@ def delete_system_admin_ui():
 
     username = input("\nEnter admin username to delete: ").strip()
 
+    if not username:
+        print("\n❌ Username cannot be empty.")
+        wait_for_enter()
+        return
+
+    # Check if user exists by trying to find them in the list
+    all_users = list_all_users()
+    user_to_delete = None
+    for user in all_users:
+        if user["username"] == username and user["role"] == "system_admin":
+            user_to_delete = user
+            break
+
+    if not user_to_delete:
+        print(f"\n❌ System Administrator '{username}' not found.")
+        wait_for_enter()
+        return
+
+    # Show user information
+    print(f"\n✓ System Administrator found:")
+    print(f"  Username: {user_to_delete['username']}")
+    print(f"  Name: {user_to_delete['first_name']} {user_to_delete['last_name']}")
+    print(f"  Created: {user_to_delete['created_at']}")
+
+    # Now ask for confirmation
     confirm = (
-        input(f"\n⚠️  Are you sure you want to delete '{username}'? (yes/no): ")
+        input(f"\n⚠️  Are you sure you want to delete this user? (yes/no): ")
         .strip()
         .lower()
     )
@@ -396,19 +554,29 @@ def delete_system_admin_ui():
 
 
 def create_service_engineer_ui():
-    """Create new Service Engineer."""
+    """Create new Service Engineer with per-field validation."""
     clear_screen()
     print_header("CREATE NEW SERVICE ENGINEER")
     print_user_info()
 
+    print("\nEnter Service Engineer information:")
     print("\nUsername requirements:")
     print("  - Length: 8-10 characters")
     print("  - Start with letter or '_'")
     print("  - Can contain: a-z, 0-9, _, ', .")
 
-    username = input("\nEnter username: ").strip()
-    first_name = input("Enter first name: ").strip()
-    last_name = input("Enter last name: ").strip()
+    # Username - validated with immediate feedback including uniqueness check
+    username = prompt_with_validation("\nEnter username: ", validate_unique_username)
+
+    # First name - validated
+    first_name = prompt_with_validation(
+        "Enter first name: ", lambda x: validate_name(x, "First name")
+    )
+
+    # Last name - validated
+    last_name = prompt_with_validation(
+        "Enter last name: ", lambda x: validate_name(x, "Last name")
+    )
 
     success, msg, temp_password = create_service_engineer(
         username, first_name, last_name
@@ -496,8 +664,33 @@ def delete_service_engineer_ui():
 
     username = input("\nEnter engineer username to delete: ").strip()
 
+    if not username:
+        print("\n❌ Username cannot be empty.")
+        wait_for_enter()
+        return
+
+    # Check if user exists by trying to find them in the list
+    all_users = list_all_users()
+    user_to_delete = None
+    for user in all_users:
+        if user["username"] == username and user["role"] == "service_engineer":
+            user_to_delete = user
+            break
+
+    if not user_to_delete:
+        print(f"\n❌ Service Engineer '{username}' not found.")
+        wait_for_enter()
+        return
+
+    # Show user information
+    print(f"\n✓ Service Engineer found:")
+    print(f"  Username: {user_to_delete['username']}")
+    print(f"  Name: {user_to_delete['first_name']} {user_to_delete['last_name']}")
+    print(f"  Created: {user_to_delete['created_at']}")
+
+    # Now ask for confirmation
     confirm = (
-        input(f"\n⚠️  Are you sure you want to delete '{username}'? (yes/no): ")
+        input(f"\n⚠️  Are you sure you want to delete this user? (yes/no): ")
         .strip()
         .lower()
     )
@@ -512,14 +705,14 @@ def delete_service_engineer_ui():
 
 
 def add_traveler_ui():
-    """Add new traveler."""
+    """Add new traveler with per-field validation."""
     clear_screen()
     print_header("ADD NEW TRAVELER")
     print_user_info()
 
     print("\nEnter traveler information:")
 
-    # Predefined cities (Assignment requirement)
+    # Predefined cities
     cities = [
         "Amsterdam",
         "Rotterdam",
@@ -533,32 +726,70 @@ def add_traveler_ui():
         "Nijmegen",
     ]
 
-    first_name = input("First name: ").strip()
-    last_name = input("Last name: ").strip()
-    birthday = input("Birthday (DD-MM-YYYY): ").strip()
+    # First name - validated
+    first_name = prompt_with_validation(
+        "First name: ", lambda x: validate_name(x, "First name")
+    )
 
-    print("\nGender: 1) Male  2) Female")
-    gender_choice = input("Enter choice (1-2): ").strip()
-    gender = "Male" if gender_choice == "1" else "Female"
+    # Last name - validated
+    last_name = prompt_with_validation(
+        "Last name: ", lambda x: validate_name(x, "Last name")
+    )
 
-    street_name = input("Street name: ").strip()
-    house_number = input("House number: ").strip()
-    zip_code = input("Zip code (1234AB): ").strip()
+    # Birthday - validated
+    birthday = prompt_with_validation(
+        "Birthday (DD-MM-YYYY): ", lambda x: validate_date(x, "Birthday")
+    )
 
+    # Gender - validated with menu choice
+    print("\nGender options:")
+    print("  1) Male")
+    print("  2) Female")
+    while True:
+        gender_choice = input("Enter choice (1-2): ").strip()
+        if gender_choice in ["1", "2"]:
+            gender = "Male" if gender_choice == "1" else "Female"
+            break
+        else:
+            print("❌ Error: Please enter 1 or 2\n")
+
+    # Street name - validated
+    street_name = prompt_with_validation(
+        "Street name: ", lambda x: validate_name(x, "Street name")
+    )
+
+    # House number - validated
+    house_number = prompt_with_validation("House number: ", validate_house_number)
+
+    # Zip code - validated
+    zip_code = prompt_with_validation("Zip code (1234AB format): ", validate_zipcode)
+
+    # City - validated with menu choice
     print("\nAvailable cities:")
     for i, city in enumerate(cities, 1):
         print(f"  {i}. {city}")
-    city_choice = input(f"Enter choice (1-{len(cities)}): ").strip()
-    try:
-        city = cities[int(city_choice) - 1]
-    except (ValueError, IndexError):
-        print("\nInvalid city choice.")
-        wait_for_enter()
-        return
+    while True:
+        city_choice = input(f"Enter choice (1-{len(cities)}): ").strip()
+        try:
+            city_idx = int(city_choice) - 1
+            if 0 <= city_idx < len(cities):
+                city = cities[city_idx]
+                break
+            else:
+                print(f"❌ Error: Please enter a number between 1 and {len(cities)}\n")
+        except ValueError:
+            print("❌ Error: Please enter a valid number\n")
 
-    email = input("Email: ").strip()
-    mobile_phone = input("Mobile phone (8 digits): ").strip()
-    driving_license = input("Driving license (AB1234567): ").strip()
+    # Email - validated
+    email = prompt_with_validation("Email: ", validate_email)
+
+    # Mobile phone - validated
+    mobile_phone = prompt_with_validation("Mobile phone (8 digits): ", validate_phone)
+
+    # Driving license - validated
+    driving_license = prompt_with_validation(
+        "Driving license (AB1234567 format): ", validate_driving_license
+    )
 
     success, msg, customer_id = add_traveler(
         first_name,
@@ -682,10 +913,35 @@ def delete_traveler_ui():
 
     customer_id = input("\nEnter customer ID to delete: ").strip()
 
+    if not customer_id:
+        print("\n❌ Customer ID cannot be empty.")
+        wait_for_enter()
+        return
+
+    # First check if traveler exists
+    traveler = get_traveler_by_id(customer_id)
+
+    if not traveler:
+        print(f"\n❌ Traveler with customer ID '{customer_id}' not found.")
+        wait_for_enter()
+        return
+
+    # Show traveler information
+    print(f"\n✓ Traveler found:")
+    print(f"  Customer ID: {traveler['customer_id']}")
+    print(f"  Name: {traveler['first_name']} {traveler['last_name']}")
+    print(f"  Birthday: {traveler['birthday']}")
+    print(f"  Gender: {traveler['gender']}")
+    print(
+        f"  Address: {traveler['street_name']} {traveler['house_number']}, {traveler['zip_code']} {traveler['city']}"
+    )
+    print(f"  Email: {traveler['email']}")
+    print(f"  Phone: {traveler['mobile_phone']}")
+    print(f"  License: {traveler['driving_license']}")
+
+    # Now ask for confirmation
     confirm = (
-        input(
-            f"\n⚠️  Are you sure you want to delete traveler '{customer_id}'? (yes/no): "
-        )
+        input(f"\n⚠️  Are you sure you want to delete this traveler? (yes/no): ")
         .strip()
         .lower()
     )
@@ -700,30 +956,52 @@ def delete_traveler_ui():
 
 
 def add_scooter_ui():
-    """Add new scooter."""
+    """
+    Add new scooter with per-field validation.
+
+    Each field is validated immediately with feedback loop.
+    User can retry invalid input before moving to next field.
+    """
     clear_screen()
     print_header("ADD NEW SCOOTER")
     print_user_info()
 
     print("\nEnter scooter information:")
 
-    serial_number = input("Serial number: ").strip()
-    scooter_type = input("Scooter type/model: ").strip()
+    # Serial number - validated with uniqueness check
+    serial_number = prompt_with_validation(
+        "Serial number (6-15 characters): ", validate_unique_serial_number
+    )
 
-    try:
-        battery_level = int(input("Battery level (0-100): ").strip())
-    except ValueError:
-        print("\nInvalid battery level.")
-        wait_for_enter()
-        return
+    # Scooter type/model - validated
+    scooter_type = prompt_with_validation(
+        "Scooter type/model (2-30 characters): ", validate_scooter_type
+    )
 
-    print("\nStatus: 1) available  2) in_use  3) maintenance")
-    status_choice = input("Enter choice (1-3): ").strip()
-    status_map = {"1": "available", "2": "in_use", "3": "maintenance"}
-    status = status_map.get(status_choice, "available")
+    # Battery level - validated as integer with range
+    battery_level = prompt_integer_with_validation(
+        "Battery level (0-100): ", validate_battery_level
+    )
 
-    location = input("Location: ").strip()
+    # Status - validated with menu choice
+    print("\nStatus options:")
+    print("  1) available")
+    print("  2) in_use")
+    print("  3) maintenance")
 
+    while True:
+        status_choice = input("Enter choice (1-3): ").strip()
+        if status_choice in ["1", "2", "3"]:
+            status_map = {"1": "available", "2": "in_use", "3": "maintenance"}
+            status = status_map[status_choice]
+            break
+        else:
+            print("❌ Error: Please enter 1, 2, or 3\n")
+
+    # Location - validated
+    location = prompt_with_validation("Location (2-50 characters): ", validate_location)
+
+    # All fields validated - now add to database
     success, msg = add_scooter(
         serial_number, scooter_type, battery_level, status, location
     )
@@ -754,10 +1032,13 @@ def search_scooters_ui():
         print(f"\nFound {len(results)} scooter(s):")
         print("\n" + "-" * 70)
         for s in results:
+            print(f"Serial Number: {s['serial_number']}")
             print(f"Type: {s['type']}")
             print(f"Battery: {s['battery_level']}%")
             print(f"Status: {s['status']}")
             print(f"Location: {s['location']}")
+            print(f"Last Service: {s['last_service_date'] or 'Never'}")
+            print(f"Added: {s['added_date']}")
             print("-" * 70)
 
     wait_for_enter()
@@ -777,10 +1058,13 @@ def list_scooters_ui():
         print(f"\nTotal: {len(scooters)} scooter(s)")
         print("\n" + "-" * 70)
         for s in scooters:
+            print(f"Serial Number: {s['serial_number']}")
             print(f"Type: {s['type']}")
             print(f"Battery: {s['battery_level']}%")
             print(f"Status: {s['status']}")
             print(f"Location: {s['location']}")
+            print(f"Last Service: {s['last_service_date'] or 'Never'}")
+            print(f"Added: {s['added_date']}")
             print("-" * 70)
 
     wait_for_enter()
@@ -904,10 +1188,32 @@ def delete_scooter_ui():
 
     serial_number = input("\nEnter scooter serial number to delete: ").strip()
 
+    if not serial_number:
+        print("\n❌ Serial number cannot be empty.")
+        wait_for_enter()
+        return
+
+    # First check if scooter exists
+    scooter = get_scooter_by_serial(serial_number)
+
+    if not scooter:
+        print(f"\n❌ Scooter with serial number '{serial_number}' not found.")
+        wait_for_enter()
+        return
+
+    # Show scooter information
+    print(f"\n✓ Scooter found:")
+    print(f"  Serial Number: {scooter['serial_number']}")
+    print(f"  Type: {scooter['type']}")
+    print(f"  Battery: {scooter['battery_level']}%")
+    print(f"  Status: {scooter['status']}")
+    print(f"  Location: {scooter['location']}")
+    print(f"  Last Service: {scooter['last_service_date'] or 'Never'}")
+    print(f"  Added: {scooter['added_date']}")
+
+    # Now ask for confirmation
     confirm = (
-        input(
-            f"\n⚠️  Are you sure you want to delete scooter '{serial_number}'? (yes/no): "
-        )
+        input(f"\n⚠️  Are you sure you want to delete this scooter? (yes/no): ")
         .strip()
         .lower()
     )
@@ -1196,16 +1502,28 @@ def revoke_restore_code_ui():
 
     try:
         code_idx = int(choice) - 1
-        code_to_revoke = codes[code_idx]["code"]
+        selected_code = codes[code_idx]
     except (ValueError, IndexError):
-        print("\nInvalid choice.")
+        print("\n❌ Invalid choice.")
         wait_for_enter()
         return
 
-    confirm = input(f"\n⚠️  Revoke code '{code_to_revoke}'? (yes/no): ").strip().lower()
+    # Show selected restore code information
+    print(f"\n✓ Restore code selected:")
+    print(f"  Code: {selected_code['code']}")
+    print(f"  Target User: {selected_code['target_username']}")
+    print(f"  Backup File: {selected_code['backup_filename']}")
+    print(f"  Created: {selected_code['created_at']}")
+
+    # Now ask for confirmation
+    confirm = (
+        input(f"\n⚠️  Are you sure you want to revoke this restore code? (yes/no): ")
+        .strip()
+        .lower()
+    )
 
     if confirm == "yes":
-        success, msg = revoke_restore_code(code_to_revoke)
+        success, msg = revoke_restore_code(selected_code["code"])
         print(f"\n{msg}")
     else:
         print("\nRevocation cancelled.")
@@ -1237,7 +1555,7 @@ def list_restore_codes_ui():
 
 
 def update_my_password_ui():
-    """Update current user's password."""
+    """Update current user's password with per-field validation."""
     clear_screen()
     print_header("UPDATE MY PASSWORD")
     print_user_info()
@@ -1249,17 +1567,49 @@ def update_my_password_ui():
     print("  - At least 1 digit")
     print("  - At least 1 special character (~!@#$%&_-+=|\\(){}[]:;'<>,.?/)")
 
+    # Step 1: Verify current password first
     current_password = input("\nEnter current password: ").strip()
-    new_password = input("Enter new password: ").strip()
+
+    if not current_password:
+        print("\n❌ Current password cannot be empty.")
+        wait_for_enter()
+        return
+
+    # Verify current password before asking for new one
+    user = get_current_user()
+    from database import get_connection
+    from auth import verify_password
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT password_hash FROM users WHERE id = ?", (user["user_id"],))
+    result = cursor.fetchone()
+    conn.close()
+
+    if not result or not verify_password(current_password, user["username"], result[0]):
+        print("\n❌ Incorrect current password.")
+        wait_for_enter()
+        return
+
+    # Step 2: Get new password with immediate validation
+    print("\n✓ Current password verified.")
+    new_password = prompt_with_validation("Enter new password: ", validate_password)
+
+    # Step 3: Confirm new password
     confirm_password = input("Confirm new password: ").strip()
+
+    if not confirm_password:
+        print("\n❌ Confirmation password cannot be empty.")
+        wait_for_enter()
+        return
 
     if new_password != confirm_password:
         print("\n❌ Passwords do not match.")
         wait_for_enter()
         return
 
-    user = get_current_user()
-    success, msg = update_password(user["username"], current_password, new_password)
+    # Step 4: Update password
+    success, msg = update_password(current_password, new_password)
 
     print(f"\n{msg}")
     wait_for_enter()

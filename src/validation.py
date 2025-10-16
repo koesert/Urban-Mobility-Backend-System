@@ -106,8 +106,10 @@ def validate_email(email):
     """
     Validate email format.
 
-    Pattern: user@domain.tld
-    Local part can contain: letters, digits, ., _, +, -
+    Rules:
+    - Max 50 characters
+    - Pattern: user@domain.tld
+    - Local part can contain: letters, digits, ., _, +, -
 
     Args:
         email (str): Email to validate
@@ -122,6 +124,10 @@ def validate_email(email):
         raise ValidationError("Email must be a string")
 
     email = email.strip()
+
+    if len(email) > 50:
+        raise ValidationError("Email cannot be longer than 50 characters")
+
     email_pattern = r"^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
 
     if not re.match(email_pattern, email):
@@ -134,11 +140,14 @@ def validate_phone(phone):
     """
     Validate and format Dutch mobile phone number.
 
-    Input: 8 digits (DDDDDDDD)
+    Accepts:
+    - 8 digits (DDDDDDDD)
+    - Already formatted (+31-6-DDDDDDDD)
+
     Output: +31-6-DDDDDDDD
 
     Args:
-        phone (str): Phone number (8 digits)
+        phone (str): Phone number (8 digits or already formatted)
 
     Returns:
         str: Formatted phone (+31-6-DDDDDDDD)
@@ -149,28 +158,35 @@ def validate_phone(phone):
     if not isinstance(phone, str):
         raise ValidationError("Phone number must be a string")
 
-    phone = phone.replace(" ", "").replace("-", "")
+    # Remove all formatting characters
+    phone_clean = phone.replace(" ", "").replace("-", "").replace("+", "")
 
-    if not re.match(r"^\d{8}$", phone):
+    # Check if already formatted (+31-6-DDDDDDDD format)
+    if phone_clean.startswith("316") and len(phone_clean) == 11:
+        # Extract last 8 digits
+        phone_clean = phone_clean[3:]
+    
+    # Validate: must be exactly 8 digits
+    if not re.match(r"^\d{8}$", phone_clean):
         raise ValidationError("Phone number must be exactly 8 digits")
 
-    return f"+31-6-{phone}"
+    return f"+31-6-{phone_clean}"
 
 
 def validate_zipcode(zipcode):
     """
     Validate Dutch zipcode format.
 
-    Format: DDDDXX (4 digits + 2 UPPERCASE letters)
+    Format: DDDDXX (4 digits + 2 letters)
     Example: 3011AB, 1234XY
 
-    Note: Does not convert to uppercase - user must enter correct format.
+    Automatically converts letters to UPPERCASE.
 
     Args:
         zipcode (str): Zipcode to validate
 
     Returns:
-        str: Validated zipcode
+        str: Validated zipcode in UPPERCASE format
 
     Raises:
         ValidationError: If zipcode is invalid
@@ -178,11 +194,11 @@ def validate_zipcode(zipcode):
     if not isinstance(zipcode, str):
         raise ValidationError("Zipcode must be a string")
 
-    zipcode = zipcode.replace(" ", "")
+    zipcode = zipcode.replace(" ", "").upper()
 
     if not re.match(r"^\d{4}[A-Z]{2}$", zipcode):
         raise ValidationError(
-            "Invalid zipcode format. Expected: DDDDXX with UPPERCASE letters (e.g., 3011AB)"
+            "Invalid zipcode format. Expected: DDDDXX (4 digits + 2 letters, e.g., 3011AB)"
         )
 
     return zipcode
@@ -192,16 +208,16 @@ def validate_driving_license(license_number):
     """
     Validate Dutch driving license format.
 
-    Format: XDDDDDDD or XXDDDDDDD (1-2 UPPERCASE letters + 7 digits)
+    Format: XDDDDDDD or XXDDDDDDD (1-2 letters + 7 digits)
     Example: AB1234567, X1234567
 
-    Note: Does not convert to uppercase - user must enter correct format.
+    Automatically converts letters to UPPERCASE.
 
     Args:
         license_number (str): Driving license number
 
     Returns:
-        str: Validated license
+        str: Validated license in UPPERCASE format
 
     Raises:
         ValidationError: If license is invalid
@@ -209,11 +225,11 @@ def validate_driving_license(license_number):
     if not isinstance(license_number, str):
         raise ValidationError("Driving license must be a string")
 
-    license_number = license_number.replace(" ", "")
+    license_number = license_number.replace(" ", "").upper()
 
     if not re.match(r"^[A-Z]{1,2}\d{7}$", license_number):
         raise ValidationError(
-            "Invalid driving license format. Expected: XDDDDDDD or XXDDDDDDD with UPPERCASE letters (e.g., AB1234567)"
+            "Invalid driving license format. Expected: XDDDDDDD or XXDDDDDDD (1-2 letters + 7 digits, e.g., AB1234567)"
         )
 
     return license_number
@@ -298,7 +314,11 @@ def validate_house_number(house_number):
     """
     Validate house number format.
 
-    Must start with a digit, can include letters or additions.
+    Rules:
+    - Max 6 characters
+    - Must start with a digit
+    - Can include letters or additions
+
     Examples: 42, 42A, 42-1, 42bis
 
     Args:
@@ -317,6 +337,9 @@ def validate_house_number(house_number):
 
     if not house_number:
         raise ValidationError("House number cannot be empty")
+
+    if len(house_number) > 6:
+        raise ValidationError("House number cannot be longer than 6 characters")
 
     if not re.match(r"^\d", house_number):
         raise ValidationError("House number must start with a digit")
@@ -393,6 +416,149 @@ def validate_gender(gender):
         raise ValidationError("Gender must be 'Male' or 'Female'")
 
     return gender
+
+
+def validate_serial_number(serial_number):
+    """
+    Validate scooter serial number format.
+
+    Rules:
+    - 6-15 characters
+    - Alphanumeric only
+    - Must start with letter or digit
+
+    Args:
+        serial_number (str): Serial number to validate
+
+    Returns:
+        str: Validated serial number (uppercase)
+
+    Raises:
+        ValidationError: If serial number is invalid
+    """
+    if not isinstance(serial_number, str):
+        raise ValidationError("Serial number must be a string")
+
+    serial_number = serial_number.strip().upper()
+
+    # Validate length
+    if len(serial_number) < 6:
+        raise ValidationError("Serial number must be at least 6 characters long")
+    if len(serial_number) > 15:
+        raise ValidationError("Serial number must be at most 15 characters long")
+
+    # Validate format (alphanumeric only)
+    if not re.match(r"^[A-Z0-9]+$", serial_number):
+        raise ValidationError("Serial number can only contain letters and digits")
+
+    return serial_number
+
+
+def validate_scooter_type(scooter_type):
+    """
+    Validate scooter type/model format.
+
+    Rules:
+    - 2-30 characters
+    - Can contain letters, digits, spaces, hyphens
+
+    Args:
+        scooter_type (str): Scooter type to validate
+
+    Returns:
+        str: Validated scooter type
+
+    Raises:
+        ValidationError: If scooter type is invalid
+    """
+    if not isinstance(scooter_type, str):
+        raise ValidationError("Scooter type must be a string")
+
+    scooter_type = scooter_type.strip()
+
+    # Validate length
+    if len(scooter_type) < 2:
+        raise ValidationError("Scooter type must be at least 2 characters long")
+    if len(scooter_type) > 30:
+        raise ValidationError("Scooter type must be at most 30 characters long")
+
+    # Validate format (letters, digits, spaces, hyphens)
+    if not re.match(r"^[a-zA-Z0-9\s\-]+$", scooter_type):
+        raise ValidationError(
+            "Scooter type can only contain letters, digits, spaces, and hyphens"
+        )
+
+    return scooter_type
+
+
+def validate_battery_level(battery_level):
+    """
+    Validate battery level value.
+
+    Must be integer between 0 and 100.
+
+    Args:
+        battery_level (int or str): Battery level to validate
+
+    Returns:
+        int: Validated battery level
+
+    Raises:
+        ValidationError: If battery level is invalid
+    """
+    # Convert string to int if needed
+    if isinstance(battery_level, str):
+        try:
+            battery_level = int(battery_level.strip())
+        except ValueError:
+            raise ValidationError("Battery level must be a number")
+
+    if not isinstance(battery_level, int):
+        raise ValidationError("Battery level must be an integer")
+
+    if battery_level < 0:
+        raise ValidationError("Battery level cannot be negative")
+    if battery_level > 100:
+        raise ValidationError("Battery level cannot exceed 100")
+
+    return battery_level
+
+
+def validate_location(location):
+    """
+    Validate location string.
+
+    Rules:
+    - 2-50 characters
+    - Can contain letters, digits, spaces, common punctuation
+
+    Args:
+        location (str): Location to validate
+
+    Returns:
+        str: Validated location
+
+    Raises:
+        ValidationError: If location is invalid
+    """
+    if not isinstance(location, str):
+        raise ValidationError("Location must be a string")
+
+    location = location.strip()
+
+    # Validate length
+    if len(location) < 2:
+        raise ValidationError("Location must be at least 2 characters long")
+    if len(location) > 50:
+        raise ValidationError("Location must be at most 50 characters long")
+
+    # Validate format (allow letters, digits, spaces, and common punctuation)
+    if not re.match(r"^[a-zA-Z0-9\s,.\-']+$", location):
+        raise ValidationError(
+            "Location can only contain letters, digits, spaces, and basic punctuation"
+        )
+
+    return location
 
 
 # Testing and demonstration
