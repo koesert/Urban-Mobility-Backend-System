@@ -118,7 +118,7 @@ def show_main_menu():
         print("  7. Logout")
 
     elif user["role"] == "service_engineer":
-        # Service Engineer menu (limited)
+        # Service Engineer menu
         print("  1. Update Scooter Information")
         print("  2. Search Scooters")
         print("  3. Update My Password")
@@ -129,7 +129,7 @@ def show_main_menu():
 
 
 def manage_system_admins_menu():
-    """Menu for managing System Administrators (Super Admin only)."""
+    """Menu for managing System Administrators."""
     while True:
         clear_screen()
         print_header("MANAGE SYSTEM ADMINISTRATORS")
@@ -162,7 +162,7 @@ def manage_system_admins_menu():
 
 
 def manage_service_engineers_menu():
-    """Menu for managing Service Engineers (Super Admin & System Admin)."""
+    """Menu for managing Service Engineers."""
     while True:
         clear_screen()
         print_header("MANAGE SERVICE ENGINEERS")
@@ -195,7 +195,7 @@ def manage_service_engineers_menu():
 
 
 def manage_travelers_menu():
-    """Menu for managing Travelers (Super Admin & System Admin)."""
+    """Menu for managing Travelers."""
     while True:
         clear_screen()
         print_header("MANAGE TRAVELERS")
@@ -228,7 +228,7 @@ def manage_travelers_menu():
 
 
 def manage_scooters_menu():
-    """Menu for managing Scooters (Super Admin & System Admin)."""
+    """Menu for managing Scooters."""
     while True:
         clear_screen()
         print_header("MANAGE SCOOTERS")
@@ -261,7 +261,7 @@ def manage_scooters_menu():
 
 
 def service_engineer_scooter_menu():
-    """Simplified scooter menu for Service Engineers (update only)."""
+    """Simplified scooter menu for Service Engineers."""
     while True:
         clear_screen()
         print_header("UPDATE SCOOTER INFORMATION")
