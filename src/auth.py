@@ -161,11 +161,11 @@ PERMISSIONS = {
     },
     "system_admin": {
         "manage_admins": False,
-        "manage_engineers": False,
+        "manage_engineers": True,
         "manage_travelers": True,
         "manage_scooters": True,
         "view_logs": True,
-        "create_backup": False,
+        "create_backup": True,
         "restore_backup": True,  # Requires restore code
         "manage_restore_codes": False,
         "update_own_password": True,
