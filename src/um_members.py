@@ -28,7 +28,7 @@ from scooters import (
     get_scooter_by_serial,
     list_all_scooters,
 )
-from logging import (
+from activity_log import (
     get_all_logs,
     display_logs,
     check_suspicious_activities,

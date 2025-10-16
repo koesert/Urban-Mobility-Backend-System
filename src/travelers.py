@@ -13,7 +13,7 @@ from validation import (
     ValidationError,
 )
 from auth import get_current_user, check_permission
-from logging import log_activity
+from activity_log import log_activity
 
 
 def add_traveler(
@@ -533,7 +533,7 @@ if __name__ == "__main__":
 
     # Show logs
     print("\n--- Activity Logs ---")
-    from logging import get_all_logs, display_logs
+    from activity_log import get_all_logs, display_logs
 
     logs = get_all_logs()
     display_logs(logs[-8:])

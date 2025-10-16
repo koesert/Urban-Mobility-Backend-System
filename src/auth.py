@@ -6,7 +6,7 @@ from database import (
     verify_password,
 )
 from validation import validate_username, validate_password, ValidationError
-from logging import log_activity
+from activity_log import log_activity
 
 # Current user session state
 current_session = {
@@ -477,7 +477,7 @@ if __name__ == "__main__":
 
     # Show logged activities
     print("\n--- Logged Activities ---")
-    from logging import get_all_logs, display_logs
+    from activity_log import get_all_logs, display_logs
 
     logs = get_all_logs()
     display_logs(logs)

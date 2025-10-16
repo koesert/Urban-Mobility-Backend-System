@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime
 from database import get_connection, encrypt_field, decrypt_field
 from auth import get_current_user, check_permission
-from logging import log_activity
+from activity_log import log_activity
 
 # Backup directory
 BACKUP_DIR = Path(__file__).parent / "backups"
@@ -572,7 +572,7 @@ if __name__ == "__main__":
 
     # Show logs
     print("\n--- Activity Logs ---")
-    from logging import get_all_logs, display_logs
+    from activity_log import get_all_logs, display_logs
 
     logs = get_all_logs()
     display_logs(logs[-8:])

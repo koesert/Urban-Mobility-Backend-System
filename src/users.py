@@ -8,7 +8,7 @@ from database import (
 )
 from validation import validate_username, validate_name, ValidationError
 from auth import get_current_user, check_permission, get_role_name
-from logging import log_activity
+from activity_log import log_activity
 
 
 def create_system_admin(username, first_name, last_name, password=None):
@@ -635,7 +635,7 @@ if __name__ == "__main__":
 
     # Show logs
     print("\n--- Activity Logs ---")
-    from logging import get_all_logs, display_logs
+    from activity_log import get_all_logs, display_logs
 
     logs = get_all_logs()
     display_logs(logs[-10:])  # Last 10 logs
