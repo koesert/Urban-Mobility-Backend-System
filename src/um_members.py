@@ -28,8 +28,6 @@ from scooters import (
     get_scooter_by_serial,
     list_all_scooters,
 )
-# Import from local logging module (not standard library)
-import logging as logging_module
 from logging import (
     get_all_logs,
     display_logs,
@@ -73,11 +71,6 @@ def print_user_info():
 def wait_for_enter():
     """Wait for user to press Enter."""
     input("\nPress Enter to continue...")
-
-
-# ===========================
-# MAIN MENU FUNCTIONS
-# ===========================
 
 
 def show_main_menu():
@@ -133,11 +126,6 @@ def show_main_menu():
 
     print("\n" + "-" * 70)
     return True
-
-
-# ===========================
-# USER MANAGEMENT MENUS
-# ===========================
 
 
 def manage_system_admins_menu():
@@ -206,11 +194,6 @@ def manage_service_engineers_menu():
             wait_for_enter()
 
 
-# ===========================
-# TRAVELER MANAGEMENT MENUS
-# ===========================
-
-
 def manage_travelers_menu():
     """Menu for managing Travelers (Super Admin & System Admin)."""
     while True:
@@ -242,11 +225,6 @@ def manage_travelers_menu():
         else:
             print("Invalid choice. Please enter 1-6.")
             wait_for_enter()
-
-
-# ===========================
-# SCOOTER MANAGEMENT MENUS
-# ===========================
 
 
 def manage_scooters_menu():
@@ -301,11 +279,6 @@ def service_engineer_scooter_menu():
         else:
             print("Invalid choice. Please enter 1-2.")
             wait_for_enter()
-
-
-# ===========================
-# USER MANAGEMENT UI FUNCTIONS
-# ===========================
 
 
 def create_system_admin_ui():
@@ -538,11 +511,6 @@ def delete_service_engineer_ui():
     wait_for_enter()
 
 
-# ===========================
-# TRAVELER UI FUNCTIONS
-# ===========================
-
-
 def add_traveler_ui():
     """Add new traveler."""
     clear_screen()
@@ -729,11 +697,6 @@ def delete_traveler_ui():
         print("\nDeletion cancelled.")
 
     wait_for_enter()
-
-
-# ===========================
-# SCOOTER UI FUNCTIONS
-# ===========================
 
 
 def add_scooter_ui():
@@ -958,11 +921,6 @@ def delete_scooter_ui():
     wait_for_enter()
 
 
-# ===========================
-# LOGGING UI FUNCTIONS
-# ===========================
-
-
 def view_logs_menu():
     """View system logs menu."""
     while True:
@@ -1039,11 +997,6 @@ def view_suspicious_logs_ui():
         display_logs(suspicious)
 
     wait_for_enter()
-
-
-# ===========================
-# BACKUP UI FUNCTIONS
-# ===========================
 
 
 def backup_restore_menu():
@@ -1283,11 +1236,6 @@ def list_restore_codes_ui():
     wait_for_enter()
 
 
-# ===========================
-# PASSWORD UPDATE UI
-# ===========================
-
-
 def update_my_password_ui():
     """Update current user's password."""
     clear_screen()
@@ -1315,11 +1263,6 @@ def update_my_password_ui():
 
     print(f"\n{msg}")
     wait_for_enter()
-
-
-# ===========================
-# MAIN LOGIN LOOP
-# ===========================
 
 
 def login_screen():
@@ -1367,6 +1310,7 @@ def main():
     # Initialize database (creates tables and super admin)
     try:
         from database import init_database
+
         init_database()
         print("✓ Database initialized")
     except Exception as e:
