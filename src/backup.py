@@ -444,6 +444,9 @@ def _validate_restore_code(restore_code):
     """
     Validate restore code (internal helper).
 
+    Note: Cannot search encrypted Fernet field directly in WHERE clause
+    because Fernet is non-deterministic. Must decrypt all codes and compare.
+
     Args:
         restore_code (str): Code to validate
 
@@ -465,26 +468,26 @@ def _validate_restore_code(restore_code):
         conn.close()
         return False, None
 
-    encrypted_code = encrypt_field(restore_code)
-
-    # Prepared statement
+    # Get all unused restore codes
+    # Note: Cannot use WHERE code = ? because Fernet encryption is non-deterministic
     cursor.execute(
-        "SELECT backup_filename, used FROM restore_codes WHERE code = ?",
-        (encrypted_code,),
+        "SELECT backup_filename, used, code FROM restore_codes WHERE used = 0"
     )
 
-    result = cursor.fetchone()
+    results = cursor.fetchall()
     conn.close()
 
-    if not result:
-        return False, None
+    # Decrypt and find matching code
+    for row in results:
+        encrypted_backup, used, encrypted_code = row
+        decrypted_code = decrypt_field(encrypted_code)
 
-    encrypted_backup, used = result
+        if decrypted_code == restore_code:
+            # Match found!
+            return True, decrypt_field(encrypted_backup)
 
-    if used:
-        return False, None
-
-    return True, decrypt_field(encrypted_backup)
+    # No match found
+    return False, None
 
 
 def _mark_code_as_used(restore_code):
