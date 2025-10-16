@@ -162,13 +162,13 @@ def validate_unique_username(username):
     """
     # First do normal validation
     username = validate_username(username)
-    
+
     # Then check if it exists
     all_users = list_all_users()
     for user in all_users:
-        if user['username'] == username:
+        if user["username"] == username:
             raise ValidationError(f"Username '{username}' already exists")
-    
+
     return username
 
 
@@ -187,12 +187,12 @@ def validate_unique_serial_number(serial_number):
     """
     # First do normal validation
     serial_number = validate_serial_number(serial_number)
-    
+
     # Then check if it exists
     scooter = get_scooter_by_serial(serial_number)
     if scooter:
         raise ValidationError(f"Serial number '{serial_number}' already exists")
-    
+
     return serial_number
 
 
@@ -1615,6 +1615,100 @@ def update_my_password_ui():
     wait_for_enter()
 
 
+def force_password_change_ui():
+    """
+    Force user to change password on first login with temporary password.
+
+    User cannot proceed until they set a new password.
+    """
+    clear_screen()
+    print_header("⚠️  PASSWORD CHANGE REQUIRED")
+    print_user_info()
+
+    print("\n" + "=" * 70)
+    print("  YOU MUST CHANGE YOUR TEMPORARY PASSWORD")
+    print("=" * 70)
+
+    print("\nPassword requirements:")
+    print("  - Length: 12-30 characters")
+    print("  - At least 1 lowercase letter")
+    print("  - At least 1 uppercase letter")
+    print("  - At least 1 digit")
+    print("  - At least 1 special character (~!@#$%&_-+=|\\(){}[]:;'<>,.?/)")
+
+    max_attempts = 3
+    for attempt in range(max_attempts):
+        new_password = prompt_with_validation("Enter new password: ", validate_password)
+
+        # Confirm new password
+        confirm_password = input("Confirm new password: ").strip()
+
+        if not confirm_password:
+            print("\n❌ Confirmation password cannot be empty.")
+            if attempt < max_attempts - 1:
+                print(f"Try again ({max_attempts - attempt - 1} attempts remaining)\n")
+                continue
+            else:
+                print("⚠️  Maximum attempts reached. You will be logged out.")
+                logout()
+                wait_for_enter()
+                return
+
+        if new_password != confirm_password:
+            print("\n❌ Passwords do not match.")
+            if attempt < max_attempts - 1:
+                print(f"Try again ({max_attempts - attempt - 1} attempts remaining)\n")
+                continue
+            else:
+                print("⚠️  Maximum attempts reached. You will be logged out.")
+                logout()
+                wait_for_enter()
+                return
+
+        # Update password (no current password needed - user just logged in)
+        user = get_current_user()
+        from database import get_connection
+        from auth import hash_password
+
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+
+            # Hash the new password
+            new_hash = hash_password(new_password, user["username"])
+
+            # Update password and reset must_change_password flag
+            cursor.execute(
+                """
+                UPDATE users
+                SET password_hash = ?, must_change_password = 0
+                WHERE id = ?
+            """,
+                (new_hash, user["user_id"]),
+            )
+
+            conn.commit()
+            conn.close()
+
+            # Update session state
+            user["must_change_password"] = False
+
+            print("\n✓ Password changed successfully!")
+            print("✓ You can now use the system.")
+            wait_for_enter()
+            return
+
+        except Exception as e:
+            print(f"\n❌ Error updating password: {e}")
+            if attempt < max_attempts - 1:
+                print(f"Try again ({max_attempts - attempt - 1} attempts remaining)\n")
+            else:
+                print("⚠️  Maximum attempts reached. You will be logged out.")
+                logout()
+                wait_for_enter()
+                return
+
+
 def login_screen():
     """Login screen."""
     clear_screen()
@@ -1634,6 +1728,12 @@ def login_screen():
     if success:
         print(f"\n✓ {message}")
         wait_for_enter()
+
+        # Check if user must change password (first login with temp password)
+        user = get_current_user()
+        if user and user.get("must_change_password"):
+            force_password_change_ui()
+
         return True
     else:
         print(f"\n❌ {message}")

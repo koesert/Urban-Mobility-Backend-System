@@ -17,6 +17,7 @@ current_session = {
     "role_name": None,
     "first_name": None,
     "last_name": None,
+    "must_change_password": False,
 }
 
 
@@ -73,7 +74,7 @@ def login(username, password):
 
     cursor.execute(
         """
-        SELECT id, username, password_hash, role, first_name, last_name
+        SELECT id, username, password_hash, role, first_name, last_name, must_change_password
         FROM users
         WHERE username = ?
     """,
@@ -92,7 +93,7 @@ def login(username, password):
         )
         return False, "Invalid username or password"
 
-    user_id, encrypted_username_db, password_hash_db, role, first_name, last_name = user
+    user_id, encrypted_username_db, password_hash_db, role, first_name, last_name, must_change_password = user
     username_db = decrypt_username(encrypted_username_db)
 
     if not verify_password(password, username_db, password_hash_db):
@@ -112,6 +113,7 @@ def login(username, password):
     current_session["role_name"] = get_role_name(role)
     current_session["first_name"] = first_name
     current_session["last_name"] = last_name
+    current_session["must_change_password"] = bool(must_change_password)
 
     log_activity(username_db, "Logged in")
 
@@ -139,6 +141,7 @@ def logout():
     current_session["role_name"] = None
     current_session["first_name"] = None
     current_session["last_name"] = None
+    current_session["must_change_password"] = False
 
     return True, f"User {username} logged out successfully"
 
@@ -295,10 +298,11 @@ def update_password(old_password, new_password):
 
     new_password_hash = hash_password(new_password, username)
 
+    # Reset must_change_password flag when password is changed
     cursor.execute(
         """
         UPDATE users
-        SET password_hash = ?
+        SET password_hash = ?, must_change_password = 0
         WHERE id = ?
     """,
         (new_password_hash, user_id),
@@ -306,6 +310,9 @@ def update_password(old_password, new_password):
 
     conn.commit()
     conn.close()
+
+    # Update session state
+    current_session["must_change_password"] = False
 
     log_activity(username, "Password updated")
 

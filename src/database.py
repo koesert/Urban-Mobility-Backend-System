@@ -217,6 +217,7 @@ def create_tables():
             role TEXT NOT NULL CHECK(role IN ('super_admin', 'system_admin', 'service_engineer')),
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
+            must_change_password INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """

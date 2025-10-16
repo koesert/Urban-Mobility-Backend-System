@@ -72,13 +72,13 @@ def create_system_admin(username, first_name, last_name, password=None):
     # Hash password with SHA-256 + salt
     password_hash = hash_password(password, username)
 
-    # Prepared statement for INSERT
+    # Prepared statement for INSERT (with must_change_password flag)
     cursor.execute(
         """
-        INSERT INTO users (username, password_hash, role, first_name, last_name)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO users (username, password_hash, role, first_name, last_name, must_change_password)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (encrypted_username, password_hash, "system_admin", first_name, last_name),
+        (encrypted_username, password_hash, "system_admin", first_name, last_name, 1),
     )
 
     conn.commit()
@@ -160,13 +160,13 @@ def create_service_engineer(username, first_name, last_name, password=None):
     # Hash password
     password_hash = hash_password(password, username)
 
-    # Prepared statement for INSERT
+    # Prepared statement for INSERT (with must_change_password flag)
     cursor.execute(
         """
-        INSERT INTO users (username, password_hash, role, first_name, last_name)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO users (username, password_hash, role, first_name, last_name, must_change_password)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (encrypted_username, password_hash, "service_engineer", first_name, last_name),
+        (encrypted_username, password_hash, "service_engineer", first_name, last_name, 1),
     )
 
     conn.commit()
