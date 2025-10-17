@@ -151,7 +151,7 @@ class TestRunner:
 
     def print_summary(self):
         """Print comprehensive test summary."""
-        total_duration = self.end_time - self.start_time
+        total_duration = (self.end_time or 0.0) - (self.start_time or 0.0)
 
         print("\n" + "=" * 80)
         print("📊 COMPREHENSIVE TEST SUMMARY")

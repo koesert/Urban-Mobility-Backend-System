@@ -432,9 +432,10 @@ if __name__ == "__main__":
 
     if success:
         user = get_current_user()
-        print(f"Current user: {user['username']}")
-        print(f"Role: {user['role']}")
-        print(f"Full name: {user['first_name']} {user['last_name']}")
+        if user:
+            print(f"Current user: {user['username']}")
+            print(f"Role: {user['role']}")
+            print(f"Full name: {user['first_name']} {user['last_name']}")
 
     print("\n--- Test 2: Permission Checks ---")
     permissions_to_test = [

@@ -118,11 +118,12 @@ def add_traveler(
     conn.close()
 
     # Log activity
-    log_activity(
-        current_user["username"],
-        "New traveler added",
-        f"Customer ID: {customer_id}, Name: {first_name} {last_name}",
-    )
+    if current_user:
+        log_activity(
+            current_user["username"],
+            "New traveler added",
+            f"Customer ID: {customer_id}, Name: {first_name} {last_name}",
+        )
 
     return True, f"Traveler '{first_name} {last_name}' added successfully", customer_id
 
@@ -235,11 +236,12 @@ def update_traveler(customer_id, **updates):
     conn.close()
 
     # Log activity
-    log_activity(
-        current_user["username"],
-        "Traveler updated",
-        f"Customer ID: {customer_id}, Updated fields: {', '.join(changes)}",
-    )
+    if current_user:
+        log_activity(
+            current_user["username"],
+            "Traveler updated",
+            f"Customer ID: {customer_id}, Updated fields: {', '.join(changes)}",
+        )
 
     return True, f"Traveler updated successfully"
 
@@ -290,11 +292,12 @@ def delete_traveler(customer_id):
     conn.close()
 
     # Log activity
-    log_activity(
-        current_user["username"],
-        "Traveler deleted",
-        f"Customer ID: {customer_id}, Name: {first_name} {last_name}",
-    )
+    if current_user:
+        log_activity(
+            current_user["username"],
+            "Traveler deleted",
+            f"Customer ID: {customer_id}, Name: {first_name} {last_name}",
+        )
 
     return True, f"Traveler '{first_name} {last_name}' deleted successfully"
 

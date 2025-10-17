@@ -1318,7 +1318,7 @@ def backup_restore_menu():
         print("2. List Backups")
         print("3. Restore Backup")
 
-        if user["role"] == "super_admin":
+        if user and user["role"] == "super_admin":
             print("4. Generate Restore Code")
             print("5. Revoke Restore Code")
             print("6. List Restore Codes")
@@ -1335,15 +1335,15 @@ def backup_restore_menu():
         elif choice == "3":
             restore_backup_ui()
         elif choice == "4":
-            if user["role"] == "super_admin":
+            if user and user["role"] == "super_admin":
                 generate_restore_code_ui()
             else:
                 break
-        elif choice == "5" and user["role"] == "super_admin":
+        elif choice == "5" and user and user["role"] == "super_admin":
             revoke_restore_code_ui()
-        elif choice == "6" and user["role"] == "super_admin":
+        elif choice == "6" and user and user["role"] == "super_admin":
             list_restore_codes_ui()
-        elif choice == "7" and user["role"] == "super_admin":
+        elif choice == "7" and user and user["role"] == "super_admin":
             break
         else:
             print("Invalid choice.")
@@ -1419,7 +1419,7 @@ def restore_backup_ui():
 
     # System Admin needs restore code
     restore_code = None
-    if user["role"] == "system_admin":
+    if user and user["role"] == "system_admin":
         restore_code = input("\nEnter restore code: ").strip()
 
     confirm = (
@@ -1580,6 +1580,10 @@ def update_my_password_ui():
     from database import get_connection
     from auth import verify_password
 
+    if not user:
+        print("\n❌ Error: No user logged in.")
+        return
+
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT password_hash FROM users WHERE id = ?", (user["user_id"],))
@@ -1671,6 +1675,10 @@ def force_password_change_ui():
         from auth import hash_password
 
         try:
+            if not user:
+                print("\n❌ Error: No user logged in.")
+                return
+
             conn = get_connection()
             cursor = conn.cursor()
 

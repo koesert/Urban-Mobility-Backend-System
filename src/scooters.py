@@ -87,11 +87,12 @@ def add_scooter(serial_number, scooter_type, battery_level, status, location):
     conn.close()
 
     # Log activity
-    log_activity(
-        current_user["username"],
-        "New scooter added",
-        f"Serial: {serial_number}, Type: {scooter_type}",
-    )
+    if current_user:
+        log_activity(
+            current_user["username"],
+            "New scooter added",
+            f"Serial: {serial_number}, Type: {scooter_type}",
+        )
 
     return True, f"Scooter '{serial_number}' added successfully"
 
@@ -143,9 +144,13 @@ def update_scooter(serial_number, **updates):
     }
 
     # Check field permissions based on role
-    user_role = current_user["role"]
-    if user_role == "service_engineer":
-        allowed_fields = service_engineer_fields
+    user_role = None
+    if current_user:
+        user_role = current_user["role"]
+        if user_role == "service_engineer":
+            allowed_fields = service_engineer_fields
+        else:
+            allowed_fields = all_fields
     else:
         allowed_fields = all_fields
 
@@ -222,11 +227,12 @@ def update_scooter(serial_number, **updates):
     conn.close()
 
     # Log activity
-    log_activity(
-        current_user["username"],
-        "Scooter updated",
-        f"Serial: {serial_number}, Updated fields: {', '.join(changes)}",
-    )
+    if current_user:
+        log_activity(
+            current_user["username"],
+            "Scooter updated",
+            f"Serial: {serial_number}, Updated fields: {', '.join(changes)}",
+        )
 
     return True, f"Scooter updated successfully"
 
@@ -249,7 +255,7 @@ def delete_scooter(serial_number):
     # Check permission (Service Engineers cannot delete)
     current_user = get_current_user()
 
-    if current_user["role"] == "service_engineer":
+    if current_user and current_user["role"] == "service_engineer":
         return False, "Access denied. Service Engineers cannot delete scooters"
 
     if not check_permission("manage_scooters"):
@@ -282,11 +288,12 @@ def delete_scooter(serial_number):
     conn.close()
 
     # Log activity
-    log_activity(
-        current_user["username"],
-        "Scooter deleted",
-        f"Serial: {serial_number}, Type: {scooter_type}",
-    )
+    if current_user:
+        log_activity(
+            current_user["username"],
+            "Scooter deleted",
+            f"Serial: {serial_number}, Type: {scooter_type}",
+        )
 
     return True, f"Scooter '{serial_number}' deleted successfully"
 

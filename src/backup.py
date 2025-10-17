@@ -65,11 +65,12 @@ def create_backup():
                 zipf.write(log_path, "system.log")
 
         # Log activity
-        log_activity(
-            current_user["username"],
-            "Backup created",
-            f"Filename: {backup_filename}",
-        )
+        if current_user:
+            log_activity(
+                current_user["username"],
+                "Backup created",
+                f"Filename: {backup_filename}",
+            )
 
         return True, f"Backup created successfully: {backup_filename}", backup_filename
 
@@ -247,11 +248,12 @@ def generate_restore_code(backup_filename, target_username):
     conn.close()
 
     # Log activity
-    log_activity(
-        current_user["username"],
-        "Restore code generated",
-        f"For user: {target_username}, Backup: {backup_filename}",
-    )
+    if current_user:
+        log_activity(
+            current_user["username"],
+            "Restore code generated",
+            f"For user: {target_username}, Backup: {backup_filename}",
+        )
 
     return True, "Restore code generated successfully", code
 
@@ -336,11 +338,12 @@ def revoke_restore_code(restore_code):
     target_user = decrypt_field(encrypted_target)
 
     # Log activity
-    log_activity(
-        current_user["username"],
-        "Restore code revoked",
-        f"For user: {target_user}, Backup: {backup_name}",
-    )
+    if current_user:
+        log_activity(
+            current_user["username"],
+            "Restore code revoked",
+            f"For user: {target_user}, Backup: {backup_name}",
+        )
 
     return True, "Restore code revoked successfully"
 
@@ -541,6 +544,7 @@ if __name__ == "__main__":
 
     # Test 3: Generate restore code
     print("\n--- Test 3: Generate Restore Code ---")
+    code = None
     if filename:
         success, msg, code = generate_restore_code(filename, "system_admin")
         print(f"Result: {success}")

@@ -85,11 +85,12 @@ def create_system_admin(username, first_name, last_name, password=None):
     conn.close()
 
     # Log activity
-    log_activity(
-        current_user["username"],
-        "New system admin created",
-        f"username: {username}, name: {first_name} {last_name}",
-    )
+    if current_user:
+        log_activity(
+            current_user["username"],
+            "New system admin created",
+            f"username: {username}, name: {first_name} {last_name}",
+        )
 
     if temp_password:
         return (
@@ -173,11 +174,12 @@ def create_service_engineer(username, first_name, last_name, password=None):
     conn.close()
 
     # Log activity
-    log_activity(
-        current_user["username"],
-        "New service engineer created",
-        f"username: {username}, name: {first_name} {last_name}",
-    )
+    if current_user:
+        log_activity(
+            current_user["username"],
+            "New service engineer created",
+            f"username: {username}, name: {first_name} {last_name}",
+        )
 
     if temp_password:
         return (
