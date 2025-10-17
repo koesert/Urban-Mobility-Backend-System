@@ -199,3 +199,6 @@ src/data/
 *.json
 
 *.bin
+
+# Claude
+*.Claude
