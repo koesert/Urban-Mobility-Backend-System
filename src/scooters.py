@@ -9,6 +9,7 @@ from validation import (
 from auth import get_current_user, check_permission
 from activity_log import log_activity
 
+
 def add_scooter(serial_number, scooter_type, battery_level, status, location):
     """
     Create new scooter record.

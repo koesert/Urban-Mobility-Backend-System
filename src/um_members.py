@@ -41,7 +41,7 @@ from backup import (
     list_backups,
     list_restore_codes,
 )
-from validation import ValidationError
+from validation import ValidationError, VALID_CITIES
 from validation import (
     validate_email,
     validate_phone,
@@ -58,6 +58,15 @@ from validation import (
     validate_scooter_type,
     validate_battery_level,
     validate_location,
+)
+from input_handlers import (
+    CancelInputException,
+    prompt_with_validation,
+    prompt_integer_with_validation,
+    prompt_menu_choice,
+    prompt_confirmation,
+    prompt_optional_field,
+    prompt_choice_from_list,
 )
 
 
@@ -88,63 +97,6 @@ def print_user_info():
 def wait_for_enter():
     """Wait for user to press Enter."""
     input("\nPress Enter to continue...")
-
-
-def prompt_with_validation(prompt_text, validator_func):
-    """
-    Prompt user for input with immediate validation loop.
-
-    Keeps asking until valid input is provided. Shows error message
-    and repeats the same prompt on validation failure.
-
-    Args:
-        prompt_text (str): Text to show to user (e.g., "Email: ")
-        validator_func (callable): Validation function from validation.py
-
-    Returns:
-        Validated value (type depends on validator function)
-
-    Example:
-        email = prompt_with_validation("Email: ", validate_email)
-    """
-    while True:
-        user_input = input(prompt_text).strip()
-        try:
-            # Call validator function
-            validated_value = validator_func(user_input)
-            return validated_value
-        except ValidationError as e:
-            # Show error and repeat the same prompt
-            print(f"❌ Error: {e}\n")
-
-
-def prompt_integer_with_validation(prompt_text, validator_func):
-    """
-    Prompt user for integer input with immediate validation loop.
-
-    Similar to prompt_with_validation but handles integer conversion
-    and validation (e.g., battery level, house number).
-
-    Args:
-        prompt_text (str): Text to show to user
-        validator_func (callable): Validation function that accepts int or str
-
-    Returns:
-        int: Validated integer value
-
-    Example:
-        battery = prompt_integer_with_validation("Battery level (0-100): ", validate_battery_level)
-    """
-    while True:
-        user_input = input(prompt_text).strip()
-        try:
-            # Validator will handle conversion and range checking
-            validated_value = validator_func(user_input)
-            return validated_value
-        except ValidationError as e:
-            print(f"❌ Error: {e}\n")
-        except ValueError:
-            print(f"❌ Error: Please enter a valid number\n")
 
 
 def validate_unique_username(username):
@@ -265,7 +217,10 @@ def manage_system_admins_menu():
         print("5. Delete System Administrator")
         print("6. Back to Main Menu")
 
-        choice = input("\nEnter choice (1-6): ").strip()
+        try:
+            choice = prompt_menu_choice("\nEnter choice (1-6): ", 1, 6)
+        except CancelInputException:
+            break
 
         if choice == "1":
             create_system_admin_ui()
@@ -279,9 +234,6 @@ def manage_system_admins_menu():
             delete_system_admin_ui()
         elif choice == "6":
             break
-        else:
-            print("Invalid choice. Please enter 1-6.")
-            wait_for_enter()
 
 
 def manage_service_engineers_menu():
@@ -298,7 +250,10 @@ def manage_service_engineers_menu():
         print("5. Delete Service Engineer")
         print("6. Back to Main Menu")
 
-        choice = input("\nEnter choice (1-6): ").strip()
+        try:
+            choice = prompt_menu_choice("\nEnter choice (1-6): ", 1, 6)
+        except CancelInputException:
+            break
 
         if choice == "1":
             create_service_engineer_ui()
@@ -312,9 +267,6 @@ def manage_service_engineers_menu():
             delete_service_engineer_ui()
         elif choice == "6":
             break
-        else:
-            print("Invalid choice. Please enter 1-6.")
-            wait_for_enter()
 
 
 def manage_travelers_menu():
@@ -331,7 +283,10 @@ def manage_travelers_menu():
         print("5. Delete Traveler")
         print("6. Back to Main Menu")
 
-        choice = input("\nEnter choice (1-6): ").strip()
+        try:
+            choice = prompt_menu_choice("\nEnter choice (1-6): ", 1, 6)
+        except CancelInputException:
+            break
 
         if choice == "1":
             add_traveler_ui()
@@ -345,9 +300,6 @@ def manage_travelers_menu():
             delete_traveler_ui()
         elif choice == "6":
             break
-        else:
-            print("Invalid choice. Please enter 1-6.")
-            wait_for_enter()
 
 
 def manage_scooters_menu():
@@ -364,7 +316,10 @@ def manage_scooters_menu():
         print("5. Delete Scooter")
         print("6. Back to Main Menu")
 
-        choice = input("\nEnter choice (1-6): ").strip()
+        try:
+            choice = prompt_menu_choice("\nEnter choice (1-6): ", 1, 6)
+        except CancelInputException:
+            break
 
         if choice == "1":
             add_scooter_ui()
@@ -378,9 +333,6 @@ def manage_scooters_menu():
             delete_scooter_ui()
         elif choice == "6":
             break
-        else:
-            print("Invalid choice. Please enter 1-6.")
-            wait_for_enter()
 
 
 def service_engineer_scooter_menu():
@@ -393,15 +345,15 @@ def service_engineer_scooter_menu():
         print("\n1. Update Scooter")
         print("2. Back to Main Menu")
 
-        choice = input("\nEnter choice (1-2): ").strip()
+        try:
+            choice = prompt_menu_choice("\nEnter choice (1-2): ", 1, 2)
+        except CancelInputException:
+            break
 
         if choice == "1":
             update_scooter_engineer_ui()
         elif choice == "2":
             break
-        else:
-            print("Invalid choice. Please enter 1-2.")
-            wait_for_enter()
 
 
 def create_system_admin_ui():
@@ -468,13 +420,19 @@ def reset_admin_password_ui():
     print_header("RESET ADMIN PASSWORD")
     print_user_info()
 
-    username = input("\nEnter admin username to reset: ").strip()
+    try:
+        username = prompt_with_validation(
+            "\nEnter admin username to reset: ", validate_username
+        )
 
-    success, msg, temp_password = reset_user_password(username)
+        success, msg, temp_password = reset_user_password(username)
 
-    print(f"\n{msg}")
-    if success:
-        print(f"New temporary password: {temp_password}")
+        print(f"\n{msg}")
+        if success:
+            print(f"New temporary password: {temp_password}")
+
+    except CancelInputException:
+        print("\nOperation cancelled.")
 
     wait_for_enter()
 
@@ -485,22 +443,32 @@ def update_admin_profile_ui():
     print_header("UPDATE ADMIN PROFILE")
     print_user_info()
 
-    username = input("\nEnter admin username to update: ").strip()
-    print("\nLeave blank to keep current value.")
-    first_name = input("New first name: ").strip()
-    last_name = input("New last name: ").strip()
+    try:
+        username = prompt_with_validation(
+            "\nEnter admin username to update: ", validate_username
+        )
 
-    updates = {}
-    if first_name:
-        updates["first_name"] = first_name
-    if last_name:
-        updates["last_name"] = last_name
+        first_name = prompt_optional_field(
+            "New first name", lambda x: validate_name(x, "First name")
+        )
+        last_name = prompt_optional_field(
+            "New last name", lambda x: validate_name(x, "Last name")
+        )
 
-    if not updates:
-        print("\nNo changes made.")
-    else:
-        success, msg = update_user_profile(username, **updates)
-        print(f"\n{msg}")
+        updates = {}
+        if first_name:
+            updates["first_name"] = first_name
+        if last_name:
+            updates["last_name"] = last_name
+
+        if not updates:
+            print("\nNo changes made.")
+        else:
+            success, msg = update_user_profile(username, **updates)
+            print(f"\n{msg}")
+
+    except CancelInputException:
+        print("\nUpdate cancelled.")
 
     wait_for_enter()
 
@@ -511,44 +479,41 @@ def delete_system_admin_ui():
     print_header("DELETE SYSTEM ADMINISTRATOR")
     print_user_info()
 
-    username = input("\nEnter admin username to delete: ").strip()
+    try:
+        username = prompt_with_validation(
+            "\nEnter admin username to delete: ", validate_username
+        )
 
-    if not username:
-        print("\n❌ Username cannot be empty.")
-        wait_for_enter()
-        return
+        # Check if user exists by trying to find them in the list
+        all_users = list_all_users()
+        user_to_delete = None
+        for user in all_users:
+            if user["username"] == username and user["role"] == "system_admin":
+                user_to_delete = user
+                break
 
-    # Check if user exists by trying to find them in the list
-    all_users = list_all_users()
-    user_to_delete = None
-    for user in all_users:
-        if user["username"] == username and user["role"] == "system_admin":
-            user_to_delete = user
-            break
+        if not user_to_delete:
+            print(f"\n❌ System Administrator '{username}' not found.")
+            wait_for_enter()
+            return
 
-    if not user_to_delete:
-        print(f"\n❌ System Administrator '{username}' not found.")
-        wait_for_enter()
-        return
+        # Show user information
+        print(f"\n✓ System Administrator found:")
+        print(f"  Username: {user_to_delete['username']}")
+        print(f"  Name: {user_to_delete['first_name']} {user_to_delete['last_name']}")
+        print(f"  Created: {user_to_delete['created_at']}")
 
-    # Show user information
-    print(f"\n✓ System Administrator found:")
-    print(f"  Username: {user_to_delete['username']}")
-    print(f"  Name: {user_to_delete['first_name']} {user_to_delete['last_name']}")
-    print(f"  Created: {user_to_delete['created_at']}")
+        # Ask for confirmation
+        if prompt_confirmation(
+            f"\n⚠️  Are you sure you want to delete this user? (yes/no): "
+        ):
+            success, msg = delete_user(username)
+            print(f"\n{msg}")
+        else:
+            print("\nDeletion cancelled.")
 
-    # Now ask for confirmation
-    confirm = (
-        input(f"\n⚠️  Are you sure you want to delete this user? (yes/no): ")
-        .strip()
-        .lower()
-    )
-
-    if confirm == "yes":
-        success, msg = delete_user(username)
-        print(f"\n{msg}")
-    else:
-        print("\nDeletion cancelled.")
+    except CancelInputException:
+        print("\nOperation cancelled.")
 
     wait_for_enter()
 
@@ -619,13 +584,19 @@ def reset_engineer_password_ui():
     print_header("RESET ENGINEER PASSWORD")
     print_user_info()
 
-    username = input("\nEnter engineer username to reset: ").strip()
+    try:
+        username = prompt_with_validation(
+            "\nEnter engineer username to reset: ", validate_username
+        )
 
-    success, msg, temp_password = reset_user_password(username)
+        success, msg, temp_password = reset_user_password(username)
 
-    print(f"\n{msg}")
-    if success:
-        print(f"New temporary password: {temp_password}")
+        print(f"\n{msg}")
+        if success:
+            print(f"New temporary password: {temp_password}")
+
+    except CancelInputException:
+        print("\nOperation cancelled.")
 
     wait_for_enter()
 
@@ -636,22 +607,32 @@ def update_engineer_profile_ui():
     print_header("UPDATE ENGINEER PROFILE")
     print_user_info()
 
-    username = input("\nEnter engineer username to update: ").strip()
-    print("\nLeave blank to keep current value.")
-    first_name = input("New first name: ").strip()
-    last_name = input("New last name: ").strip()
+    try:
+        username = prompt_with_validation(
+            "\nEnter engineer username to update: ", validate_username
+        )
 
-    updates = {}
-    if first_name:
-        updates["first_name"] = first_name
-    if last_name:
-        updates["last_name"] = last_name
+        first_name = prompt_optional_field(
+            "New first name", lambda x: validate_name(x, "First name")
+        )
+        last_name = prompt_optional_field(
+            "New last name", lambda x: validate_name(x, "Last name")
+        )
 
-    if not updates:
-        print("\nNo changes made.")
-    else:
-        success, msg = update_user_profile(username, **updates)
-        print(f"\n{msg}")
+        updates = {}
+        if first_name:
+            updates["first_name"] = first_name
+        if last_name:
+            updates["last_name"] = last_name
+
+        if not updates:
+            print("\nNo changes made.")
+        else:
+            success, msg = update_user_profile(username, **updates)
+            print(f"\n{msg}")
+
+    except CancelInputException:
+        print("\nUpdate cancelled.")
 
     wait_for_enter()
 
@@ -662,44 +643,41 @@ def delete_service_engineer_ui():
     print_header("DELETE SERVICE ENGINEER")
     print_user_info()
 
-    username = input("\nEnter engineer username to delete: ").strip()
+    try:
+        username = prompt_with_validation(
+            "\nEnter engineer username to delete: ", validate_username
+        )
 
-    if not username:
-        print("\n❌ Username cannot be empty.")
-        wait_for_enter()
-        return
+        # Check if user exists by trying to find them in the list
+        all_users = list_all_users()
+        user_to_delete = None
+        for user in all_users:
+            if user["username"] == username and user["role"] == "service_engineer":
+                user_to_delete = user
+                break
 
-    # Check if user exists by trying to find them in the list
-    all_users = list_all_users()
-    user_to_delete = None
-    for user in all_users:
-        if user["username"] == username and user["role"] == "service_engineer":
-            user_to_delete = user
-            break
+        if not user_to_delete:
+            print(f"\n❌ Service Engineer '{username}' not found.")
+            wait_for_enter()
+            return
 
-    if not user_to_delete:
-        print(f"\n❌ Service Engineer '{username}' not found.")
-        wait_for_enter()
-        return
+        # Show user information
+        print(f"\n✓ Service Engineer found:")
+        print(f"  Username: {user_to_delete['username']}")
+        print(f"  Name: {user_to_delete['first_name']} {user_to_delete['last_name']}")
+        print(f"  Created: {user_to_delete['created_at']}")
 
-    # Show user information
-    print(f"\n✓ Service Engineer found:")
-    print(f"  Username: {user_to_delete['username']}")
-    print(f"  Name: {user_to_delete['first_name']} {user_to_delete['last_name']}")
-    print(f"  Created: {user_to_delete['created_at']}")
+        # Ask for confirmation
+        if prompt_confirmation(
+            f"\n⚠️  Are you sure you want to delete this user? (yes/no): "
+        ):
+            success, msg = delete_user(username)
+            print(f"\n{msg}")
+        else:
+            print("\nDeletion cancelled.")
 
-    # Now ask for confirmation
-    confirm = (
-        input(f"\n⚠️  Are you sure you want to delete this user? (yes/no): ")
-        .strip()
-        .lower()
-    )
-
-    if confirm == "yes":
-        success, msg = delete_user(username)
-        print(f"\n{msg}")
-    else:
-        print("\nDeletion cancelled.")
+    except CancelInputException:
+        print("\nOperation cancelled.")
 
     wait_for_enter()
 
@@ -710,104 +688,76 @@ def add_traveler_ui():
     print_header("ADD NEW TRAVELER")
     print_user_info()
 
-    print("\nEnter traveler information:")
+    print("\nEnter traveler information (type 'exit' or 'cancel' to abort):")
 
-    # Predefined cities
-    cities = [
-        "Amsterdam",
-        "Rotterdam",
-        "Utrecht",
-        "Den Haag",
-        "Eindhoven",
-        "Groningen",
-        "Tilburg",
-        "Almere",
-        "Breda",
-        "Nijmegen",
-    ]
+    try:
+        # First name - validated
+        first_name = prompt_with_validation(
+            "\nFirst name: ", lambda x: validate_name(x, "First name")
+        )
 
-    # First name - validated
-    first_name = prompt_with_validation(
-        "First name: ", lambda x: validate_name(x, "First name")
-    )
+        # Last name - validated
+        last_name = prompt_with_validation(
+            "Last name: ", lambda x: validate_name(x, "Last name")
+        )
 
-    # Last name - validated
-    last_name = prompt_with_validation(
-        "Last name: ", lambda x: validate_name(x, "Last name")
-    )
+        # Birthday - validated
+        birthday = prompt_with_validation(
+            "Birthday (DD-MM-YYYY): ", lambda x: validate_date(x, "Birthday")
+        )
 
-    # Birthday - validated
-    birthday = prompt_with_validation(
-        "Birthday (DD-MM-YYYY): ", lambda x: validate_date(x, "Birthday")
-    )
+        # Gender - validated with menu choice
+        gender = prompt_choice_from_list("Select gender:", ["Male", "Female"])
 
-    # Gender - validated with menu choice
-    print("\nGender options:")
-    print("  1) Male")
-    print("  2) Female")
-    while True:
-        gender_choice = input("Enter choice (1-2): ").strip()
-        if gender_choice in ["1", "2"]:
-            gender = "Male" if gender_choice == "1" else "Female"
-            break
-        else:
-            print("❌ Error: Please enter 1 or 2\n")
+        # Street name - validated
+        street_name = prompt_with_validation(
+            "Street name: ", lambda x: validate_name(x, "Street name")
+        )
 
-    # Street name - validated
-    street_name = prompt_with_validation(
-        "Street name: ", lambda x: validate_name(x, "Street name")
-    )
+        # House number - validated
+        house_number = prompt_with_validation("House number: ", validate_house_number)
 
-    # House number - validated
-    house_number = prompt_with_validation("House number: ", validate_house_number)
+        # Zip code - validated
+        zip_code = prompt_with_validation(
+            "Zip code (1234AB format): ", validate_zipcode
+        )
 
-    # Zip code - validated
-    zip_code = prompt_with_validation("Zip code (1234AB format): ", validate_zipcode)
+        # City - validated with menu choice
+        city = prompt_choice_from_list("Select city:", VALID_CITIES)
 
-    # City - validated with menu choice
-    print("\nAvailable cities:")
-    for i, city in enumerate(cities, 1):
-        print(f"  {i}. {city}")
-    while True:
-        city_choice = input(f"Enter choice (1-{len(cities)}): ").strip()
-        try:
-            city_idx = int(city_choice) - 1
-            if 0 <= city_idx < len(cities):
-                city = cities[city_idx]
-                break
-            else:
-                print(f"❌ Error: Please enter a number between 1 and {len(cities)}\n")
-        except ValueError:
-            print("❌ Error: Please enter a valid number\n")
+        # Email - validated
+        email = prompt_with_validation("Email: ", validate_email)
 
-    # Email - validated
-    email = prompt_with_validation("Email: ", validate_email)
+        # Mobile phone - validated
+        mobile_phone = prompt_with_validation(
+            "Mobile phone (8 digits): ", validate_phone
+        )
 
-    # Mobile phone - validated
-    mobile_phone = prompt_with_validation("Mobile phone (8 digits): ", validate_phone)
+        # Driving license - validated
+        driving_license = prompt_with_validation(
+            "Driving license (AB1234567 format): ", validate_driving_license
+        )
 
-    # Driving license - validated
-    driving_license = prompt_with_validation(
-        "Driving license (AB1234567 format): ", validate_driving_license
-    )
+        success, msg, customer_id = add_traveler(
+            first_name,
+            last_name,
+            birthday,
+            gender,
+            street_name,
+            house_number,
+            zip_code,
+            city,
+            email,
+            mobile_phone,
+            driving_license,
+        )
 
-    success, msg, customer_id = add_traveler(
-        first_name,
-        last_name,
-        birthday,
-        gender,
-        street_name,
-        house_number,
-        zip_code,
-        city,
-        email,
-        mobile_phone,
-        driving_license,
-    )
+        print(f"\n{msg}")
+        if success:
+            print(f"Customer ID: {customer_id}")
 
-    print(f"\n{msg}")
-    if success:
-        print(f"Customer ID: {customer_id}")
+    except CancelInputException:
+        print("\nTraveler creation cancelled.")
 
     wait_for_enter()
 
@@ -819,26 +769,35 @@ def search_travelers_ui():
     print_user_info()
 
     print("\nSearch by partial key (name, customer ID):")
-    search_key = input("Enter search term: ").strip()
 
-    if not search_key:
-        print("\nSearch term cannot be empty.")
-        wait_for_enter()
-        return
+    try:
+        # Simple validation for search term
+        def validate_search_term(term):
+            term = term.strip()
+            if not term:
+                raise ValidationError(
+                    "Search term cannot be empty. Expected: at least 1 character"
+                )
+            return term
 
-    results = search_travelers(search_key)
+        search_key = prompt_with_validation("Enter search term: ", validate_search_term)
 
-    if not results:
-        print(f"\nNo travelers found matching '{search_key}'.")
-    else:
-        print(f"\nFound {len(results)} traveler(s):")
-        print("\n" + "-" * 70)
-        for t in results:
-            print(f"Customer ID: {t['customer_id']}")
-            print(f"Name: {t['first_name']} {t['last_name']}")
-            print(f"Email: {t['email']}")
-            print(f"City: {t['city']}")
-            print("-" * 70)
+        results = search_travelers(search_key)
+
+        if not results:
+            print(f"\nNo travelers found matching '{search_key}'.")
+        else:
+            print(f"\nFound {len(results)} traveler(s):")
+            print("\n" + "-" * 70)
+            for t in results:
+                print(f"Customer ID: {t['customer_id']}")
+                print(f"Name: {t['first_name']} {t['last_name']}")
+                print(f"Email: {t['email']}")
+                print(f"City: {t['city']}")
+                print("-" * 70)
+
+    except CancelInputException:
+        print("\nSearch cancelled.")
 
     wait_for_enter()
 

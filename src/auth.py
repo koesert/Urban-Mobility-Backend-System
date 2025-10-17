@@ -93,7 +93,15 @@ def login(username, password):
         )
         return False, "Invalid username or password"
 
-    user_id, encrypted_username_db, password_hash_db, role, first_name, last_name, must_change_password = user
+    (
+        user_id,
+        encrypted_username_db,
+        password_hash_db,
+        role,
+        first_name,
+        last_name,
+        must_change_password,
+    ) = user
     username_db = decrypt_username(encrypted_username_db)
 
     if not verify_password(password, username_db, password_hash_db):
