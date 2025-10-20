@@ -170,6 +170,71 @@ class TestLogActivity:
         assert "User created" in encrypted_content
         assert "Username: john_m" in encrypted_content
 
+    @patch("activity_log.LOG_FILE")
+    @patch("activity_log.DATA_DIR")
+    @patch("activity_log._encrypt_log_content")
+    @patch("activity_log._decrypt_log_content")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_log_activity_corrupted_log_number(
+        self, mock_file, mock_decrypt, mock_encrypt, mock_data_dir, mock_log_file
+    ):
+        """Test logging when existing log file has corrupted/unparseable log number"""
+        mock_log_file.exists.return_value = True
+        # First call: Return data that causes parsing exception when extracting log number
+        # The code tries to parse: int(last_line.split(",")[0].strip('"'))
+        # We'll make this raise an exception
+        mock_decrypt.side_effect = [
+            "No.,Date,Time,Username,Activity,Additional Info,Suspicious\n"
+            '"bad","01-01-2025","10:00:00","admin","Login","","No"\n',  # First call - 'bad' can't be converted to int
+            "No.,Date,Time,Username,Activity,Additional Info,Suspicious\n",  # Second call
+        ]
+        mock_encrypt.return_value = b"encrypted_log"
+
+        log_activity("test_user", "Test activity")
+
+        # Should fall back to log_number = 1 due to exception handling
+        mock_encrypt.assert_called_once()
+        encrypted_content = mock_encrypt.call_args[0][0]
+        # Should start with log number 1 since parsing failed
+        assert '"1"' in encrypted_content
+
+    @patch("activity_log.LOG_FILE")
+    @patch("activity_log.DATA_DIR")
+    @patch("activity_log._encrypt_log_content")
+    @patch("activity_log._decrypt_log_content")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_log_activity_decryption_fails(
+        self, mock_file, mock_decrypt, mock_encrypt, mock_data_dir, mock_log_file
+    ):
+        """Test logging when decryption of existing content fails"""
+        # Setup: File exists but decryption fails on second call
+        call_count = [0]
+
+        def decrypt_side_effect(content):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # First call for getting log number - succeeds
+                return (
+                    "No.,Date,Time,Username,Activity,Additional Info,Suspicious\n"
+                    '"1","01-01-2025","10:00:00","admin","Login","","No"\n'
+                )
+            else:
+                # Second call for reading existing content - fails
+                raise Exception("Decryption failed")
+
+        mock_log_file.exists.return_value = True
+        mock_decrypt.side_effect = decrypt_side_effect
+        mock_encrypt.return_value = b"encrypted_log"
+
+        log_activity("test_user", "Test activity")
+
+        # Should handle exception and create fresh header
+        mock_encrypt.assert_called_once()
+        encrypted_content = mock_encrypt.call_args[0][0]
+        # Should include the header and new log entry
+        assert "No.,Date,Time,Username,Activity,Additional Info,Suspicious" in encrypted_content
+        assert "Test activity" in encrypted_content
+
 
 # ============================================================================
 # Log Retrieval Tests
@@ -328,6 +393,27 @@ class TestSuspiciousLogs:
 
         assert count == 5
         mock_get_unread.assert_called_once()
+
+    @patch("activity_log.LAST_CHECK_FILE")
+    @patch("activity_log.get_suspicious_logs")
+    def test_get_unread_suspicious_count_corrupted_check_file(
+        self, mock_get_suspicious, mock_check_file
+    ):
+        """Test counting unread when last check file is corrupted"""
+        mock_check_file.exists.return_value = True
+        mock_get_suspicious.return_value = [
+            {"no": 1, "suspicious": "Yes"},
+            {"no": 2, "suspicious": "Yes"},
+            {"no": 5, "suspicious": "Yes"},
+        ]
+
+        # Mock open to raise exception when reading
+        with patch("builtins.open", mock_open()) as mock_file:
+            mock_file.side_effect = Exception("Cannot read file")
+            count = get_unread_suspicious_count()
+
+        # Should default to last_checked = 0, so all 3 logs are unread
+        assert count == 3
 
 
 # ============================================================================
