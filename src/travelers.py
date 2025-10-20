@@ -83,7 +83,7 @@ def add_traveler(
     try:
         first_name = validate_name(first_name, "First name")
         last_name = validate_name(last_name, "Last name")
-        birthday = validate_date(birthday, "Birthday")
+        birthday = validate_date(birthday, "Birthday", must_be_past=True)
         gender = validate_gender(gender)
         street_name = validate_name(street_name, "Street name")
         house_number = validate_house_number(house_number)
@@ -265,7 +265,7 @@ def update_traveler(customer_id, **updates):
             if field in ["first_name", "last_name"]:
                 value = validate_name(value, field.replace("_", " ").title())
             elif field == "birthday":
-                value = validate_date(value, "Birthday")
+                value = validate_date(value, "Birthday", must_be_past=True)
             elif field == "gender":
                 value = validate_gender(value)
             elif field == "street_name":

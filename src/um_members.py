@@ -791,7 +791,7 @@ def add_traveler_ui():
 
         # Birthday - validated
         birthday = prompt_with_validation(
-            "Birthday (DD-MM-YYYY): ", lambda x: validate_date(x, "Birthday")
+            "Birthday (DD-MM-YYYY): ", lambda x: validate_date(x, "Birthday", must_be_past=True)
         )
 
         # Gender - validated with menu choice

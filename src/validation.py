@@ -293,7 +293,7 @@ def validate_driving_license(license_number):
     return license_number
 
 
-def validate_date(date_str, field_name="Date"):
+def validate_date(date_str, field_name="Date", must_be_past=False):
     """
     Validate date format and check if it's a valid calendar date.
 
@@ -303,12 +303,13 @@ def validate_date(date_str, field_name="Date"):
     Args:
         date_str (str): Date string
         field_name (str): Field name for error messages
+        must_be_past (bool): If True, date must be in the past (for birthdays)
 
     Returns:
         str: Validated date (DD-MM-YYYY)
 
     Raises:
-        ValidationError: If date is invalid
+        ValidationError: If date is invalid or in the future when must_be_past=True
     """
     if not isinstance(date_str, str):
         raise ValidationError(f"{field_name} must be a string")
@@ -322,11 +323,27 @@ def validate_date(date_str, field_name="Date"):
 
     try:
         day, month, year = map(int, date_str.split("-"))
-        datetime(year, month, day)
+        date_obj = datetime(year, month, day)
     except ValueError:
         raise ValidationError(
             f"Invalid {field_name.lower()}. Please enter a valid calendar date"
         )
+
+    # Check if date must be in the past (e.g., for birthdays)
+    if must_be_past:
+        today = datetime.now()
+        if date_obj > today:
+            raise ValidationError(
+                f"{field_name} cannot be in the future. Expected: date in the past (e.g., 15-03-1995)"
+            )
+
+        # Check if date is not more than 150 years in the past
+        max_years_ago = 150
+        earliest_allowed = datetime(today.year - max_years_ago, today.month, today.day)
+        if date_obj < earliest_allowed:
+            raise ValidationError(
+                f"{field_name} cannot be more than {max_years_ago} years in the past. Expected: within last {max_years_ago} years"
+            )
 
     return date_str
 
@@ -500,44 +517,6 @@ def validate_name(name, field_name="Name"):
         )
 
     return name
-
-
-def validate_date(date_str, field_name="Date"):
-    """
-    Validate date format and check if it's a valid calendar date.
-
-    Format: DD-MM-YYYY
-    Example: 15-03-1995, 01-12-2024
-
-    Args:
-        date_str (str): Date string
-        field_name (str): Field name for error messages
-
-    Returns:
-        str: Validated date (DD-MM-YYYY)
-
-    Raises:
-        ValidationError: If date is invalid
-    """
-    if not isinstance(date_str, str):
-        raise ValidationError(f"{field_name} must be a string")
-
-    date_str = date_str.strip()
-
-    if not re.match(r"^\d{2}-\d{2}-\d{4}$", date_str):
-        raise ValidationError(
-            f"Invalid {field_name.lower()} format. Expected: DD-MM-YYYY (e.g., 15-03-1995)"
-        )
-
-    try:
-        day, month, year = map(int, date_str.split("-"))
-        datetime(year, month, day)
-    except ValueError:
-        raise ValidationError(
-            f"Invalid {field_name.lower()}. Please enter a valid calendar date"
-        )
-
-    return date_str
 
 
 def validate_gender(gender):
