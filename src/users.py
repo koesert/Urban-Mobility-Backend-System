@@ -1,3 +1,11 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# IMPORTS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: User account management imports
+#
+# External modules: database, validation, auth, activity_log
+# ═══════════════════════════════════════════════════════════════════════════
+
 import secrets
 import string
 from database import (
@@ -9,6 +17,19 @@ from database import (
 from validation import validate_username, validate_name, ValidationError
 from auth import get_current_user, check_permission, get_role_name
 from activity_log import log_activity
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 1: USER CREATION FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Create new user accounts with role-based permissions
+#
+# Key components:
+# - create_system_admin(): Create System Admin account (Super Admin only)
+# - create_service_engineer(): Create Service Engineer (Super/System Admin)
+#
+# Note: All new users get temporary passwords and must change on first login
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def create_system_admin(username, first_name, last_name, password=None):
@@ -167,7 +188,14 @@ def create_service_engineer(username, first_name, last_name, password=None):
         INSERT INTO users (username, password_hash, role, first_name, last_name, must_change_password)
         VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (encrypted_username, password_hash, "service_engineer", first_name, last_name, 1),
+        (
+            encrypted_username,
+            password_hash,
+            "service_engineer",
+            first_name,
+            last_name,
+            1,
+        ),
     )
 
     conn.commit()
@@ -189,6 +217,18 @@ def create_service_engineer(username, first_name, last_name, password=None):
         )
     else:
         return True, f"Service Engineer '{username}' created successfully", None
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 2: USER DELETION
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Delete user accounts with role-based permissions
+#
+# Key components:
+# - delete_user(): Delete System Admin or Service Engineer with permission checks
+#
+# Note: Cannot delete Super Admin or your own account
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def delete_user(username):
@@ -279,6 +319,17 @@ def delete_user(username):
     )
 
     return True, f"User '{username}' deleted successfully"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 3: PASSWORD MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Reset and manage user passwords
+#
+# Key components:
+# - reset_user_password(): Reset password to temporary (role-based permissions)
+# - _generate_temporary_password(): Helper for secure password generation (internal)
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def reset_user_password(username):
@@ -376,6 +427,50 @@ def reset_user_password(username):
     )
 
     return True, f"Password reset successfully for '{username}'", temp_password
+
+
+def _generate_temporary_password():
+    """
+    Generate secure temporary password.
+
+    Requirements (matches validate_password):
+    - 12 characters
+    - Includes uppercase, lowercase, digits, special characters
+
+    Returns:
+        str: Temporary password
+
+    Example:
+        temp_pw = _generate_temporary_password()
+        # Returns something like: "Temp@1234Abc"
+    """
+    # Ensure all character types are included
+    password_chars = [
+        secrets.choice(string.ascii_uppercase),  # Uppercase
+        secrets.choice(string.ascii_lowercase),  # Lowercase
+        secrets.choice(string.digits),  # Digit
+        secrets.choice("~!@#$%&_-+="),  # Special character
+    ]
+
+    # Fill remaining 8 characters randomly
+    all_chars = string.ascii_letters + string.digits + "~!@#$%&_-+="
+    password_chars.extend(secrets.choice(all_chars) for _ in range(8))
+
+    # Shuffle to avoid predictable pattern
+    password_list = list(password_chars)
+    secrets.SystemRandom().shuffle(password_list)
+
+    return "".join(password_list)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 4: PROFILE UPDATES
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Update user profile information
+#
+# Key components:
+# - update_user_profile(): Update first name and last name (role-based permissions)
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def update_user_profile(username, first_name=None, last_name=None):
@@ -495,38 +590,14 @@ def update_user_profile(username, first_name=None, last_name=None):
     return True, f"Profile updated successfully for '{username}'"
 
 
-def _generate_temporary_password():
-    """
-    Generate secure temporary password.
-
-    Requirements (matches validate_password):
-    - 12 characters
-    - Includes uppercase, lowercase, digits, special characters
-
-    Returns:
-        str: Temporary password
-
-    Example:
-        temp_pw = _generate_temporary_password()
-        # Returns something like: "Temp@1234Abc"
-    """
-    # Ensure all character types are included
-    password_chars = [
-        secrets.choice(string.ascii_uppercase),  # Uppercase
-        secrets.choice(string.ascii_lowercase),  # Lowercase
-        secrets.choice(string.digits),  # Digit
-        secrets.choice("~!@#$%&_-+="),  # Special character
-    ]
-
-    # Fill remaining 8 characters randomly
-    all_chars = string.ascii_letters + string.digits + "~!@#$%&_-+="
-    password_chars.extend(secrets.choice(all_chars) for _ in range(8))
-
-    # Shuffle to avoid predictable pattern
-    password_list = list(password_chars)
-    secrets.SystemRandom().shuffle(password_list)
-
-    return "".join(password_list)
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 5: USER LISTING & RETRIEVAL
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: List and retrieve user information
+#
+# Key components:
+# - list_all_users(): Get all users with role information
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def list_all_users():
@@ -571,79 +642,3 @@ def list_all_users():
         )
 
     return users
-
-
-# Testing and demonstration
-if __name__ == "__main__":
-    from auth import login, logout
-
-    print("=" * 60)
-    print("USER MANAGEMENT SYSTEM TESTING")
-    print("=" * 60)
-
-    # Login as super admin
-    print("\n--- Logging in as Super Admin ---")
-    login("super_admin", "Admin_123?")
-
-    # Test 1: Create System Admin
-    print("\n--- Test 1: Create System Administrator ---")
-    success, msg, temp_pw = create_system_admin("admin_001", "John", "Admin")
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-    if temp_pw:
-        print(f"Temporary password: {temp_pw}")
-
-    # Test 2: Create Service Engineer
-    print("\n--- Test 2: Create Service Engineer ---")
-    success, msg, temp_pw = create_service_engineer("engineer1", "Jane", "Engineer")
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-    if temp_pw:
-        print(f"Temporary password: {temp_pw}")
-
-    # Test 3: List all users
-    print("\n--- Test 3: List All Users ---")
-    users = list_all_users()
-    for user in users:
-        print(
-            f"  {user['username']:15s} | {user['role_name']:25s} | {user['first_name']} {user['last_name']}"
-        )
-
-    # Test 4: Reset password
-    print("\n--- Test 4: Reset User Password ---")
-    success, msg, temp_pw = reset_user_password("admin_001")
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-    if temp_pw:
-        print(f"New temporary password: {temp_pw}")
-
-    # Test 5: Update profile
-    print("\n--- Test 5: Update User Profile ---")
-    success, msg = update_user_profile("engineer1", first_name="Janet")
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-
-    # Test 6: Delete user
-    print("\n--- Test 6: Delete User ---")
-    success, msg = delete_user("engineer1")
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-
-    # Test 7: Try to delete super_admin (should fail)
-    print("\n--- Test 7: Try Delete Super Admin (Should Fail) ---")
-    success, msg = delete_user("super_admin")
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-
-    # Show logs
-    print("\n--- Activity Logs ---")
-    from activity_log import get_all_logs, display_logs
-
-    logs = get_all_logs()
-    display_logs(logs[-10:])  # Last 10 logs
-
-    logout()
-
-    print("\n" + "=" * 60)
-    print("✓ User management system ready!")
-    print("=" * 60)

@@ -1,9 +1,16 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# IMPORTS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: All module imports for the Urban Mobility Backend System UI
+#
+# External libraries: os
+# Internal modules: auth, users, travelers, scooters, activity_log, backup, validation
+# ═══════════════════════════════════════════════════════════════════════════
+
 import os
-import sys
-from pathlib import Path
 
 # Local imports
-from auth import login, logout, get_current_user, check_permission, update_password
+from auth import login, logout, get_current_user, update_password
 from users import (
     create_system_admin,
     create_service_engineer,
@@ -47,8 +54,6 @@ from validation import (
     validate_phone,
     validate_zipcode,
     validate_date,
-    validate_city,
-    validate_gender,
     validate_driving_license,
     validate_name,
     validate_house_number,
@@ -68,6 +73,23 @@ from input_handlers import (
     prompt_optional_field,
     prompt_choice_from_list,
 )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 1: UTILITY FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Helper functions for user interface operations
+#
+# Key components:
+# - clear_screen(): Cross-platform screen clearing
+# - print_header(): Formatted section headers
+# - print_user_info(): Display current logged-in user
+# - wait_for_enter(): Input blocking for user interaction
+# - prompt_with_validation(): Reusable input validation loop
+# - prompt_integer_with_validation(): Integer input with validation
+# - validate_unique_username(): Check username uniqueness
+# - validate_unique_serial_number(): Check scooter serial uniqueness
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def clear_screen():
@@ -146,6 +168,21 @@ def validate_unique_serial_number(serial_number):
         raise ValidationError(f"Serial number '{serial_number}' already exists")
 
     return serial_number
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 2: MENU SYSTEMS & NAVIGATION
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Main menu and submenu functions for navigation
+#
+# Key components:
+# - show_main_menu(): Role-based main menu display (Super Admin, System Admin, Service Engineer)
+# - manage_system_admins_menu(): System Administrator management submenu
+# - manage_service_engineers_menu(): Service Engineer management submenu
+# - manage_travelers_menu(): Traveler/customer management submenu
+# - manage_scooters_menu(): Scooter fleet management submenu (Admin/Super Admin)
+# - service_engineer_scooter_menu(): Limited scooter menu for Service Engineers
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def show_main_menu():
@@ -356,6 +393,22 @@ def service_engineer_scooter_menu():
             break
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 3: SYSTEM ADMINISTRATOR UI
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: User interface functions for System Administrator management
+#
+# Key components:
+# - create_system_admin_ui(): Create new System Admin with validation
+# - list_system_admins_ui(): Display all System Administrators
+# - reset_admin_password_ui(): Reset System Admin password
+# - update_admin_profile_ui(): Update System Admin name
+# - delete_system_admin_ui(): Delete System Admin with confirmation
+#
+# Note: Only accessible by Super Admin role
+# ═══════════════════════════════════════════════════════════════════════════
+
+
 def create_system_admin_ui():
     """Create new System Administrator with per-field validation."""
     clear_screen()
@@ -516,6 +569,22 @@ def delete_system_admin_ui():
         print("\nOperation cancelled.")
 
     wait_for_enter()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 4: SERVICE ENGINEER UI
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: User interface functions for Service Engineer management
+#
+# Key components:
+# - create_service_engineer_ui(): Create new Service Engineer with validation
+# - list_service_engineers_ui(): Display all Service Engineers
+# - reset_engineer_password_ui(): Reset Service Engineer password
+# - update_engineer_profile_ui(): Update Service Engineer name
+# - delete_service_engineer_ui(): Delete Service Engineer with confirmation
+#
+# Note: Accessible by Super Admin and System Admin roles
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def create_service_engineer_ui():
@@ -680,6 +749,22 @@ def delete_service_engineer_ui():
         print("\nOperation cancelled.")
 
     wait_for_enter()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 5: TRAVELER/CUSTOMER UI
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: User interface functions for traveler/customer management
+#
+# Key components:
+# - add_traveler_ui(): Add new traveler with complete profile validation
+# - search_travelers_ui(): Search travelers by name or customer ID
+# - list_travelers_ui(): Display all travelers with key information
+# - update_traveler_ui(): Update traveler contact information (email/phone)
+# - delete_traveler_ui(): Delete traveler with confirmation
+#
+# Note: Accessible by Super Admin and System Admin roles
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def add_traveler_ui():
@@ -912,6 +997,23 @@ def delete_traveler_ui():
         print("\nDeletion cancelled.")
 
     wait_for_enter()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 6: SCOOTER FLEET MANAGEMENT UI
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: User interface functions for scooter fleet management
+#
+# Key components:
+# - add_scooter_ui(): Add new scooter to fleet with validation
+# - search_scooters_ui(): Search scooters by type, location, or status
+# - list_scooters_ui(): Display all scooters with complete information
+# - update_scooter_ui(): Update scooter (Admin - all fields)
+# - update_scooter_engineer_ui(): Update scooter (Engineer - limited fields only)
+# - delete_scooter_ui(): Delete scooter with confirmation
+#
+# Note: Different permissions for Admins vs Service Engineers
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def add_scooter_ui():
@@ -1186,6 +1288,21 @@ def delete_scooter_ui():
     wait_for_enter()
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 7: SYSTEM LOGS UI
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: User interface functions for viewing system activity logs
+#
+# Key components:
+# - view_logs_menu(): Logs viewing submenu
+# - view_all_logs_ui(): Display all system logs
+# - view_recent_logs_ui(): Display last 20 logs
+# - view_suspicious_logs_ui(): Display only suspicious activities
+#
+# Note: Accessible by Super Admin and System Admin roles
+# ═══════════════════════════════════════════════════════════════════════════
+
+
 def view_logs_menu():
     """View system logs menu."""
     while True:
@@ -1262,6 +1379,24 @@ def view_suspicious_logs_ui():
         display_logs(suspicious)
 
     wait_for_enter()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 8: BACKUP & RESTORE UI
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: User interface functions for backup and disaster recovery
+#
+# Key components:
+# - backup_restore_menu(): Backup/restore submenu with role-based options
+# - create_backup_ui(): Create system backup (database + keys + logs)
+# - list_backups_ui(): Display available backups
+# - restore_backup_ui(): Restore from backup (with code validation for System Admins)
+# - generate_restore_code_ui(): Generate one-time restore code (Super Admin only)
+# - revoke_restore_code_ui(): Revoke unused restore code (Super Admin only)
+# - list_restore_codes_ui(): Display active restore codes (Super Admin only)
+#
+# Note: Super Admin has full access; System Admin needs restore codes
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def backup_restore_menu():
@@ -1513,6 +1648,19 @@ def list_restore_codes_ui():
     wait_for_enter()
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 9: PASSWORD MANAGEMENT UI
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: User interface functions for password management
+#
+# Key components:
+# - update_my_password_ui(): Allow user to change their own password
+# - force_password_change_ui(): Force password change on first login with temp password
+#
+# Note: All users can update their own password; temp password users are forced to change
+# ═══════════════════════════════════════════════════════════════════════════
+
+
 def update_my_password_ui():
     """Update current user's password with per-field validation."""
     clear_screen()
@@ -1674,6 +1822,25 @@ def force_password_change_ui():
                 logout()
                 wait_for_enter()
                 return
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 10: MAIN PROGRAM LOOP & ENTRY POINT
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Main application entry point and program flow control
+#
+# Key components:
+# - login_screen(): User login interface with credential validation
+# - main(): Main program loop (initialization → login → menu routing → logout)
+#
+# Program flow:
+# 1. Initialize database and system
+# 2. Display login screen
+# 3. Force password change if using temporary password
+# 4. Show role-based main menu
+# 5. Route to appropriate submenu based on user choice and role
+# 6. Handle logout and restart loop
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def login_screen():

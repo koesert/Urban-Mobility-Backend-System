@@ -1,3 +1,11 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# IMPORTS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Traveler/customer management imports
+#
+# External modules: database, validation, auth, activity_log, uuid
+# ═══════════════════════════════════════════════════════════════════════════
+
 import uuid
 from database import get_connection, encrypt_field, decrypt_field
 from validation import (
@@ -14,6 +22,16 @@ from validation import (
 )
 from auth import get_current_user, check_permission
 from activity_log import log_activity
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 1: CREATE OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Add new travelers/customers to the system
+#
+# Key components:
+# - add_traveler(): Create new customer record with full validation and encryption
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def add_traveler(
@@ -126,6 +144,16 @@ def add_traveler(
         )
 
     return True, f"Traveler '{first_name} {last_name}' added successfully", customer_id
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 2: UPDATE OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Update existing traveler information
+#
+# Key components:
+# - update_traveler(): Update traveler fields with validation and encryption
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def update_traveler(customer_id, **updates):
@@ -246,6 +274,16 @@ def update_traveler(customer_id, **updates):
     return True, f"Traveler updated successfully"
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 3: DELETE OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Delete traveler records
+#
+# Key components:
+# - delete_traveler(): Remove traveler from system with confirmation
+# ═══════════════════════════════════════════════════════════════════════════
+
+
 def delete_traveler(customer_id):
     """
     Delete traveler record.
@@ -300,6 +338,18 @@ def delete_traveler(customer_id):
         )
 
     return True, f"Traveler '{first_name} {last_name}' deleted successfully"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 4: SEARCH & RETRIEVAL OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Search and retrieve traveler information
+#
+# Key components:
+# - search_travelers(): Partial key search in names and customer ID
+# - get_traveler_by_id(): Get specific traveler by customer ID
+# - list_all_travelers(): Get all travelers with decrypted data
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def search_travelers(search_key):
@@ -448,101 +498,3 @@ def list_all_travelers():
         )
 
     return travelers
-
-
-# Testing and demonstration
-if __name__ == "__main__":
-    from auth import login, logout
-
-    print("=" * 60)
-    print("TRAVELER MANAGEMENT SYSTEM TESTING")
-    print("=" * 60)
-
-    # Login as super admin
-    print("\n--- Logging in as Super Admin ---")
-    login("super_admin", "Admin_123?")
-
-    # Test 1: Add traveler
-    print("\n--- Test 1: Add Traveler ---")
-    success, msg, cid = add_traveler(
-        first_name="John",
-        last_name="Doe",
-        birthday="15-03-1990",
-        gender="Male",
-        street_name="Main Street",
-        house_number="42",
-        zip_code="3011AB",
-        city="Amsterdam",
-        email="john.doe@example.com",
-        mobile_phone="12345678",
-        driving_license="AB1234567",
-    )
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-    print(f"Customer ID: {cid}")
-
-    # Test 2: Add another traveler
-    print("\n--- Test 2: Add Another Traveler ---")
-    success, msg, cid2 = add_traveler(
-        first_name="Jane",
-        last_name="Smith",
-        birthday="22-07-1985",
-        gender="Female",
-        street_name="Park Avenue",
-        house_number="123",
-        zip_code="1012AB",
-        city="Rotterdam",
-        email="jane.smith@example.com",
-        mobile_phone="87654321",
-        driving_license="XY7654321",
-    )
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-
-    # Test 3: List all travelers
-    print("\n--- Test 3: List All Travelers ---")
-    travelers = list_all_travelers()
-    for t in travelers:
-        print(
-            f"  {t['customer_id']:12s} | {t['first_name']:10s} {t['last_name']:10s} | {t['email']:25s}"
-        )
-
-    # Test 4: Search travelers
-    print("\n--- Test 4: Search Travelers (partial key: 'john') ---")
-    results = search_travelers("john")
-    print(f"Found {len(results)} travelers:")
-    for t in results:
-        print(f"  {t['customer_id']:12s} | {t['first_name']} {t['last_name']}")
-
-    # Test 5: Update traveler
-    print("\n--- Test 5: Update Traveler ---")
-    success, msg = update_traveler(cid, email="john.updated@example.com")
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-
-    # Test 6: Get specific traveler
-    print("\n--- Test 6: Get Traveler By ID ---")
-    traveler = get_traveler_by_id(cid)
-    if traveler:
-        print(f"  Name: {traveler['first_name']} {traveler['last_name']}")
-        print(f"  Email: {traveler['email']}")
-        print(f"  Phone: {traveler['mobile_phone']}")
-
-    # Test 7: Delete traveler
-    print("\n--- Test 7: Delete Traveler ---")
-    success, msg = delete_traveler(cid2)
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-
-    # Show logs
-    print("\n--- Activity Logs ---")
-    from activity_log import get_all_logs, display_logs
-
-    logs = get_all_logs()
-    display_logs(logs[-8:])
-
-    logout()
-
-    print("\n" + "=" * 60)
-    print("✓ Traveler management system ready!")
-    print("=" * 60)

@@ -1,13 +1,48 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# IMPORTS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Activity logging system imports
+#
+# External libraries: csv, datetime, pathlib, cryptography
+# ═══════════════════════════════════════════════════════════════════════════
+
 import csv
 from datetime import datetime
 from pathlib import Path
 from cryptography.fernet import Fernet
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 1: CONSTANTS & FILE PATHS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: File paths for logs and encryption keys
+#
+# Key components:
+# - DATA_DIR: Directory for log files
+# - LOG_FILE: Encrypted activity log CSV
+# - FERNET_KEY_FILE: Encryption key for logs
+# - LAST_CHECK_FILE: Last viewed log number (for unread count)
+# ═══════════════════════════════════════════════════════════════════════════
 
 # File paths
 DATA_DIR = Path(__file__).parent / "data"
 LOG_FILE = DATA_DIR / "system.log"
 FERNET_KEY_FILE = DATA_DIR / "fernet_key.bin"
 LAST_CHECK_FILE = DATA_DIR / "last_log_check.txt"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 2: ENCRYPTION HELPERS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Internal helper functions for log encryption/decryption
+#
+# Key components:
+# - _get_log_cipher(): Get Fernet cipher for logs
+# - _encrypt_log_content(): Encrypt log content
+# - _decrypt_log_content(): Decrypt log content
+#
+# Note: These are internal functions (prefixed with _)
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def _get_log_cipher():
@@ -58,6 +93,18 @@ def _decrypt_log_content(encrypted_content):
     """
     cipher = _get_log_cipher()
     return cipher.decrypt(encrypted_content).decode()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 3: LOGGING FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Core logging functionality
+#
+# Key components:
+# - log_activity(): Record encrypted activity log entry
+#
+# Note: All logs are encrypted and stored in CSV format
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def log_activity(username, activity, additional_info="", suspicious=False):
@@ -140,6 +187,21 @@ def log_activity(username, activity, additional_info="", suspicious=False):
     encrypted_content = _encrypt_log_content(new_content)
     with open(LOG_FILE, "wb") as f:
         f.write(encrypted_content)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 4: LOG RETRIEVAL FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Retrieve and filter logs
+#
+# Key components:
+# - get_all_logs(): Get all decrypted logs
+# - get_suspicious_logs(): Filter suspicious activities
+# - get_unread_suspicious_count(): Count unread suspicious logs
+# - check_suspicious_activities(): Alias for unread count
+#
+# Note: Logs are decrypted on retrieval
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def get_all_logs():
@@ -257,6 +319,20 @@ def check_suspicious_activities():
     return get_unread_suspicious_count()
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 5: LOG MANAGEMENT FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Manage log state and display
+#
+# Key components:
+# - mark_logs_as_read(): Mark all logs as viewed
+# - clear_logs(): Delete all logs (Super Admin only)
+# - display_logs(): Format and display logs in table
+#
+# Note: Used by admin interface for log management
+# ═══════════════════════════════════════════════════════════════════════════
+
+
 def mark_logs_as_read():
     """
     Mark all current logs as read.
@@ -347,83 +423,3 @@ def display_logs(logs, show_suspicious_only=False):
     suspicious_count = sum(1 for log in logs if log["suspicious"] == "Yes")
     if suspicious_count > 0:
         print(f"⚠️  Suspicious activities: {suspicious_count}")
-
-
-# Testing and demonstration
-if __name__ == "__main__":
-    print("=" * 60)
-    print("LOGGING SYSTEM TESTING")
-    print("=" * 60)
-
-    # Test 1: Log normal activities
-    print("\n--- Test 1: Logging Normal Activities ---")
-    log_activity("super_admin", "Logged in")
-    log_activity("super_admin", "New admin user is created", "username: john_m_05")
-    log_activity("john_m_05", "Logged in")
-    log_activity("john_m_05", "New traveler added", "Customer ID: 12345")
-    print("✅ Logged 4 normal activities")
-
-    # Test 2: Log suspicious activities
-    print("\n--- Test 2: Logging Suspicious Activities ---")
-    log_activity(
-        "unknown",
-        "Unsuccessful login",
-        "username: 'admin' with wrong password",
-        suspicious=True,
-    )
-    log_activity(
-        "unknown",
-        "Unsuccessful login",
-        "Multiple login attempts detected",
-        suspicious=True,
-    )
-    print("✅ Logged 2 suspicious activities")
-
-    # Test 3: Retrieve all logs
-    print("\n--- Test 3: Retrieve All Logs ---")
-    all_logs = get_all_logs()
-    display_logs(all_logs)
-
-    # Test 4: Get suspicious logs only
-    print("\n--- Test 4: Suspicious Logs Only ---")
-    suspicious = get_suspicious_logs()
-    print(f"Found {len(suspicious)} suspicious logs:")
-    display_logs(suspicious)
-
-    # Test 5: Unread suspicious count
-    print("\n--- Test 5: Unread Suspicious Count ---")
-    unread_count = get_unread_suspicious_count()
-    print(f"⚠️  Unread suspicious activities: {unread_count}")
-
-    # Test 6: Mark as read
-    print("\n--- Test 6: Mark Logs as Read ---")
-    mark_logs_as_read()
-    print("✅ Logs marked as read")
-
-    # Check unread count again
-    unread_count = get_unread_suspicious_count()
-    print(f"Unread suspicious activities after marking: {unread_count}")
-
-    # Test 7: Add new suspicious log
-    print("\n--- Test 7: New Suspicious Log After Read ---")
-    log_activity(
-        "unknown",
-        "Brute force attack detected",
-        "100+ failed attempts",
-        suspicious=True,
-    )
-    unread_count = get_unread_suspicious_count()
-    print(f"⚠️  New unread suspicious activities: {unread_count}")
-
-    # Test 8: Verify encryption
-    print("\n--- Test 8: Verify Log File is Encrypted ---")
-    if LOG_FILE.exists():
-        with open(LOG_FILE, "rb") as f:
-            raw_content = f.read()[:100]  # First 100 bytes
-
-        print(f"Raw file content (first 100 bytes): {raw_content}")
-        print("✅ Log file is encrypted (not human-readable)")
-
-    print("\n" + "=" * 60)
-    print("✅ Logging system ready!")
-    print("=" * 60)

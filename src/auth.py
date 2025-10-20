@@ -1,3 +1,11 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# IMPORTS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Authentication and authorization system imports
+#
+# External modules: database, validation, activity_log
+# ═══════════════════════════════════════════════════════════════════════════
+
 from database import (
     get_connection,
     encrypt_username,
@@ -7,6 +15,22 @@ from database import (
 )
 from validation import validate_username, validate_password, ValidationError
 from activity_log import log_activity
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 1: SESSION MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: User session state and basic session operations
+#
+# Key components:
+# - current_session: Global session state dictionary
+# - get_current_user(): Retrieve current user session data
+# - is_logged_in(): Check if user is authenticated
+# - login(): Authenticate user and create session
+# - logout(): End session and clear user data
+#
+# Note: Session is in-memory only (resets on application restart)
+# ═══════════════════════════════════════════════════════════════════════════
 
 # Current user session state
 current_session = {
@@ -154,6 +178,23 @@ def logout():
     return True, f"User {username} logged out successfully"
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 2: ROLE-BASED ACCESS CONTROL (RBAC)
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Permission system and role-based authorization
+#
+# Key components:
+# - PERMISSIONS: Permission matrix for all three roles
+# - check_permission(): Check if current user has specific permission
+# - require_permission(): Verify permission with error message
+# - get_role_name(): Convert role ID to human-readable name
+#
+# Roles:
+# - Super Admin: Full system access
+# - System Admin: Can manage engineers, travelers, scooters, view logs, backup/restore
+# - Service Engineer: Limited access (update scooters, change own password only)
+# ═══════════════════════════════════════════════════════════════════════════
+
 # Role-based access control permissions matrix
 PERMISSIONS = {
     "super_admin": {
@@ -251,6 +292,20 @@ def get_role_name(role):
         "service_engineer": "Service Engineer",
     }
     return role_names.get(role, role)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 3: USER MANAGEMENT FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: User operations and password management
+#
+# Key components:
+# - update_password(): Change password for current user
+# - get_user_by_username(): Look up user by username
+# - list_users_by_role(): Get all users, optionally filtered by role
+#
+# Note: All functions enforce authentication and validation
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def update_password(old_password, new_password):
@@ -426,67 +481,3 @@ def list_users_by_role(role=None):
         )
 
     return users
-
-
-# Testing and demonstration
-if __name__ == "__main__":
-    print("=" * 60)
-    print("AUTHENTICATION SYSTEM TESTING (WITH LOGGING)")
-    print("=" * 60)
-
-    print("\n--- Test 1: Super Admin Login ---")
-    success, message = login("super_admin", "Admin_123?")
-    print(f"Login: {success} - {message}")
-
-    if success:
-        user = get_current_user()
-        if user:
-            print(f"Current user: {user['username']}")
-            print(f"Role: {user['role']}")
-            print(f"Full name: {user['first_name']} {user['last_name']}")
-
-    print("\n--- Test 2: Permission Checks ---")
-    permissions_to_test = [
-        "manage_admins",
-        "manage_travelers",
-        "manage_scooters",
-        "view_logs",
-        "create_backup",
-    ]
-
-    for perm in permissions_to_test:
-        has_perm = check_permission(perm)
-        print(f"  {perm:25s}: {'✅ YES' if has_perm else '❌ NO'}")
-
-    print("\n--- Test 3: Failed Login (Wrong Password) ---")
-    logout()
-    success, message = login("super_admin", "WrongPassword123!")
-    print(f"Login: {success} - {message}")
-
-    print("\n--- Test 4: Failed Login (Invalid Username) ---")
-    success, message = login("admin", "Admin_123?")
-    print(f"Login: {success} - {message}")
-
-    print("\n--- Test 5: List All Users ---")
-    login("super_admin", "Admin_123?")
-    users = list_users_by_role()
-    for user in users:
-        print(
-            f"  - {user['username']:15s} | {user['role_name']:25s} | {user['first_name']} {user['last_name']}"
-        )
-
-    print("\n--- Test 6: Logout ---")
-    success, message = logout()
-    print(f"Logout: {success} - {message}")
-    print(f"Still logged in? {is_logged_in()}")
-
-    print("\n" + "=" * 60)
-    print("✓ Authentication system with logging ready!")
-    print("=" * 60)
-
-    # Show logged activities
-    print("\n--- Logged Activities ---")
-    from activity_log import get_all_logs, display_logs
-
-    logs = get_all_logs()
-    display_logs(logs)

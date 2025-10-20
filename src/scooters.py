@@ -1,3 +1,11 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# IMPORTS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Scooter fleet management imports
+#
+# External modules: database, validation, auth, activity_log
+# ═══════════════════════════════════════════════════════════════════════════
+
 from database import get_connection, encrypt_username, decrypt_username
 from validation import (
     ValidationError,
@@ -8,6 +16,16 @@ from validation import (
 )
 from auth import get_current_user, check_permission
 from activity_log import log_activity
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 1: CREATE OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Add new scooters to fleet inventory
+#
+# Key components:
+# - add_scooter(): Create new scooter record with validation and encryption
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def add_scooter(serial_number, scooter_type, battery_level, status, location):
@@ -96,6 +114,18 @@ def add_scooter(serial_number, scooter_type, battery_level, status, location):
         )
 
     return True, f"Scooter '{serial_number}' added successfully"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 2: UPDATE OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Update scooter information with role-based field restrictions
+#
+# Key components:
+# - update_scooter(): Update with role-based permissions (Service Engineers limited)
+#
+# Note: Service Engineers can only update battery, status, location, service date
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def update_scooter(serial_number, **updates):
@@ -238,6 +268,16 @@ def update_scooter(serial_number, **updates):
     return True, f"Scooter updated successfully"
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 3: DELETE OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Delete scooter records
+#
+# Key components:
+# - delete_scooter(): Remove scooter (Super/System Admin only, not engineers)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
 def delete_scooter(serial_number):
     """
     Delete scooter record (Super Admin or System Admin only).
@@ -297,6 +337,20 @@ def delete_scooter(serial_number):
         )
 
     return True, f"Scooter '{serial_number}' deleted successfully"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 4: SEARCH & RETRIEVAL OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Search and retrieve scooter information
+#
+# Key components:
+# - search_scooters(): Partial key search in type, location, status
+# - get_scooter_by_serial(): Get specific scooter by serial number
+# - list_all_scooters(): Get all scooters with decrypted serial numbers
+#
+# Note: Cannot search by serial number (encrypted)
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def search_scooters(search_key):
@@ -431,116 +485,3 @@ def list_all_scooters():
         )
 
     return scooters
-
-
-# Testing and demonstration
-if __name__ == "__main__":
-    from auth import login, logout
-
-    print("=" * 60)
-    print("SCOOTER MANAGEMENT SYSTEM TESTING")
-    print("=" * 60)
-
-    # Login as super admin
-    print("\n--- Logging in as Super Admin ---")
-    login("super_admin", "Admin_123?")
-
-    # Test 1: Add scooter
-    print("\n--- Test 1: Add Scooter ---")
-    success, msg = add_scooter(
-        serial_number="SC123456",
-        scooter_type="Model X",
-        battery_level=100,
-        status="available",
-        location="Amsterdam Central",
-    )
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-
-    # Test 2: Add another scooter
-    print("\n--- Test 2: Add Another Scooter ---")
-    success, msg = add_scooter(
-        serial_number="SC789012",
-        scooter_type="Model Y",
-        battery_level=85,
-        status="in_use",
-        location="Rotterdam Port",
-    )
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-
-    # Test 3: List all scooters
-    print("\n--- Test 3: List All Scooters ---")
-    scooters = list_all_scooters()
-    for s in scooters:
-        print(
-            f"  {s['serial_number']:12s} | {s['type']:10s} | {s['battery_level']:3d}% | {s['status']:12s} | {s['location']}"
-        )
-
-    # Test 4: Search scooters
-    print("\n--- Test 4: Search Scooters (partial key: 'Model') ---")
-    results = search_scooters("Model")
-    print(f"Found {len(results)} scooters:")
-    for s in results:
-        print(f"  {s['serial_number']:12s} | {s['type']}")
-
-    # Test 5: Update scooter (Super Admin - all fields)
-    print("\n--- Test 5: Update Scooter (Super Admin) ---")
-    success, msg = update_scooter(
-        "SC123456", battery_level=75, location="Utrecht Center"
-    )
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-
-    # Test 6: Get specific scooter
-    print("\n--- Test 6: Get Scooter By Serial ---")
-    scooter = get_scooter_by_serial("SC123456")
-    if scooter:
-        print(f"  Type: {scooter['type']}")
-        print(f"  Battery: {scooter['battery_level']}%")
-        print(f"  Location: {scooter['location']}")
-
-    # Test 7: Test Service Engineer restrictions
-    print("\n--- Test 7: Test Service Engineer Field Restrictions ---")
-    logout()
-
-    # Create and login as Service Engineer
-    from users import create_service_engineer
-
-    login("super_admin", "Admin_123?")
-    create_service_engineer("eng_test", "Test", "Engineer")
-    logout()
-
-    login("eng_test", "Temp@1234Abc")  # Placeholder, need real temp password
-
-    # Try to update allowed field
-    print("  Trying to update battery_level (allowed):")
-    success, msg = update_scooter("SC123456", battery_level=90)
-    print(f"  Result: {success} - {msg}")
-
-    # Try to update forbidden field
-    print("  Trying to update type (forbidden):")
-    success, msg = update_scooter("SC123456", type="Model Z")
-    print(f"  Result: {success} - {msg}")
-
-    logout()
-
-    # Test 8: Delete scooter
-    print("\n--- Test 8: Delete Scooter ---")
-    login("super_admin", "Admin_123?")
-    success, msg = delete_scooter("SC789012")
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-
-    # Show logs
-    print("\n--- Activity Logs ---")
-    from activity_log import get_all_logs, display_logs
-
-    logs = get_all_logs()
-    display_logs(logs[-10:])
-
-    logout()
-
-    print("\n" + "=" * 60)
-    print("✓ Scooter management system ready!")
-    print("=" * 60)

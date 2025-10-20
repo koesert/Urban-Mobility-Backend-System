@@ -1,12 +1,37 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# IMPORTS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Database and cryptography libraries for secure data management
+#
+# External libraries:
+# - sqlite3: Database operations
+# - hashlib: Password hashing (SHA-256)
+# - Crypto: AES-256 encryption for usernames
+# - cryptography.fernet: Non-deterministic encryption for sensitive data
+# ═══════════════════════════════════════════════════════════════════════════
+
 import sqlite3
 import hashlib
-import os
 from pathlib import Path
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Random import get_random_bytes
 from cryptography.fernet import Fernet
 import base64
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 1: CONSTANTS & FILE PATHS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Configuration paths and default credentials
+#
+# Key components:
+# - DATA_DIR: Directory for database and encryption keys
+# - DB_PATH: SQLite database file location
+# - AES_KEY_PATH: AES-256 key for username encryption (deterministic)
+# - FERNET_KEY_PATH: Fernet key for sensitive data encryption (non-deterministic)
+# - SUPER_ADMIN credentials: Default admin account
+# ═══════════════════════════════════════════════════════════════════════════
 
 # File paths
 DATA_DIR = Path(__file__).parent / "data"
@@ -17,6 +42,19 @@ FERNET_KEY_PATH = DATA_DIR / "fernet_key.bin"
 # Default super admin credentials
 SUPER_ADMIN_USERNAME = "super_admin"
 SUPER_ADMIN_PASSWORD = "Admin_123?"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 2: ENCRYPTION KEY MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Load or create encryption keys for system security
+#
+# Key components:
+# - load_or_create_aes_key(): AES-256 key for deterministic username encryption
+# - load_or_create_fernet_key(): Fernet key for non-deterministic data encryption
+#
+# Note: Keys are persisted to disk for consistency across application restarts
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def load_or_create_aes_key():
@@ -115,6 +153,22 @@ def load_or_create_fernet_key():
 fernet_cipher = load_or_create_fernet_key()
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 3: ENCRYPTION FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Encrypt and decrypt sensitive data
+#
+# Key components:
+# - encrypt_username() / decrypt_username(): Deterministic AES-256 ECB for searchable usernames
+# - encrypt_field() / decrypt_field(): Non-deterministic Fernet for sensitive data
+#
+# Encryption strategy:
+# - Usernames: AES-256 ECB (deterministic) - allows WHERE username = ? queries
+# - Sensitive data: Fernet (non-deterministic) - better security, not searchable
+#   (emails, phones, driving licenses, serial numbers)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
 def encrypt_field(plaintext):
     """
     Encrypt field using Fernet (non-deterministic, more secure).
@@ -147,6 +201,19 @@ def decrypt_field(encrypted_text):
         return ""
     decrypted_bytes = fernet_cipher.decrypt(encrypted_text.encode())
     return decrypted_bytes.decode()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 4: PASSWORD HASHING
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Secure password hashing with SHA-256 and salting
+#
+# Key components:
+# - hash_password(): Hash password with username as salt (SHA-256)
+# - verify_password(): Verify password by comparing hashes
+#
+# Note: Username salt prevents rainbow table attacks and ensures unique hashes
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def hash_password(password, username):
@@ -185,6 +252,18 @@ def verify_password(password, username, stored_hash):
     return input_hash == stored_hash
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 5: DATABASE CONNECTION
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: SQLite database connection management
+#
+# Key components:
+# - get_connection(): Create SQLite connection with foreign keys enabled
+#
+# Note: Foreign keys are enabled for referential integrity
+# ═══════════════════════════════════════════════════════════════════════════
+
+
 def get_connection():
     """
     Create and return a database connection with foreign keys enabled.
@@ -196,6 +275,21 @@ def get_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 6: TABLE CREATION
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Database schema definition and table creation
+#
+# Key components:
+# - create_tables(): Create all database tables (users, travelers, scooters)
+#
+# Tables:
+# - users: System users (Super Admin, System Admin, Service Engineer)
+# - travelers: Customers with encrypted personal information
+# - scooters: Fleet inventory with encrypted serial numbers
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def create_tables():
@@ -306,6 +400,19 @@ def init_super_admin():
     conn.close()
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 7: SYSTEM INITIALIZATION
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Initialize database system and default accounts
+#
+# Key components:
+# - init_super_admin(): Create default Super Admin account
+# - init_database(): Main initialization function (tables + super admin)
+#
+# Note: Called on application startup to ensure system is ready
+# ═══════════════════════════════════════════════════════════════════════════
+
+
 def init_database():
     """
     Initialize the complete database system: keys, tables, and super admin.
@@ -325,53 +432,3 @@ def init_database():
     print(f"✓ AES key (usernames): {AES_KEY_PATH}")
     print(f"✓ Fernet key (other data): {FERNET_KEY_PATH}")
     print("=" * 60)
-
-
-# Testing and demonstration
-if __name__ == "__main__":
-    init_database()
-
-    # Verify username encryption is deterministic (required for database queries)
-    print("\n--- Testing Username Encryption (AES-256 ECB - Deterministic) ---")
-    test_username = "super_admin"
-    encrypted1 = encrypt_username(test_username)
-    encrypted2 = encrypt_username(test_username)
-    decrypted = decrypt_username(encrypted1)
-
-    print(f"Original:     {test_username}")
-    print(f"Encrypted 1:  {encrypted1}")
-    print(f"Encrypted 2:  {encrypted2}")
-    print(f"Deterministic? {encrypted1 == encrypted2} (Must be True)")
-    print(f"Decrypted:    {decrypted}")
-    print(f"Match: {test_username == decrypted}")
-
-    # Verify Fernet encryption is non-deterministic (better security)
-    print("\n--- Testing Other Field Encryption (Fernet - Non-Deterministic) ---")
-    test_email = "test@example.com"
-    encrypted_email1 = encrypt_field(test_email)
-    encrypted_email2 = encrypt_field(test_email)
-    decrypted_email = decrypt_field(encrypted_email1)
-
-    print(f"Original:     {test_email}")
-    print(f"Encrypted 1:  {encrypted_email1[:50]}...")
-    print(f"Encrypted 2:  {encrypted_email2[:50]}...")
-    print(
-        f"Deterministic? {encrypted_email1 == encrypted_email2} (Must be False for security)"
-    )
-    print(f"Decrypted:    {decrypted_email}")
-    print(f"Match: {test_email == decrypted_email}")
-
-    # Verify password hashing with salt
-    print("\n--- Testing Password Hashing (SHA-256 + Salt) ---")
-    test_username = "test_user"
-    test_password = "TestPass123!"
-    password_hash = hash_password(test_password, test_username)
-    print(f"Username: {test_username}")
-    print(f"Password: {test_password}")
-    print(f"Hash: {password_hash}")
-    print(
-        f"Verify (correct): {verify_password(test_password, test_username, password_hash)}"
-    )
-    print(
-        f"Verify (wrong): {verify_password('WrongPass123!', test_username, password_hash)}"
-    )

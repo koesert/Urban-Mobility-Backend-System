@@ -1,4 +1,12 @@
-import os
+# ═══════════════════════════════════════════════════════════════════════════
+# IMPORTS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Backup and restore system imports
+#
+# External libraries: os, zipfile, secrets, string, pathlib, datetime
+# Internal modules: database, auth, activity_log
+# ═══════════════════════════════════════════════════════════════════════════
+
 import zipfile
 import secrets
 import string
@@ -8,9 +16,33 @@ from database import get_connection, encrypt_field, decrypt_field
 from auth import get_current_user, check_permission
 from activity_log import log_activity
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 1: CONSTANTS & PATHS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Backup directory configuration
+#
+# Key components:
+# - BACKUP_DIR: Directory for backup ZIP files
+# - DATA_DIR: Directory with database and keys to backup
+# ═══════════════════════════════════════════════════════════════════════════
+
 # Backup directory
 BACKUP_DIR = Path(__file__).parent / "backups"
 DATA_DIR = Path(__file__).parent / "data"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 2: BACKUP OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Create and list backup files
+#
+# Key components:
+# - create_backup(): Create ZIP backup of database + keys + logs
+# - list_backups(): List all available backup files
+#
+# Note: Backups include database, encryption keys, and activity logs
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def create_backup():
@@ -76,6 +108,53 @@ def create_backup():
 
     except Exception as e:
         return False, f"Error creating backup: {e}", None
+
+
+def list_backups():
+    """
+    List all available backup files.
+
+    Returns:
+        list: List of backup dictionaries
+
+    Example:
+        backups = list_backups()
+        for backup in backups:
+            print(f"{backup['filename']} - {backup['size']} bytes")
+    """
+    if not BACKUP_DIR.exists():
+        return []
+
+    backups = []
+
+    for backup_file in BACKUP_DIR.glob("backup_*.zip"):
+        stat = backup_file.stat()
+        backups.append(
+            {
+                "filename": backup_file.name,
+                "size": stat.st_size,
+                "created": datetime.fromtimestamp(stat.st_mtime).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+            }
+        )
+
+    # Sort by creation time (newest first)
+    backups.sort(key=lambda x: x["created"], reverse=True)
+
+    return backups
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 3: RESTORE OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Restore from backup with role-based access control
+#
+# Key components:
+# - restore_backup(): Restore from ZIP backup with code validation for System Admins
+#
+# Note: Super Admin can restore without code; System Admin needs restore code
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def restore_backup(backup_filename, restore_code=None):
@@ -174,6 +253,20 @@ def restore_backup(backup_filename, restore_code=None):
 
     except Exception as e:
         return False, f"Error restoring backup: {e}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 4: RESTORE CODE MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Manage one-time use restore codes for System Admins
+#
+# Key components:
+# - generate_restore_code(): Create restore code (Super Admin only)
+# - revoke_restore_code(): Revoke unused code (Super Admin only)
+# - list_restore_codes(): List all active codes (Super Admin only)
+#
+# Note: Restore codes are one-time use and tied to specific backup + user
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def generate_restore_code(backup_filename, target_username):
@@ -348,41 +441,6 @@ def revoke_restore_code(restore_code):
     return True, "Restore code revoked successfully"
 
 
-def list_backups():
-    """
-    List all available backup files.
-
-    Returns:
-        list: List of backup dictionaries
-
-    Example:
-        backups = list_backups()
-        for backup in backups:
-            print(f"{backup['filename']} - {backup['size']} bytes")
-    """
-    if not BACKUP_DIR.exists():
-        return []
-
-    backups = []
-
-    for backup_file in BACKUP_DIR.glob("backup_*.zip"):
-        stat = backup_file.stat()
-        backups.append(
-            {
-                "filename": backup_file.name,
-                "size": stat.st_size,
-                "created": datetime.fromtimestamp(stat.st_mtime).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                ),
-            }
-        )
-
-    # Sort by creation time (newest first)
-    backups.sort(key=lambda x: x["created"], reverse=True)
-
-    return backups
-
-
 def list_restore_codes():
     """
     List all active restore codes (Super Admin only).
@@ -441,6 +499,19 @@ def list_restore_codes():
         )
 
     return codes
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 5: INTERNAL HELPER FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Internal helpers for restore code validation
+#
+# Key components:
+# - _validate_restore_code(): Check if code is valid and unused (internal)
+# - _mark_code_as_used(): Mark code as used after restore (internal)
+#
+# Note: These are internal functions (prefixed with _)
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def _validate_restore_code(restore_code):
@@ -512,77 +583,3 @@ def _mark_code_as_used(restore_code):
 
     conn.commit()
     conn.close()
-
-
-# Testing and demonstration
-if __name__ == "__main__":
-    from auth import login, logout
-
-    print("=" * 60)
-    print("BACKUP & RESTORE SYSTEM TESTING")
-    print("=" * 60)
-
-    # Login as super admin
-    print("\n--- Logging in as Super Admin ---")
-    login("super_admin", "Admin_123?")
-
-    # Test 1: Create backup
-    print("\n--- Test 1: Create Backup ---")
-    success, msg, filename = create_backup()
-    print(f"Result: {success}")
-    print(f"Message: {msg}")
-    if filename:
-        print(f"Backup file: {filename}")
-
-    # Test 2: List backups
-    print("\n--- Test 2: List Backups ---")
-    backups = list_backups()
-    for backup in backups:
-        print(
-            f"  {backup['filename']:30s} | {backup['size']:10d} bytes | {backup['created']}"
-        )
-
-    # Test 3: Generate restore code
-    print("\n--- Test 3: Generate Restore Code ---")
-    code = None
-    if filename:
-        success, msg, code = generate_restore_code(filename, "system_admin")
-        print(f"Result: {success}")
-        print(f"Message: {msg}")
-        if code:
-            print(f"Restore code: {code}")
-
-    # Test 4: List restore codes
-    print("\n--- Test 4: List Restore Codes ---")
-    codes = list_restore_codes()
-    for c in codes:
-        print(
-            f"  Code: {c['code']} | User: {c['target_username']} | Backup: {c['backup_filename']}"
-        )
-
-    # Test 5: Restore backup (Super Admin - no code needed)
-    print("\n--- Test 5: Restore Backup (Super Admin) ---")
-    if filename:
-        success, msg = restore_backup(filename)
-        print(f"Result: {success}")
-        print(f"Message: {msg}")
-
-    # Test 6: Revoke restore code
-    print("\n--- Test 6: Revoke Restore Code ---")
-    if code:
-        success, msg = revoke_restore_code(code)
-        print(f"Result: {success}")
-        print(f"Message: {msg}")
-
-    # Show logs
-    print("\n--- Activity Logs ---")
-    from activity_log import get_all_logs, display_logs
-
-    logs = get_all_logs()
-    display_logs(logs[-8:])
-
-    logout()
-
-    print("\n" + "=" * 60)
-    print("✓ Backup & restore system ready!")
-    print("=" * 60)

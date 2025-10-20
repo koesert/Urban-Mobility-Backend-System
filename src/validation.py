@@ -1,11 +1,42 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# IMPORTS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Input validation libraries
+#
+# External libraries: re (regex), datetime (date validation)
+# ═══════════════════════════════════════════════════════════════════════════
+
 import re
 from datetime import datetime
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 1: CUSTOM EXCEPTIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Custom exception for validation errors
+#
+# Key components:
+# - ValidationError: Raised when input validation fails
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 class ValidationError(Exception):
     """Custom exception for input validation failures."""
 
     pass
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 2: USER CREDENTIAL VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Validate username and password formats
+#
+# Key components:
+# - validate_username(): 8-10 chars, specific character rules
+# - validate_password(): 12-30 chars, complexity requirements
+#
+# Note: Strong validation ensures system security
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def validate_username(username):
@@ -102,6 +133,19 @@ def validate_password(password):
     return password
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 3: CONTACT INFORMATION VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Validate email and phone number formats
+#
+# Key components:
+# - validate_email(): RFC-compliant email format
+# - validate_phone(): Dutch mobile format (+31-6-DDDDDDDD)
+#
+# Note: Phone numbers are automatically formatted
+# ═══════════════════════════════════════════════════════════════════════════
+
+
 def validate_email(email):
     """
     Validate email format.
@@ -165,12 +209,26 @@ def validate_phone(phone):
     if phone_clean.startswith("316") and len(phone_clean) == 11:
         # Extract last 8 digits
         phone_clean = phone_clean[3:]
-    
+
     # Validate: must be exactly 8 digits
     if not re.match(r"^\d{8}$", phone_clean):
         raise ValidationError("Phone number must be exactly 8 digits. Expected: 8 digits (e.g., 12345678)")
 
     return f"+31-6-{phone_clean}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 4: ADDRESS VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Validate address components (Dutch format)
+#
+# Key components:
+# - validate_zipcode(): Dutch postal code (DDDDXX format)
+# - validate_house_number(): House number with optional addition
+# - validate_city(): City from predefined list
+#
+# Note: Zipcodes and cities follow Dutch standards
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def validate_zipcode(zipcode):
@@ -392,6 +450,96 @@ def validate_city(city):
     return city
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 5: PERSONAL INFORMATION VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Validate personal data (names, dates, gender, documents)
+#
+# Key components:
+# - validate_name(): Names and street names (letters, spaces, hyphens, apostrophes)
+# - validate_date(): Date in DD-MM-YYYY format with calendar validation
+# - validate_gender(): Male or Female
+# - validate_driving_license(): Dutch license format (X(X)DDDDDDD)
+#
+# Note: Date validation checks for valid calendar dates (e.g., no Feb 30)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def validate_name(name, field_name="Name"):
+    """
+    Validate names (first name, last name, street name).
+
+    Rules:
+    - 1-50 characters
+    - Only letters, spaces, hyphens, apostrophes
+
+    Args:
+        name (str): Name to validate
+        field_name (str): Field name for error messages
+
+    Returns:
+        str: Validated name
+
+    Raises:
+        ValidationError: If name is invalid
+    """
+    if not isinstance(name, str):
+        raise ValidationError(f"{field_name} must be a string")
+
+    name = name.strip()
+
+    if not name:
+        raise ValidationError(f"{field_name} cannot be empty")
+
+    if len(name) > 50:
+        raise ValidationError(f"{field_name} cannot be longer than 50 characters")
+
+    if not re.match(r"^[a-zA-Z\s\-']+$", name):
+        raise ValidationError(
+            f"{field_name} can only contain letters, spaces, hyphens, and apostrophes"
+        )
+
+    return name
+
+
+def validate_date(date_str, field_name="Date"):
+    """
+    Validate date format and check if it's a valid calendar date.
+
+    Format: DD-MM-YYYY
+    Example: 15-03-1995, 01-12-2024
+
+    Args:
+        date_str (str): Date string
+        field_name (str): Field name for error messages
+
+    Returns:
+        str: Validated date (DD-MM-YYYY)
+
+    Raises:
+        ValidationError: If date is invalid
+    """
+    if not isinstance(date_str, str):
+        raise ValidationError(f"{field_name} must be a string")
+
+    date_str = date_str.strip()
+
+    if not re.match(r"^\d{2}-\d{2}-\d{4}$", date_str):
+        raise ValidationError(
+            f"Invalid {field_name.lower()} format. Expected: DD-MM-YYYY (e.g., 15-03-1995)"
+        )
+
+    try:
+        day, month, year = map(int, date_str.split("-"))
+        datetime(year, month, day)
+    except ValueError:
+        raise ValidationError(
+            f"Invalid {field_name.lower()}. Please enter a valid calendar date"
+        )
+
+    return date_str
+
+
 def validate_gender(gender):
     """
     Validate gender value.
@@ -416,6 +564,52 @@ def validate_gender(gender):
         raise ValidationError("Gender must be 'Male' or 'Female'")
 
     return gender
+
+
+def validate_driving_license(license_number):
+    """
+    Validate Dutch driving license format.
+
+    Format: XDDDDDDD or XXDDDDDDD (1-2 letters + 7 digits)
+    Example: AB1234567, X1234567
+
+    Automatically converts letters to UPPERCASE.
+
+    Args:
+        license_number (str): Driving license number
+
+    Returns:
+        str: Validated license in UPPERCASE format
+
+    Raises:
+        ValidationError: If license is invalid
+    """
+    if not isinstance(license_number, str):
+        raise ValidationError("Driving license must be a string")
+
+    license_number = license_number.replace(" ", "").upper()
+
+    if not re.match(r"^[A-Z]{1,2}\d{7}$", license_number):
+        raise ValidationError(
+            "Invalid driving license format. Expected: XDDDDDDD or XXDDDDDDD (1-2 letters + 7 digits, e.g., AB1234567)"
+        )
+
+    return license_number
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 6: SCOOTER-SPECIFIC VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Validate scooter fleet data
+#
+# Key components:
+# - validate_serial_number(): 6-15 alphanumeric characters
+# - validate_scooter_type(): Scooter model/type (2-30 chars)
+# - validate_battery_level(): Integer 0-100
+# - validate_location(): Location string (2-50 chars)
+#
+# Note: Serial numbers are automatically converted to uppercase
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def validate_serial_number(serial_number):
@@ -559,60 +753,3 @@ def validate_location(location):
         )
 
     return location
-
-
-# Testing and demonstration
-if __name__ == "__main__":
-    print("=" * 60)
-    print("VALIDATION TESTING")
-    print("=" * 60)
-
-    test_cases = [
-        (
-            "Username",
-            validate_username,
-            ["john_doe", "Jane.Doe", "user_123", "admin_usr", "super_admin"],
-        ),
-        (
-            "Password",
-            validate_password,
-            ["MyPassword123!", "Secure@Pass2024", "ValidPass123#"],
-        ),
-        ("Email", validate_email, ["user@example.com", "john.doe@company.co.uk"]),
-        ("Phone", validate_phone, ["12345678", "87654321"]),
-        ("Zipcode", validate_zipcode, ["3011AB", "1234XY", "9876CD"]),
-        ("License", validate_driving_license, ["AB1234567", "X1234567", "PQ9876543"]),
-        ("Date", validate_date, ["15-03-1995", "01-12-2024"]),
-        ("City", validate_city, ["Amsterdam", "Rotterdam", "Tilburg"]),
-    ]
-
-    for test_name, validator, valid_inputs in test_cases:
-        print(f"\n--- Testing {test_name} ---")
-        for input_val in valid_inputs:
-            try:
-                result = validator(input_val)
-                print(f"✅ {input_val:20s} → {result}")
-            except ValidationError as e:
-                print(f"❌ {input_val:20s} → ERROR: {e}")
-
-    print("\n" + "=" * 60)
-    print("TESTING INVALID INPUTS (Should show errors)")
-    print("=" * 60)
-
-    invalid_tests = [
-        ("Username", validate_username, ["john", "123john", "toolongusername"]),
-        ("Password", validate_password, ["short", "nouppercase123!", "NoSpecial123"]),
-        ("Email", validate_email, ["invalid", "@example.com", "user@.com"]),
-        ("Phone", validate_phone, ["1234567", "123456789", "1234abcd"]),
-        ("Zipcode", validate_zipcode, ["301AB", "3011ABC", "3011ab"]),
-        ("License", validate_driving_license, ["ab1234567", "ABC123456", "A123456"]),
-    ]
-
-    for test_name, validator, invalid_inputs in invalid_tests:
-        print(f"\n--- Testing {test_name} (Invalid) ---")
-        for input_val in invalid_inputs:
-            try:
-                result = validator(input_val)
-                print(f"⚠️  {input_val:20s} → {result} (SHOULD HAVE FAILED!)")
-            except ValidationError as e:
-                print(f"✅ {input_val:20s} → Correctly rejected: {e}")

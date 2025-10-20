@@ -1,12 +1,14 @@
-"""
-Input handling utilities with exit/cancel support and immediate validation.
-
-This module provides reusable input prompt functions that:
-- Allow users to type 'exit' or 'cancel' to return to previous menu
-- Provide immediate feedback on validation errors
-- Show examples of valid input formats
-- Support retry loops until valid input or user cancels
-"""
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 1: IMPORTS & EXCEPTIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Core imports and custom exception classes
+#
+# Key components:
+# - ValidationError: Import from validation module
+# - CancelInputException: Custom exception for user cancellation
+#
+# Note: CancelInputException is raised when user types 'exit' or 'cancel'
+# ═══════════════════════════════════════════════════════════════════════════
 
 from validation import ValidationError
 
@@ -15,6 +17,23 @@ class CancelInputException(Exception):
     """Raised when user types 'exit' or 'cancel' to abort input."""
 
     pass
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 2: VALIDATION INPUT PROMPTS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Input prompt functions with immediate validation feedback
+#
+# Key components:
+# - prompt_with_validation(): Generic validation prompt with retry loop
+# - prompt_integer_with_validation(): Integer-specific validation prompt
+#
+# Features:
+# - Immediate validation with error feedback
+# - Support for 'exit' or 'cancel' commands
+# - Automatic retry loop until valid input or cancellation
+# - Shows validation error messages with examples
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def prompt_with_validation(prompt_text, validator_func, allow_exit=True):
@@ -95,6 +114,25 @@ def prompt_integer_with_validation(prompt_text, validator_func, allow_exit=True)
             print(f"❌ Error: {e}\n")
         except ValueError:
             print(f"❌ Error: Please enter a valid number\n")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 3: MENU & CHOICE PROMPTS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Menu navigation and user choice prompt functions
+#
+# Key components:
+# - prompt_menu_choice(): Numbered menu choice validation
+# - prompt_confirmation(): Yes/no confirmation prompts
+# - prompt_optional_field(): Optional field updates with skip support
+# - prompt_choice_from_list(): Select from numbered list of options
+#
+# Features:
+# - Range validation for menu choices
+# - Yes/no confirmation with validation
+# - Optional field support (Enter to skip, exit to cancel)
+# - Automatic numbering and display for list choices
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def prompt_menu_choice(prompt_text, min_choice, max_choice, allow_exit=True):
@@ -278,6 +316,23 @@ def prompt_choice_from_list(prompt_text, options, allow_exit=True):
         f"Enter choice (1-{len(options)}): ", 1, len(options), allow_exit
     )
     return options[int(choice) - 1]
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 4: TESTING & DEMONSTRATION
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Test code for input handler functions
+#
+# Tests:
+# - prompt_with_validation with email validation
+# - prompt_integer_with_validation with battery level validation
+# - prompt_menu_choice with range validation
+# - prompt_confirmation with yes/no validation
+# - prompt_optional_field with skip/exit/validate flow
+# - prompt_choice_from_list with numbered options
+#
+# Note: Run this file directly (python input_handlers.py) to execute tests
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 # Testing and demonstration
