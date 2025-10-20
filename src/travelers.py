@@ -31,6 +31,7 @@ from activity_log import log_activity
 #
 # Key components:
 # - add_traveler(): Create new customer record with full validation and encryption
+# - _generate_unique_customer_id(): Generate unique customer ID with collision check
 # ═══════════════════════════════════════════════════════════════════════════
 
 
@@ -94,8 +95,11 @@ def add_traveler(
     except ValidationError as e:
         return False, f"Validation error: {e}", None
 
-    # Generate unique customer ID
-    customer_id = str(uuid.uuid4().int)[:10]
+    # Generate unique customer ID with collision check
+    try:
+        customer_id = _generate_unique_customer_id()
+    except RuntimeError as e:
+        return False, f"Failed to generate customer ID: {e}", None
 
     # Encrypt sensitive fields
     encrypted_email = encrypt_field(email)
@@ -144,6 +148,43 @@ def add_traveler(
         )
 
     return True, f"Traveler '{first_name} {last_name}' added successfully", customer_id
+
+
+def _generate_unique_customer_id():
+    """
+    Generate unique customer ID with collision check.
+
+    Generates a 10-digit ID from UUID and verifies it doesn't already exist
+    in the database. Retries up to 10 times if collision occurs.
+
+    Returns:
+        str: Unique 10-digit customer ID
+
+    Raises:
+        RuntimeError: If unable to generate unique ID after 10 attempts
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    max_attempts = 10
+    for _ in range(max_attempts):
+        # Generate potential customer ID
+        customer_id = str(uuid.uuid4().int)[:10]
+
+        # Check if it already exists
+        cursor.execute(
+            "SELECT customer_id FROM travelers WHERE customer_id = ?", (customer_id,)
+        )
+
+        if cursor.fetchone() is None:
+            # ID is unique
+            conn.close()
+            return customer_id
+
+    conn.close()
+    raise RuntimeError(
+        f"Failed to generate unique customer ID after {max_attempts} attempts"
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════

@@ -14,7 +14,81 @@ from travelers import (
     search_travelers,
     get_traveler_by_id,
     list_all_travelers,
+    _generate_unique_customer_id,
 )
+
+
+# ============================================================================
+# Generate Unique Customer ID Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestGenerateUniqueCustomerId:
+    """Test unique customer ID generation"""
+
+    @patch("travelers.get_connection")
+    def test_generate_unique_customer_id_success(self, mock_conn):
+        """Test successfully generating unique customer ID"""
+        mock_cursor = Mock()
+        # First ID check returns None (ID is unique)
+        mock_cursor.fetchone.return_value = None
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        customer_id = _generate_unique_customer_id()
+
+        assert customer_id is not None
+        assert len(customer_id) == 10
+        assert customer_id.isdigit()
+        mock_cursor.execute.assert_called_once()
+
+    @patch("travelers.uuid.uuid4")
+    @patch("travelers.get_connection")
+    def test_generate_unique_customer_id_collision_retry(self, mock_conn, mock_uuid):
+        """Test ID generation retries on collision"""
+        # Mock UUID to generate predictable IDs
+        mock_uuid_obj = Mock()
+        mock_uuid_obj.int = 12345678901234567890
+        mock_uuid.return_value = mock_uuid_obj
+
+        mock_cursor = Mock()
+        # First call: ID exists (collision)
+        # Second call: ID is unique
+        mock_cursor.fetchone.side_effect = [
+            ("1234567890",),  # Collision - ID exists
+            None,  # Success - ID is unique
+        ]
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        customer_id = _generate_unique_customer_id()
+
+        assert customer_id is not None
+        assert len(customer_id) == 10
+        # Should have tried twice due to collision
+        assert mock_cursor.execute.call_count == 2
+
+    @patch("travelers.uuid.uuid4")
+    @patch("travelers.get_connection")
+    def test_generate_unique_customer_id_max_attempts_exceeded(
+        self, mock_conn, mock_uuid
+    ):
+        """Test ID generation fails after max attempts"""
+        # Mock UUID to generate predictable IDs
+        mock_uuid_obj = Mock()
+        mock_uuid_obj.int = 12345678901234567890
+        mock_uuid.return_value = mock_uuid_obj
+
+        mock_cursor = Mock()
+        # Always return existing ID (simulate constant collision)
+        mock_cursor.fetchone.return_value = ("1234567890",)
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        with pytest.raises(RuntimeError) as exc_info:
+            _generate_unique_customer_id()
+
+        assert "Failed to generate unique customer ID" in str(exc_info.value)
+        # Should have tried 10 times
+        assert mock_cursor.execute.call_count == 10
 
 
 # ============================================================================
@@ -27,12 +101,13 @@ class TestAddTraveler:
     """Test adding new travelers"""
 
     @patch("travelers.log_activity")
+    @patch("travelers._generate_unique_customer_id")
     @patch("travelers.get_connection")
     @patch("travelers.encrypt_field")
     @patch("travelers.get_current_user")
     @patch("travelers.check_permission")
     def test_add_traveler_success(
-        self, mock_check_perm, mock_get_user, mock_encrypt, mock_conn, mock_log
+        self, mock_check_perm, mock_get_user, mock_encrypt, mock_conn, mock_gen_id, mock_log
     ):
         """Test successfully adding a traveler"""
         mock_check_perm.return_value = True
@@ -42,6 +117,7 @@ class TestAddTraveler:
             "encrypted_phone",
             "encrypted_license",
         ]
+        mock_gen_id.return_value = "1234567890"
 
         mock_cursor = Mock()
         mock_conn.return_value.cursor.return_value = mock_cursor
@@ -62,8 +138,9 @@ class TestAddTraveler:
 
         assert success is True
         assert "added successfully" in msg.lower()
-        assert customer_id is not None
+        assert customer_id == "1234567890"
         assert len(customer_id) == 10
+        mock_gen_id.assert_called_once()
         mock_cursor.execute.assert_called_once()
         mock_conn.return_value.commit.assert_called_once()
 
@@ -223,6 +300,35 @@ class TestAddTraveler:
 
         assert success is False
         assert "validation error" in msg.lower()
+
+    @patch("travelers._generate_unique_customer_id")
+    @patch("travelers.check_permission")
+    def test_add_traveler_customer_id_generation_fails(
+        self, mock_check_perm, mock_gen_id
+    ):
+        """Test adding traveler when customer ID generation fails"""
+        mock_check_perm.return_value = True
+        mock_gen_id.side_effect = RuntimeError(
+            "Failed to generate unique customer ID after 10 attempts"
+        )
+
+        success, msg, customer_id = add_traveler(
+            "John",
+            "Doe",
+            "15-03-1990",
+            "Male",
+            "Main Street",
+            "42",
+            "1234AB",
+            "Amsterdam",
+            "john@example.com",
+            "12345678",
+            "AB1234567",
+        )
+
+        assert success is False
+        assert "failed to generate customer id" in msg.lower()
+        assert customer_id is None
 
 
 # ============================================================================
