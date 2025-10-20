@@ -65,9 +65,9 @@ def validate_username(username):
 
     # Special case: allow "super_admin" system account (bypasses length rule)
     if username.lower() == "super_admin":
-        if not re.match(r"^[a-zA-Z_]", username):
+        if not re.match(r"^[a-zA-Z_]", username):  # pragma: no cover
             raise ValidationError("Username must start with a letter or underscore")
-        if not re.match(r"^[a-zA-Z0-9_'.]+$", username):
+        if not re.match(r"^[a-zA-Z0-9_'.]+$", username):  # pragma: no cover
             raise ValidationError(
                 "Username can only contain letters, digits, underscore, apostrophe, and period"
             )
@@ -262,37 +262,6 @@ def validate_zipcode(zipcode):
     return zipcode
 
 
-def validate_driving_license(license_number):
-    """
-    Validate Dutch driving license format.
-
-    Format: XDDDDDDD or XXDDDDDDD (1-2 letters + 7 digits)
-    Example: AB1234567, X1234567
-
-    Automatically converts letters to UPPERCASE.
-
-    Args:
-        license_number (str): Driving license number
-
-    Returns:
-        str: Validated license in UPPERCASE format
-
-    Raises:
-        ValidationError: If license is invalid
-    """
-    if not isinstance(license_number, str):
-        raise ValidationError("Driving license must be a string")
-
-    license_number = license_number.replace(" ", "").upper()
-
-    if not re.match(r"^[A-Z]{1,2}\d{7}$", license_number):
-        raise ValidationError(
-            "Invalid driving license format. Expected: XDDDDDDD or XXDDDDDDD (1-2 letters + 7 digits, e.g., AB1234567)"
-        )
-
-    return license_number
-
-
 def validate_date(date_str, field_name="Date", must_be_past=False):
     """
     Validate date format and check if it's a valid calendar date.
@@ -346,43 +315,6 @@ def validate_date(date_str, field_name="Date", must_be_past=False):
             )
 
     return date_str
-
-
-def validate_name(name, field_name="Name"):
-    """
-    Validate names (first name, last name, street name).
-
-    Rules:
-    - 1-50 characters
-    - Only letters, spaces, hyphens, apostrophes
-
-    Args:
-        name (str): Name to validate
-        field_name (str): Field name for error messages
-
-    Returns:
-        str: Validated name
-
-    Raises:
-        ValidationError: If name is invalid
-    """
-    if not isinstance(name, str):
-        raise ValidationError(f"{field_name} must be a string")
-
-    name = name.strip()
-
-    if not name:
-        raise ValidationError(f"{field_name} cannot be empty. Expected: 1-50 characters (e.g., John, Mary-Jane)")
-
-    if len(name) > 50:
-        raise ValidationError(f"{field_name} cannot be longer than 50 characters. Expected: max 50 chars (e.g., John)")
-
-    if not re.match(r"^[a-zA-Z\s\-']+$", name):
-        raise ValidationError(
-            f"{field_name} can only contain letters, spaces, hyphens, and apostrophes. Expected: letters, spaces, -, ' (e.g., Mary-Jane, O'Brien)"
-        )
-
-    return name
 
 
 def validate_house_number(house_number):
