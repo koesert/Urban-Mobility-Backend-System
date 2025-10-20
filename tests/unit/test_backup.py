@@ -330,9 +330,7 @@ class TestRestoreBackup:
 
     @patch("backup.check_permission")
     @patch("backup.get_current_user")
-    def test_restore_backup_file_not_found(
-        self, mock_get_user, mock_check_perm
-    ):
+    def test_restore_backup_file_not_found(self, mock_get_user, mock_check_perm):
         """Test restoring non-existent backup"""
         mock_get_user.return_value = {"username": "super_admin", "role": "super_admin"}
         mock_check_perm.side_effect = lambda x: x == "manage_restore_codes"
@@ -346,7 +344,7 @@ class TestRestoreBackup:
             success, msg = restore_backup("nonexistent.zip")
 
         assert success is False
-        assert ("not found" in msg.lower() or "error" in msg.lower())
+        assert "not found" in msg.lower() or "error" in msg.lower()
 
 
 # ============================================================================
@@ -370,9 +368,7 @@ class TestGenerateRestoreCode:
         assert code is None
 
     @patch("backup.check_permission")
-    def test_generate_restore_code_backup_not_found(
-        self, mock_check_perm
-    ):
+    def test_generate_restore_code_backup_not_found(self, mock_check_perm):
         """Test generating code for non-existent backup"""
         mock_check_perm.return_value = True
 

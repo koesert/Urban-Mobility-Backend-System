@@ -40,7 +40,7 @@ class TestCreateSystemAdmin:
         mock_encrypt,
         mock_hash,
         mock_conn,
-        mock_log
+        mock_log,
     ):
         """Test successful system admin creation"""
         mock_check_perm.return_value = True

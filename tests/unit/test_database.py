@@ -18,7 +18,7 @@ from database import (
     get_connection,
     create_tables,
     init_super_admin,
-    init_database
+    init_database,
 )
 
 

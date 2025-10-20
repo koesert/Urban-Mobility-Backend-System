@@ -107,7 +107,13 @@ class TestAddTraveler:
     @patch("travelers.get_current_user")
     @patch("travelers.check_permission")
     def test_add_traveler_success(
-        self, mock_check_perm, mock_get_user, mock_encrypt, mock_conn, mock_gen_id, mock_log
+        self,
+        mock_check_perm,
+        mock_get_user,
+        mock_encrypt,
+        mock_conn,
+        mock_gen_id,
+        mock_log,
     ):
         """Test successfully adding a traveler"""
         mock_check_perm.return_value = True

@@ -232,7 +232,10 @@ class TestLogActivity:
         mock_encrypt.assert_called_once()
         encrypted_content = mock_encrypt.call_args[0][0]
         # Should include the header and new log entry
-        assert "No.,Date,Time,Username,Activity,Additional Info,Suspicious" in encrypted_content
+        assert (
+            "No.,Date,Time,Username,Activity,Additional Info,Suspicious"
+            in encrypted_content
+        )
         assert "Test activity" in encrypted_content
 
 
