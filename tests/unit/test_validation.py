@@ -23,7 +23,7 @@ from validation import (
     validate_scooter_type,
     validate_battery_level,
     validate_location,
-    VALID_CITIES,
+    VALID_CITIES
 )
 
 

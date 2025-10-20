@@ -13,7 +13,7 @@ from auth import (
     get_current_user,
     is_logged_in,
     check_permission,
-    update_password,
+    update_password
 )
 
 

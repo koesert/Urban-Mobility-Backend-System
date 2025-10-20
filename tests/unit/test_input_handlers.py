@@ -6,7 +6,7 @@ validation, exit/cancel behavior, and error handling.
 """
 
 import pytest
-from unittest.mock import patch, call
+from unittest.mock import patch
 from input_handlers import (
     CancelInputException,
     prompt_with_validation,
@@ -14,9 +14,9 @@ from input_handlers import (
     prompt_menu_choice,
     prompt_confirmation,
     prompt_optional_field,
-    prompt_choice_from_list,
+    prompt_choice_from_list
 )
-from validation import ValidationError, validate_email, validate_battery_level
+from validation import validate_email, validate_battery_level
 
 
 # ============================================================================
