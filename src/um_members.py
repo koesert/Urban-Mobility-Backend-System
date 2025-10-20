@@ -216,8 +216,9 @@ def show_main_menu():
         print("  4. Manage Scooters")
         print("  5. View System Logs")
         print("  6. Backup & Restore")
-        print("  7. Update My Password")
-        print("  8. Logout")
+        print("  7. View My Profile")
+        print("  8. Update My Password")
+        print("  9. Logout")
 
     elif user["role"] == "system_admin":
         # System Admin menu
@@ -226,15 +227,17 @@ def show_main_menu():
         print("  3. Manage Scooters")
         print("  4. View System Logs")
         print("  5. Backup & Restore")
-        print("  6. Update My Password")
-        print("  7. Logout")
+        print("  6. View My Profile")
+        print("  7. Update My Password")
+        print("  8. Logout")
 
     elif user["role"] == "service_engineer":
         # Service Engineer menu
         print("  1. Update Scooter Information")
         print("  2. Search Scooters")
-        print("  3. Update My Password")
-        print("  4. Logout")
+        print("  3. View My Profile")
+        print("  4. Update My Password")
+        print("  5. Logout")
 
     print("\n" + "-" * 70)
     return True
@@ -1649,16 +1652,79 @@ def list_restore_codes_ui():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# SECTION 9: PASSWORD MANAGEMENT UI
+# SECTION 9: PROFILE MANAGEMENT UI
 # ═══════════════════════════════════════════════════════════════════════════
-# Description: User interface functions for password management
+# Description: User interface functions for viewing and managing own profile
 #
 # Key components:
+# - view_my_profile_ui(): Display current user's profile information
 # - update_my_password_ui(): Allow user to change their own password
 # - force_password_change_ui(): Force password change on first login with temp password
 #
-# Note: All users can update their own password; temp password users are forced to change
+# Note: All users can view their own profile and update their own password
 # ═══════════════════════════════════════════════════════════════════════════
+
+
+def view_my_profile_ui():
+    """Display current user's profile information."""
+    clear_screen()
+    print_header("MY PROFILE")
+
+    user = get_current_user()
+
+    if not user:
+        print("\n❌ Error: No user logged in.")
+        wait_for_enter()
+        return
+
+    # Display profile information
+    print("\n" + "=" * 70)
+    print("PROFILE INFORMATION")
+    print("=" * 70)
+
+    print(f"\n{'Username:':<20} {user['username']}")
+    print(f"{'First Name:':<20} {user['first_name']}")
+    print(f"{'Last Name:':<20} {user['last_name']}")
+    print(f"{'Role:':<20} {user['role_name']}")
+
+    # Show account creation date if available
+    if 'created_at' in user and user['created_at']:
+        print(f"{'Account Created:':<20} {user['created_at']}")
+
+    # Show must_change_password status
+    if user.get('must_change_password'):
+        print(f"\n⚠️  Status: You must change your password (using temporary password)")
+
+    print("\n" + "=" * 70)
+
+    # Display role-specific permissions
+    print("\nYOUR PERMISSIONS:")
+    print("-" * 70)
+
+    if user["role"] == "super_admin":
+        print("  ✓ Manage System Administrators (create, update, delete)")
+        print("  ✓ Manage Service Engineers (create, update, delete)")
+        print("  ✓ Manage Travelers (add, update, delete)")
+        print("  ✓ Manage Scooters (add, update, delete)")
+        print("  ✓ View System Logs")
+        print("  ✓ Create and restore backups")
+        print("  ✓ Generate and revoke restore codes")
+        print("  ✓ Full system access")
+    elif user["role"] == "system_admin":
+        print("  ✓ Manage Service Engineers (create, update, delete)")
+        print("  ✓ Manage Travelers (add, update, delete)")
+        print("  ✓ Manage Scooters (add, update, delete)")
+        print("  ✓ View System Logs")
+        print("  ✓ Create and restore backups")
+        print("  ✓ Generate and revoke restore codes")
+    elif user["role"] == "service_engineer":
+        print("  ✓ Update Scooter Information (status, battery, location, service)")
+        print("  ✓ Search Scooters")
+        print("  ✓ View scooter details")
+
+    print("-" * 70)
+
+    wait_for_enter()
 
 
 def update_my_password_ui():
@@ -1941,8 +2007,10 @@ def main():
                 elif choice == "6":
                     backup_restore_menu()
                 elif choice == "7":
-                    update_my_password_ui()
+                    view_my_profile_ui()
                 elif choice == "8":
+                    update_my_password_ui()
+                elif choice == "9":
                     logout()
                     print("\n✓ Logged out successfully")
                     wait_for_enter()
@@ -1963,8 +2031,10 @@ def main():
                 elif choice == "5":
                     backup_restore_menu()
                 elif choice == "6":
-                    update_my_password_ui()
+                    view_my_profile_ui()
                 elif choice == "7":
+                    update_my_password_ui()
+                elif choice == "8":
                     logout()
                     print("\n✓ Logged out successfully")
                     wait_for_enter()
@@ -1979,8 +2049,10 @@ def main():
                 elif choice == "2":
                     search_scooters_ui()
                 elif choice == "3":
-                    update_my_password_ui()
+                    view_my_profile_ui()
                 elif choice == "4":
+                    update_my_password_ui()
+                elif choice == "5":
                     logout()
                     print("\n✓ Logged out successfully")
                     wait_for_enter()
