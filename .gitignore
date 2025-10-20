@@ -191,6 +191,7 @@ temp/
 
 # Data folder (contains database, keys, logs, backups)
 src/data/
+src/backups/
 
 # Encryption keys (if any are generated)
 *.key
@@ -201,4 +202,4 @@ src/data/
 *.bin
 
 # Claude
-*.Claude
+*.claude
