@@ -791,7 +791,8 @@ def add_traveler_ui():
 
         # Birthday - validated
         birthday = prompt_with_validation(
-            "Birthday (DD-MM-YYYY): ", lambda x: validate_date(x, "Birthday", must_be_past=True)
+            "Birthday (DD-MM-YYYY): ",
+            lambda x: validate_date(x, "Birthday", must_be_past=True),
         )
 
         # Gender - validated with menu choice
@@ -1688,11 +1689,11 @@ def view_my_profile_ui():
     print(f"{'Role:':<20} {user['role_name']}")
 
     # Show account creation date if available
-    if 'created_at' in user and user['created_at']:
+    if "created_at" in user and user["created_at"]:
         print(f"{'Account Created:':<20} {user['created_at']}")
 
     # Show must_change_password status
-    if user.get('must_change_password'):
+    if user.get("must_change_password"):
         print(f"\n⚠️  Status: You must change your password (using temporary password)")
 
     print("\n" + "=" * 70)

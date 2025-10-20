@@ -75,12 +75,18 @@ def validate_username(username):
 
     # Validate length for regular users
     if len(username) < 8:
-        raise ValidationError("Username must be at least 8 characters long. Expected: 8-10 characters (e.g., john_doe)")
+        raise ValidationError(
+            "Username must be at least 8 characters long. Expected: 8-10 characters (e.g., john_doe)"
+        )
     if len(username) > 10:
-        raise ValidationError("Username must be at most 10 characters long. Expected: 8-10 characters (e.g., john_doe)")
+        raise ValidationError(
+            "Username must be at most 10 characters long. Expected: 8-10 characters (e.g., john_doe)"
+        )
 
     if not re.match(r"^[a-zA-Z_]", username):
-        raise ValidationError("Username must start with a letter or underscore. Expected: starts with letter or _ (e.g., john_doe, _username)")
+        raise ValidationError(
+            "Username must start with a letter or underscore. Expected: starts with letter or _ (e.g., john_doe, _username)"
+        )
 
     if not re.match(r"^[a-zA-Z0-9_'.]+$", username):
         raise ValidationError(
@@ -112,18 +118,28 @@ def validate_password(password):
         raise ValidationError("Password must be a string")
 
     if len(password) < 12:
-        raise ValidationError("Password must be at least 12 characters long. Expected: 12-30 characters (e.g., MySecure@Pass123)")
+        raise ValidationError(
+            "Password must be at least 12 characters long. Expected: 12-30 characters (e.g., MySecure@Pass123)"
+        )
     if len(password) > 30:
-        raise ValidationError("Password must be at most 30 characters long. Expected: 12-30 characters (e.g., MySecure@Pass123)")
+        raise ValidationError(
+            "Password must be at most 30 characters long. Expected: 12-30 characters (e.g., MySecure@Pass123)"
+        )
 
     if not re.search(r"[a-z]", password):
-        raise ValidationError("Password must contain at least 1 lowercase letter. Expected: includes a-z, A-Z, 0-9, special chars (e.g., MySecure@Pass123)")
+        raise ValidationError(
+            "Password must contain at least 1 lowercase letter. Expected: includes a-z, A-Z, 0-9, special chars (e.g., MySecure@Pass123)"
+        )
 
     if not re.search(r"[A-Z]", password):
-        raise ValidationError("Password must contain at least 1 uppercase letter. Expected: includes a-z, A-Z, 0-9, special chars (e.g., MySecure@Pass123)")
+        raise ValidationError(
+            "Password must contain at least 1 uppercase letter. Expected: includes a-z, A-Z, 0-9, special chars (e.g., MySecure@Pass123)"
+        )
 
     if not re.search(r"\d", password):
-        raise ValidationError("Password must contain at least 1 digit. Expected: includes a-z, A-Z, 0-9, special chars (e.g., MySecure@Pass123)")
+        raise ValidationError(
+            "Password must contain at least 1 digit. Expected: includes a-z, A-Z, 0-9, special chars (e.g., MySecure@Pass123)"
+        )
 
     if not re.search(r"[~!@#$%&_\-+=`|\\(){}[\]:;'<>,.?/]", password):
         raise ValidationError(
@@ -170,12 +186,16 @@ def validate_email(email):
     email = email.strip()
 
     if len(email) > 50:
-        raise ValidationError("Email cannot be longer than 50 characters. Expected: max 50 chars (e.g., user@example.com)")
+        raise ValidationError(
+            "Email cannot be longer than 50 characters. Expected: max 50 chars (e.g., user@example.com)"
+        )
 
     email_pattern = r"^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
 
     if not re.match(email_pattern, email):
-        raise ValidationError("Invalid email format. Expected: user@domain.tld (e.g., john.doe@example.com)")
+        raise ValidationError(
+            "Invalid email format. Expected: user@domain.tld (e.g., john.doe@example.com)"
+        )
 
     return email.lower()
 
@@ -212,7 +232,9 @@ def validate_phone(phone):
 
     # Validate: must be exactly 8 digits
     if not re.match(r"^\d{8}$", phone_clean):
-        raise ValidationError("Phone number must be exactly 8 digits. Expected: 8 digits (e.g., 12345678)")
+        raise ValidationError(
+            "Phone number must be exactly 8 digits. Expected: 8 digits (e.g., 12345678)"
+        )
 
     return f"+31-6-{phone_clean}"
 
@@ -343,16 +365,24 @@ def validate_house_number(house_number):
     house_number = house_number.strip()
 
     if not house_number:
-        raise ValidationError("House number cannot be empty. Expected: max 6 chars, starts with digit (e.g., 42, 42A)")
+        raise ValidationError(
+            "House number cannot be empty. Expected: max 6 chars, starts with digit (e.g., 42, 42A)"
+        )
 
     if len(house_number) > 6:
-        raise ValidationError("House number cannot be longer than 6 characters. Expected: max 6 chars (e.g., 42, 42A, 42-1)")
+        raise ValidationError(
+            "House number cannot be longer than 6 characters. Expected: max 6 chars (e.g., 42, 42A, 42-1)"
+        )
 
     if not re.match(r"^\d", house_number):
-        raise ValidationError("House number must start with a digit. Expected: starts with digit (e.g., 42A, 123-B)")
+        raise ValidationError(
+            "House number must start with a digit. Expected: starts with digit (e.g., 42A, 123-B)"
+        )
 
     if not re.match(r"^[\d\w\-]+$", house_number):
-        raise ValidationError("House number contains invalid characters. Expected: digits, letters, hyphens (e.g., 42, 42A, 42-1)")
+        raise ValidationError(
+            "House number contains invalid characters. Expected: digits, letters, hyphens (e.g., 42, 42A, 42-1)"
+        )
 
     return house_number
 
@@ -548,13 +578,19 @@ def validate_serial_number(serial_number):
 
     # Validate length
     if len(serial_number) < 6:
-        raise ValidationError("Serial number must be at least 6 characters long. Expected: 6-15 alphanumeric chars (e.g., ABC123XYZ)")
+        raise ValidationError(
+            "Serial number must be at least 6 characters long. Expected: 6-15 alphanumeric chars (e.g., ABC123XYZ)"
+        )
     if len(serial_number) > 15:
-        raise ValidationError("Serial number must be at most 15 characters long. Expected: 6-15 alphanumeric chars (e.g., ABC123XYZ)")
+        raise ValidationError(
+            "Serial number must be at most 15 characters long. Expected: 6-15 alphanumeric chars (e.g., ABC123XYZ)"
+        )
 
     # Validate format (alphanumeric only)
     if not re.match(r"^[A-Z0-9]+$", serial_number):
-        raise ValidationError("Serial number can only contain letters and digits. Expected: alphanumeric only (e.g., ABC123XYZ, SERIAL2024)")
+        raise ValidationError(
+            "Serial number can only contain letters and digits. Expected: alphanumeric only (e.g., ABC123XYZ, SERIAL2024)"
+        )
 
     return serial_number
 
@@ -583,9 +619,13 @@ def validate_scooter_type(scooter_type):
 
     # Validate length
     if len(scooter_type) < 2:
-        raise ValidationError("Scooter type must be at least 2 characters long. Expected: 2-30 characters (e.g., E-Scooter Pro, Model X)")
+        raise ValidationError(
+            "Scooter type must be at least 2 characters long. Expected: 2-30 characters (e.g., E-Scooter Pro, Model X)"
+        )
     if len(scooter_type) > 30:
-        raise ValidationError("Scooter type must be at most 30 characters long. Expected: 2-30 characters (e.g., E-Scooter Pro)")
+        raise ValidationError(
+            "Scooter type must be at most 30 characters long. Expected: 2-30 characters (e.g., E-Scooter Pro)"
+        )
 
     # Validate format (letters, digits, spaces, hyphens)
     if not re.match(r"^[a-zA-Z0-9\s\-]+$", scooter_type):
@@ -616,15 +656,23 @@ def validate_battery_level(battery_level):
         try:
             battery_level = int(battery_level.strip())
         except ValueError:
-            raise ValidationError("Battery level must be a number. Expected: integer 0-100 (e.g., 75, 100)")
+            raise ValidationError(
+                "Battery level must be a number. Expected: integer 0-100 (e.g., 75, 100)"
+            )
 
     if not isinstance(battery_level, int):
-        raise ValidationError("Battery level must be an integer. Expected: integer 0-100 (e.g., 75, 100)")
+        raise ValidationError(
+            "Battery level must be an integer. Expected: integer 0-100 (e.g., 75, 100)"
+        )
 
     if battery_level < 0:
-        raise ValidationError("Battery level cannot be negative. Expected: 0-100 (e.g., 0, 50, 100)")
+        raise ValidationError(
+            "Battery level cannot be negative. Expected: 0-100 (e.g., 0, 50, 100)"
+        )
     if battery_level > 100:
-        raise ValidationError("Battery level cannot exceed 100. Expected: 0-100 (e.g., 0, 50, 100)")
+        raise ValidationError(
+            "Battery level cannot exceed 100. Expected: 0-100 (e.g., 0, 50, 100)"
+        )
 
     return battery_level
 
@@ -653,9 +701,13 @@ def validate_location(location):
 
     # Validate length
     if len(location) < 2:
-        raise ValidationError("Location must be at least 2 characters long. Expected: 2-50 characters (e.g., Dam Square, Station 5)")
+        raise ValidationError(
+            "Location must be at least 2 characters long. Expected: 2-50 characters (e.g., Dam Square, Station 5)"
+        )
     if len(location) > 50:
-        raise ValidationError("Location must be at most 50 characters long. Expected: 2-50 characters (e.g., Central Station)")
+        raise ValidationError(
+            "Location must be at most 50 characters long. Expected: 2-50 characters (e.g., Central Station)"
+        )
 
     # Validate format (allow letters, digits, spaces, and common punctuation)
     if not re.match(r"^[a-zA-Z0-9\s,.\-']+$", location):
