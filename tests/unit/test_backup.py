@@ -678,12 +678,15 @@ class TestValidateRestoreCode:
 class TestMarkCodeAsUsed:
     """Test marking restore code as used"""
 
+    @patch("backup.decrypt_field")
     @patch("backup.encrypt_field")
     @patch("backup.get_connection")
-    def test_mark_code_as_used_success(self, mock_conn, mock_encrypt):
+    def test_mark_code_as_used_success(self, mock_conn, mock_encrypt, mock_decrypt):
         """Test successfully marking code as used"""
         mock_encrypt.return_value = "encrypted_code"
+        mock_decrypt.return_value = "ABC123"
         mock_cursor = Mock()
+        mock_cursor.fetchall.return_value = [(1, "encrypted_code")]
         mock_conn.return_value.cursor.return_value = mock_cursor
 
         _mark_code_as_used("ABC123")

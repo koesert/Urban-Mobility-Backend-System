@@ -33,7 +33,9 @@ class TestKeyLoading:
 
     @patch("database.AES_KEY_PATH")
     @patch("database.DATA_DIR")
-    def test_load_or_create_aes_key_loads_existing_key(self, mock_data_dir, mock_aes_key_path):
+    def test_load_or_create_aes_key_loads_existing_key(
+        self, mock_data_dir, mock_aes_key_path
+    ):
         """Test that load_or_create_aes_key loads existing key from file"""
         from database import load_or_create_aes_key
         from unittest.mock import MagicMock, mock_open
@@ -53,7 +55,9 @@ class TestKeyLoading:
 
     @patch("database.FERNET_KEY_PATH")
     @patch("database.DATA_DIR")
-    def test_load_or_create_fernet_key_loads_existing_key(self, mock_data_dir, mock_fernet_key_path):
+    def test_load_or_create_fernet_key_loads_existing_key(
+        self, mock_data_dir, mock_fernet_key_path
+    ):
         """Test that load_or_create_fernet_key loads existing key from file"""
         from database import load_or_create_fernet_key
         from cryptography.fernet import Fernet
@@ -379,7 +383,12 @@ class TestTableCreation:
 
         assert "CREATE TABLE IF NOT EXISTS scooters" in scooters_sql
         assert "serial_number TEXT NOT NULL UNIQUE" in scooters_sql
-        assert "battery_level INTEGER NOT NULL" in scooters_sql
+        assert "brand TEXT NOT NULL" in scooters_sql
+        assert "model TEXT NOT NULL" in scooters_sql
+        assert "battery_capacity INTEGER NOT NULL" in scooters_sql
+        assert "state_of_charge INTEGER NOT NULL" in scooters_sql
+        assert "latitude REAL NOT NULL" in scooters_sql
+        assert "longitude REAL NOT NULL" in scooters_sql
 
 
 # ============================================================================
