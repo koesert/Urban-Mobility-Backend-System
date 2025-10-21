@@ -203,3 +203,4 @@ src/backups/
 
 # Claude
 *.claude
+CLAUDE.md
