@@ -44,7 +44,7 @@ def run_pytest(args):
         pytest_args.extend(
             [
                 "--cov=src",
-                "--cov-report=html",
+                "--cov-report=html:tests/htmlcov",
                 "--cov-report=term-missing",
                 "--cov-config=tests/pytest.ini",
             ]
