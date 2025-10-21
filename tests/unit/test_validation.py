@@ -621,5 +621,3 @@ class TestStateOfChargeValidation:
         """Test non-integer state of charge (like float)"""
         with pytest.raises(ValidationError, match="must be an integer"):
             validate_state_of_charge(50.5)
-
-

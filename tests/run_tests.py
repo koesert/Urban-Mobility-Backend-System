@@ -41,17 +41,17 @@ def run_pytest(args):
 
     # Add coverage options unless disabled
     if not args.no_coverage:
-        pytest_args.extend([
-            "--cov=src",
-            "--cov-report=html",
-            "--cov-report=term-missing"
-        ])
+        pytest_args.extend(
+            [
+                "--cov=src",
+                "--cov-report=html",
+                "--cov-report=term-missing",
+                "--cov-config=tests/pytest.ini",
+            ]
+        )
 
     # Add other useful options
-    pytest_args.extend([
-        "--strict-markers",
-        "--tb=short"
-    ])
+    pytest_args.extend(["--strict-markers", "--tb=short"])
 
     # Run pytest
     print("=" * 80)
@@ -69,28 +69,15 @@ def main():
     parser = argparse.ArgumentParser(
         description="Run tests for Urban Mobility Backend System"
     )
+    parser.add_argument("--unit", "-u", help="Run only unit tests", action="store_true")
     parser.add_argument(
-        "--unit",
-        "-u",
-        help="Run only unit tests",
-        action="store_true"
+        "--integration", "-i", help="Run only integration tests", action="store_true"
     )
     parser.add_argument(
-        "--integration",
-        "-i",
-        help="Run only integration tests",
-        action="store_true"
+        "--verbose", "-v", help="Enable verbose output", action="store_true"
     )
     parser.add_argument(
-        "--verbose",
-        "-v",
-        help="Enable verbose output",
-        action="store_true"
-    )
-    parser.add_argument(
-        "--no-coverage",
-        help="Disable coverage reporting",
-        action="store_true"
+        "--no-coverage", help="Disable coverage reporting", action="store_true"
     )
 
     args = parser.parse_args()
