@@ -122,6 +122,10 @@ class TestAddTraveler:
             "encrypted_email",
             "encrypted_phone",
             "encrypted_license",
+            "encrypted_street",
+            "encrypted_house",
+            "encrypted_zip",
+            "encrypted_city",
         ]
         mock_gen_id.return_value = "1234567890"
 
@@ -368,10 +372,10 @@ class TestUpdateTraveler:
             "Doe",
             "15-03-1990",
             "Male",
-            "Main Street",
-            "42",
-            "1234AB",
-            "Amsterdam",
+            "encrypted_street",
+            "encrypted_house",
+            "encrypted_zip",
+            "encrypted_city",
             "encrypted_email",
             "encrypted_phone",
             "encrypted_license",
@@ -742,10 +746,10 @@ class TestSearchTravelers:
                 "Doe",
                 "15-03-1990",
                 "Male",
-                "Main Street",
-                "42",
-                "1234AB",
-                "Amsterdam",
+                "encrypted_street",
+                "encrypted_house",
+                "encrypted_zip",
+                "encrypted_city",
                 "encrypted_email",
                 "encrypted_phone",
                 "encrypted_license",
@@ -753,7 +757,15 @@ class TestSearchTravelers:
             )
         ]
         mock_conn.return_value.cursor.return_value = mock_cursor
-        mock_decrypt.side_effect = ["john@example.com", "12345678", "AB1234567"]
+        mock_decrypt.side_effect = [
+            "Main Street",
+            "42",
+            "1234AB",
+            "Amsterdam",
+            "john@example.com",
+            "12345678",
+            "AB1234567",
+        ]
 
         results = search_travelers("john")
 
@@ -797,10 +809,10 @@ class TestSearchTravelers:
                 "Doe",
                 "15-03-1990",
                 "Male",
-                "Main Street",
-                "42",
-                "1234AB",
-                "Amsterdam",
+                "encrypted_street",
+                "encrypted_house",
+                "encrypted_zip",
+                "encrypted_city",
                 "encrypted_email",
                 "encrypted_phone",
                 "encrypted_license",
@@ -825,9 +837,17 @@ class TestSearchTravelers:
         ]
         mock_conn.return_value.cursor.return_value = mock_cursor
         mock_decrypt.side_effect = [
+            "Main Street",
+            "42",
+            "1234AB",
+            "Amsterdam",
             "john1@example.com",
             "11111111",
             "AB1111111",
+            "Oak Street",
+            "15",
+            "5678CD",
+            "Rotterdam",
             "john2@example.com",
             "22222222",
             "AB2222222",
@@ -859,17 +879,25 @@ class TestGetTravelerById:
             "Doe",
             "15-03-1990",
             "Male",
-            "Main Street",
-            "42",
-            "1234AB",
-            "Amsterdam",
+            "encrypted_street",
+            "encrypted_house",
+            "encrypted_zip",
+            "encrypted_city",
             "encrypted_email",
             "encrypted_phone",
             "encrypted_license",
             "2025-01-01",
         )
         mock_conn.return_value.cursor.return_value = mock_cursor
-        mock_decrypt.side_effect = ["john@example.com", "12345678", "AB1234567"]
+        mock_decrypt.side_effect = [
+            "Main Street",
+            "42",
+            "1234AB",
+            "Amsterdam",
+            "john@example.com",
+            "12345678",
+            "AB1234567",
+        ]
 
         traveler = get_traveler_by_id("1234567890")
 
@@ -912,10 +940,10 @@ class TestListAllTravelers:
                 "Doe",
                 "15-03-1990",
                 "Male",
-                "Main Street",
-                "42",
-                "1234AB",
-                "Amsterdam",
+                "encrypted_street1",
+                "encrypted_house1",
+                "encrypted_zip1",
+                "encrypted_city1",
                 "encrypted_email1",
                 "encrypted_phone1",
                 "encrypted_license1",
@@ -928,10 +956,10 @@ class TestListAllTravelers:
                 "Smith",
                 "20-05-1985",
                 "Female",
-                "Oak Street",
-                "15",
-                "5678CD",
-                "Rotterdam",
+                "encrypted_street2",
+                "encrypted_house2",
+                "encrypted_zip2",
+                "encrypted_city2",
                 "encrypted_email2",
                 "encrypted_phone2",
                 "encrypted_license2",
@@ -940,9 +968,17 @@ class TestListAllTravelers:
         ]
         mock_conn.return_value.cursor.return_value = mock_cursor
         mock_decrypt.side_effect = [
+            "Main Street",
+            "42",
+            "1234AB",
+            "Amsterdam",
             "john@example.com",
             "11111111",
             "AB1111111",
+            "Oak Street",
+            "15",
+            "5678CD",
+            "Rotterdam",
             "jane@example.com",
             "22222222",
             "AB2222222",
@@ -978,10 +1014,10 @@ class TestListAllTravelers:
                 "Doe",
                 "15-03-1990",
                 "Male",
-                "Main Street",
-                "42",
-                "1234AB",
-                "Amsterdam",
+                "encrypted_street",
+                "encrypted_house",
+                "encrypted_zip",
+                "encrypted_city",
                 "encrypted_email",
                 "encrypted_phone",
                 "encrypted_license",
@@ -989,12 +1025,20 @@ class TestListAllTravelers:
             )
         ]
         mock_conn.return_value.cursor.return_value = mock_cursor
-        mock_decrypt.side_effect = ["john@example.com", "12345678", "AB1234567"]
+        mock_decrypt.side_effect = [
+            "Main Street",
+            "42",
+            "1234AB",
+            "Amsterdam",
+            "john@example.com",
+            "12345678",
+            "AB1234567",
+        ]
 
         travelers = list_all_travelers()
 
-        # Should decrypt email, phone, and license
-        assert mock_decrypt.call_count == 3
+        # Should decrypt email, phone, license, and address fields
+        assert mock_decrypt.call_count == 7
         assert travelers[0]["email"] == "john@example.com"
         assert travelers[0]["mobile_phone"] == "12345678"
         assert travelers[0]["driving_license"] == "AB1234567"

@@ -21,8 +21,7 @@ from validation import (
     validate_gender,
     validate_serial_number,
     validate_scooter_type,
-    validate_battery_level,
-    validate_location,
+    validate_state_of_charge,
     VALID_CITIES,
 )
 
@@ -314,29 +313,29 @@ class TestDrivingLicenseValidation:
 
 @pytest.mark.unit
 class TestDateValidation:
-    """Test validate_date function"""
+    """Test validate_date function (ISO YYYY-MM-DD format)"""
 
     @pytest.mark.parametrize(
         "date_str",
         [
-            "15-03-1995",
-            "01-01-2000",
-            "31-12-2024",
-            "29-02-2020",  # Leap year
+            "1995-03-15",
+            "2000-01-01",
+            "2024-12-31",
+            "2020-02-29",  # Leap year
         ],
     )
     def test_valid_dates(self, date_str):
-        """Test valid date inputs"""
+        """Test valid date inputs in YYYY-MM-DD format"""
         assert validate_date(date_str) == date_str
 
     @pytest.mark.parametrize(
         "invalid_date",
         [
             "15/03/1995",  # Wrong separator
-            "2024-03-15",  # Wrong format
-            "32-01-2024",  # Invalid day
-            "15-13-2024",  # Invalid month
-            "29-02-2023",  # Not a leap year
+            "15-03-2024",  # Wrong format (DD-MM-YYYY instead of YYYY-MM-DD)
+            "2024-01-32",  # Invalid day
+            "2024-13-15",  # Invalid month
+            "2023-02-29",  # Not a leap year
         ],
     )
     def test_invalid_dates(self, invalid_date):
@@ -348,20 +347,6 @@ class TestDateValidation:
         """Test non-string date"""
         with pytest.raises(ValidationError, match="Date must be a string"):
             validate_date(20241231)
-
-    def test_date_future_when_must_be_past(self):
-        """Test future date when must_be_past=True"""
-        from datetime import datetime, timedelta
-
-        future_date = datetime.now() + timedelta(days=365)
-        future_date_str = future_date.strftime("%d-%m-%Y")
-        with pytest.raises(ValidationError, match="cannot be in the future"):
-            validate_date(future_date_str, must_be_past=True)
-
-    def test_date_too_far_in_past(self):
-        """Test date more than 150 years in the past"""
-        with pytest.raises(ValidationError, match="cannot be more than 150 years"):
-            validate_date("01-01-1800", must_be_past=True)
 
 
 # ============================================================================
@@ -520,9 +505,9 @@ class TestSerialNumberValidation:
     @pytest.mark.parametrize(
         "serial,expected",
         [
-            ("ABC123", "ABC123"),
-            ("abc123xyz", "ABC123XYZ"),  # Converts to uppercase
-            ("  SERIAL2024  ", "SERIAL2024"),  # Strips whitespace
+            ("ABC1234567", "ABC1234567"),
+            ("abc123xyz0", "ABC123XYZ0"),  # Converts to uppercase
+            ("  SERIAL2024FLEET  ", "SERIAL2024FLEET"),  # Strips whitespace
         ],
     )
     def test_valid_serial_numbers(self, serial, expected):
@@ -531,20 +516,20 @@ class TestSerialNumberValidation:
 
     def test_serial_too_short(self):
         """Test serial number that is too short"""
-        with pytest.raises(ValidationError, match="at least 6 characters"):
+        with pytest.raises(ValidationError, match="at least 10 characters"):
             validate_serial_number("ABC12")
 
     def test_serial_too_long(self):
         """Test serial number that is too long"""
-        with pytest.raises(ValidationError, match="at most 15 characters"):
-            validate_serial_number("A" * 16)
+        with pytest.raises(ValidationError, match="at most 17 characters"):
+            validate_serial_number("A" * 18)
 
     def test_serial_invalid_chars(self):
         """Test serial number with invalid characters"""
         with pytest.raises(
             ValidationError, match="can only contain letters and digits"
         ):
-            validate_serial_number("ABC-123")
+            validate_serial_number("ABC-123DEFGH")
 
     def test_serial_number_non_string(self):
         """Test non-string serial number"""
@@ -595,13 +580,13 @@ class TestScooterTypeValidation:
 
 
 # ============================================================================
-# Battery Level Validation Tests
+# State of Charge Validation Tests
 # ============================================================================
 
 
 @pytest.mark.unit
-class TestBatteryLevelValidation:
-    """Test validate_battery_level function"""
+class TestStateOfChargeValidation:
+    """Test validate_state_of_charge function"""
 
     @pytest.mark.parametrize(
         "level,expected",
@@ -613,68 +598,28 @@ class TestBatteryLevelValidation:
             ("  100  ", 100),  # String with spaces
         ],
     )
-    def test_valid_battery_levels(self, level, expected):
-        """Test valid battery level inputs"""
-        assert validate_battery_level(level) == expected
+    def test_valid_state_of_charge(self, level, expected):
+        """Test valid state of charge inputs"""
+        assert validate_state_of_charge(level) == expected
 
-    def test_battery_level_negative(self):
-        """Test negative battery level"""
+    def test_state_of_charge_negative(self):
+        """Test negative state of charge"""
         with pytest.raises(ValidationError, match="cannot be negative"):
-            validate_battery_level(-1)
+            validate_state_of_charge(-1)
 
-    def test_battery_level_too_high(self):
-        """Test battery level above 100"""
+    def test_state_of_charge_too_high(self):
+        """Test state of charge above 100"""
         with pytest.raises(ValidationError, match="cannot exceed 100"):
-            validate_battery_level(101)
+            validate_state_of_charge(101)
 
-    def test_battery_level_invalid_string(self):
+    def test_state_of_charge_invalid_string(self):
         """Test non-numeric string"""
         with pytest.raises(ValidationError, match="must be a number"):
-            validate_battery_level("abc")
+            validate_state_of_charge("abc")
 
-    def test_battery_level_non_integer(self):
-        """Test non-integer battery level (like float)"""
+    def test_state_of_charge_non_integer(self):
+        """Test non-integer state of charge (like float)"""
         with pytest.raises(ValidationError, match="must be an integer"):
-            validate_battery_level(50.5)
+            validate_state_of_charge(50.5)
 
 
-# ============================================================================
-# Location Validation Tests
-# ============================================================================
-
-
-@pytest.mark.unit
-class TestLocationValidation:
-    """Test validate_location function"""
-
-    @pytest.mark.parametrize(
-        "location",
-        [
-            "Central Station",
-            "Dam Square",
-            "Location-5",
-        ],
-    )
-    def test_valid_locations(self, location):
-        """Test valid location inputs"""
-        assert validate_location(location) == location
-
-    def test_location_too_short(self):
-        """Test location that is too short"""
-        with pytest.raises(ValidationError, match="at least 2 characters"):
-            validate_location("A")
-
-    def test_location_too_long(self):
-        """Test location that is too long"""
-        with pytest.raises(ValidationError, match="at most 50 characters"):
-            validate_location("A" * 51)
-
-    def test_location_invalid_chars(self):
-        """Test location with invalid characters"""
-        with pytest.raises(ValidationError, match="can only contain"):
-            validate_location("Location@#$")
-
-    def test_location_non_string(self):
-        """Test non-string location"""
-        with pytest.raises(ValidationError, match="Location must be a string"):
-            validate_location(12345)

@@ -16,7 +16,7 @@ from input_handlers import (
     prompt_optional_field,
     prompt_choice_from_list,
 )
-from validation import validate_email, validate_battery_level
+from validation import validate_email, validate_state_of_charge
 
 
 # ============================================================================
@@ -152,7 +152,7 @@ class TestPromptIntegerWithValidation:
         mock_input.return_value = "75"
 
         result = prompt_integer_with_validation(
-            "Battery (0-100): ", validate_battery_level
+            "Battery (0-100): ", validate_state_of_charge
         )
 
         assert result == 75
@@ -164,7 +164,7 @@ class TestPromptIntegerWithValidation:
         """Test that string numbers are converted to integers"""
         mock_input.return_value = "  100  "
 
-        result = prompt_integer_with_validation("Battery: ", validate_battery_level)
+        result = prompt_integer_with_validation("Battery: ", validate_state_of_charge)
 
         assert result == 100
         assert isinstance(result, int)
@@ -175,7 +175,7 @@ class TestPromptIntegerWithValidation:
         """Test non-numeric input handling"""
         mock_input.side_effect = ["abc", "75"]
 
-        result = prompt_integer_with_validation("Battery: ", validate_battery_level)
+        result = prompt_integer_with_validation("Battery: ", validate_state_of_charge)
 
         assert result == 75
         assert mock_print.call_count == 1
@@ -188,7 +188,7 @@ class TestPromptIntegerWithValidation:
         """Test integer out of valid range"""
         mock_input.side_effect = ["150", "75"]
 
-        result = prompt_integer_with_validation("Battery: ", validate_battery_level)
+        result = prompt_integer_with_validation("Battery: ", validate_state_of_charge)
 
         assert result == 75
         assert mock_print.call_count == 1
@@ -199,7 +199,7 @@ class TestPromptIntegerWithValidation:
         mock_input.return_value = "exit"
 
         with pytest.raises(CancelInputException):
-            prompt_integer_with_validation("Battery: ", validate_battery_level)
+            prompt_integer_with_validation("Battery: ", validate_state_of_charge)
 
 
 # ============================================================================
