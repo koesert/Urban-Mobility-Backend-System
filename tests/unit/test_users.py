@@ -221,6 +221,49 @@ class TestCreateServiceEngineer:
         assert success is False
         assert "already exists" in msg.lower()
 
+    @patch("users.log_activity")
+    @patch("users.get_connection")
+    @patch("users.hash_password")
+    @patch("users.encrypt_username")
+    @patch("users.get_current_user")
+    @patch("users.check_permission")
+    def test_create_service_engineer_with_password(
+        self,
+        mock_check_perm,
+        mock_get_user,
+        mock_encrypt,
+        mock_hash,
+        mock_conn,
+        mock_log,
+    ):
+        """Test creating service engineer with provided password (no temp password)"""
+        mock_check_perm.return_value = True
+        mock_get_user.return_value = {"username": "admin_001"}
+        mock_encrypt.return_value = "encrypted_engineer"
+        mock_hash.return_value = "hashed_password"
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = None
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg, temp_pw = create_service_engineer(
+            "engineer1", "Jane", "Smith", "CustomPass123!"
+        )
+
+        assert success is True
+        assert temp_pw is None  # No temp password when provided
+
+    @patch("users.check_permission")
+    def test_create_service_engineer_invalid_username(self, mock_check_perm):
+        """Test creating service engineer with invalid username"""
+        mock_check_perm.return_value = True
+
+        success, msg, temp_pw = create_service_engineer("bad", "Jane", "Smith")
+
+        assert success is False
+        assert "validation error" in msg.lower()
+        assert temp_pw is None
+
 
 # ============================================================================
 # Delete User Tests
@@ -317,6 +360,38 @@ class TestDeleteUser:
         mock_conn.return_value.cursor.return_value = mock_cursor
 
         success, msg = delete_user("admin_002")
+
+        assert success is False
+        assert "access denied" in msg.lower()
+
+    @patch("users.get_current_user")
+    def test_delete_user_invalid_username(self, mock_get_user):
+        """Test deleting user with invalid username"""
+        mock_get_user.return_value = {"username": "super_admin"}
+
+        success, msg = delete_user("bad")  # Too short
+
+        assert success is False
+        assert "invalid username" in msg.lower()
+
+    @patch("users.log_activity")
+    @patch("users.get_connection")
+    @patch("users.encrypt_username")
+    @patch("users.check_permission")
+    @patch("users.get_current_user")
+    def test_delete_service_engineer_insufficient_permission(
+        self, mock_get_user, mock_check_perm, mock_encrypt, mock_conn, mock_log
+    ):
+        """Test deleting service engineer without permission"""
+        mock_get_user.return_value = {"username": "nonadmin", "role": "other"}
+        mock_check_perm.return_value = False
+        mock_encrypt.return_value = "encrypted_engineer"
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1, "service_engineer", "Jane", "Doe")
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg = delete_user("engineer1")
 
         assert success is False
         assert "access denied" in msg.lower()
@@ -422,6 +497,39 @@ class TestResetUserPassword:
         mock_conn.return_value.cursor.return_value = mock_cursor
 
         success, msg, temp_pw = reset_user_password("admin_002")
+
+        assert success is False
+        assert "access denied" in msg.lower()
+        assert temp_pw is None
+
+    @patch("users.get_current_user")
+    def test_reset_password_invalid_username(self, mock_get_user):
+        """Test resetting password with invalid username"""
+        mock_get_user.return_value = {"username": "super_admin"}
+
+        success, msg, temp_pw = reset_user_password("bad")  # Too short
+
+        assert success is False
+        assert "invalid username" in msg.lower()
+        assert temp_pw is None
+
+    @patch("users.get_connection")
+    @patch("users.encrypt_username")
+    @patch("users.check_permission")
+    @patch("users.get_current_user")
+    def test_reset_service_engineer_password_no_permission(
+        self, mock_get_user, mock_check_perm, mock_encrypt, mock_conn
+    ):
+        """Test resetting service engineer password without permission"""
+        mock_get_user.return_value = {"username": "nonadmin", "role": "other"}
+        mock_check_perm.return_value = False
+        mock_encrypt.return_value = "encrypted_engineer"
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1, "service_engineer")
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg, temp_pw = reset_user_password("engineer1")
 
         assert success is False
         assert "access denied" in msg.lower()
@@ -535,6 +643,58 @@ class TestUpdateUserProfile:
             call for call in mock_cursor.execute.call_args_list if "UPDATE" in str(call)
         ]
         assert len(update_call) == 1
+
+    @patch("users.get_current_user")
+    def test_update_profile_invalid_username(self, mock_get_user):
+        """Test updating profile with invalid username"""
+        mock_get_user.return_value = {"username": "super_admin"}
+
+        success, msg = update_user_profile("bad", first_name="Johnny")
+
+        assert success is False
+        assert "invalid username" in msg.lower()
+
+    @patch("users.get_connection")
+    @patch("users.encrypt_username")
+    @patch("users.check_permission")
+    @patch("users.get_current_user")
+    def test_update_system_admin_profile_no_permission(
+        self, mock_get_user, mock_check_perm, mock_encrypt, mock_conn
+    ):
+        """Test updating system admin profile without permission"""
+        mock_get_user.return_value = {"username": "admin_001", "role": "system_admin"}
+        mock_check_perm.return_value = False
+        mock_encrypt.return_value = "encrypted_user"
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1, "system_admin", "John", "Doe")
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg = update_user_profile("admin_002", first_name="Johnny")
+
+        assert success is False
+        assert "access denied" in msg.lower()
+
+    @patch("users.get_connection")
+    @patch("users.encrypt_username")
+    @patch("users.check_permission")
+    @patch("users.get_current_user")
+    def test_update_service_engineer_profile_no_permission(
+        self, mock_get_user, mock_check_perm, mock_encrypt, mock_conn
+    ):
+        """Test updating service engineer profile without permission"""
+        mock_get_user.return_value = {"username": "nonadmin", "role": "other"}
+        mock_check_perm.return_value = False
+        mock_encrypt.return_value = "encrypted_engineer"
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1, "service_engineer", "Jane", "Doe")
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg = update_user_profile("engineer1", first_name="Janet")
+
+        assert success is False
+        assert "access denied" in msg.lower()
 
 
 # ============================================================================

@@ -23,6 +23,57 @@ from database import (
 
 
 # ============================================================================
+# Key Loading Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestKeyLoading:
+    """Test loading existing encryption keys from files"""
+
+    @patch("database.AES_KEY_PATH")
+    @patch("database.DATA_DIR")
+    def test_load_or_create_aes_key_loads_existing_key(self, mock_data_dir, mock_aes_key_path):
+        """Test that load_or_create_aes_key loads existing key from file"""
+        from database import load_or_create_aes_key
+        from unittest.mock import MagicMock, mock_open
+
+        # Simulate existing key file
+        mock_aes_key_path.exists.return_value = True
+        test_key = b"0" * 32  # 32-byte test key
+
+        # Mock the file opening
+        m = mock_open(read_data=test_key)
+        with patch("builtins.open", m):
+            key = load_or_create_aes_key()
+
+            # Verify key was loaded from file
+            assert key == test_key
+            m.assert_called_once_with(mock_aes_key_path, "rb")
+
+    @patch("database.FERNET_KEY_PATH")
+    @patch("database.DATA_DIR")
+    def test_load_or_create_fernet_key_loads_existing_key(self, mock_data_dir, mock_fernet_key_path):
+        """Test that load_or_create_fernet_key loads existing key from file"""
+        from database import load_or_create_fernet_key
+        from cryptography.fernet import Fernet
+        from unittest.mock import mock_open
+
+        # Simulate existing key file
+        mock_fernet_key_path.exists.return_value = True
+        test_key = Fernet.generate_key()
+
+        # Mock the file opening
+        m = mock_open(read_data=test_key)
+        with patch("builtins.open", m):
+            cipher = load_or_create_fernet_key()
+
+            # Verify key was loaded from file
+            m.assert_called_once_with(mock_fernet_key_path, "rb")
+            assert cipher is not None
+
+
+# ============================================================================
 # Encryption Tests - Username (AES)
 # ============================================================================
 

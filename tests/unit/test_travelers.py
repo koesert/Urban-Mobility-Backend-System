@@ -466,6 +466,200 @@ class TestUpdateTraveler:
 
         assert success is True
 
+    @patch("travelers.log_activity")
+    @patch("travelers.get_connection")
+    @patch("travelers.get_current_user")
+    @patch("travelers.check_permission")
+    def test_update_traveler_first_name(
+        self, mock_check_perm, mock_get_user, mock_conn, mock_log
+    ):
+        """Test updating traveler first_name field"""
+        mock_check_perm.return_value = True
+        mock_get_user.return_value = {"username": "admin_001"}
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1,) + ("data",) * 12
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg = update_traveler("1234567890", first_name="Jane")
+
+        assert success is True
+        assert "updated successfully" in msg.lower()
+
+    @patch("travelers.log_activity")
+    @patch("travelers.get_connection")
+    @patch("travelers.get_current_user")
+    @patch("travelers.check_permission")
+    def test_update_traveler_last_name(
+        self, mock_check_perm, mock_get_user, mock_conn, mock_log
+    ):
+        """Test updating traveler last_name field"""
+        mock_check_perm.return_value = True
+        mock_get_user.return_value = {"username": "admin_001"}
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1,) + ("data",) * 12
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg = update_traveler("1234567890", last_name="Smith")
+
+        assert success is True
+
+    @patch("travelers.log_activity")
+    @patch("travelers.get_connection")
+    @patch("travelers.get_current_user")
+    @patch("travelers.check_permission")
+    def test_update_traveler_birthday(
+        self, mock_check_perm, mock_get_user, mock_conn, mock_log
+    ):
+        """Test updating traveler birthday field"""
+        mock_check_perm.return_value = True
+        mock_get_user.return_value = {"username": "admin_001"}
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1,) + ("data",) * 12
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg = update_traveler("1234567890", birthday="01-01-1990")
+
+        assert success is True
+
+    @patch("travelers.log_activity")
+    @patch("travelers.get_connection")
+    @patch("travelers.get_current_user")
+    @patch("travelers.check_permission")
+    def test_update_traveler_gender(
+        self, mock_check_perm, mock_get_user, mock_conn, mock_log
+    ):
+        """Test updating traveler gender field"""
+        mock_check_perm.return_value = True
+        mock_get_user.return_value = {"username": "admin_001"}
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1,) + ("data",) * 12
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg = update_traveler("1234567890", gender="Female")
+
+        assert success is True
+
+    @patch("travelers.log_activity")
+    @patch("travelers.get_connection")
+    @patch("travelers.get_current_user")
+    @patch("travelers.check_permission")
+    def test_update_traveler_street_name(
+        self, mock_check_perm, mock_get_user, mock_conn, mock_log
+    ):
+        """Test updating traveler street_name field"""
+        mock_check_perm.return_value = True
+        mock_get_user.return_value = {"username": "admin_001"}
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1,) + ("data",) * 12
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg = update_traveler("1234567890", street_name="Oak Street")
+
+        assert success is True
+
+    @patch("travelers.log_activity")
+    @patch("travelers.get_connection")
+    @patch("travelers.get_current_user")
+    @patch("travelers.check_permission")
+    def test_update_traveler_house_number(
+        self, mock_check_perm, mock_get_user, mock_conn, mock_log
+    ):
+        """Test updating traveler house_number field"""
+        mock_check_perm.return_value = True
+        mock_get_user.return_value = {"username": "admin_001"}
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1,) + ("data",) * 12
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg = update_traveler("1234567890", house_number="123")
+
+        assert success is True
+
+    @patch("travelers.log_activity")
+    @patch("travelers.get_connection")
+    @patch("travelers.get_current_user")
+    @patch("travelers.check_permission")
+    def test_update_traveler_zip_code(
+        self, mock_check_perm, mock_get_user, mock_conn, mock_log
+    ):
+        """Test updating traveler zip_code field"""
+        mock_check_perm.return_value = True
+        mock_get_user.return_value = {"username": "admin_001"}
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1,) + ("data",) * 12
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg = update_traveler("1234567890", zip_code="5678CD")
+
+        assert success is True
+
+    @patch("travelers.log_activity")
+    @patch("travelers.get_connection")
+    @patch("travelers.get_current_user")
+    @patch("travelers.check_permission")
+    def test_update_traveler_city(
+        self, mock_check_perm, mock_get_user, mock_conn, mock_log
+    ):
+        """Test updating traveler city field"""
+        mock_check_perm.return_value = True
+        mock_get_user.return_value = {"username": "admin_001"}
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1,) + ("data",) * 12
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg = update_traveler("1234567890", city="Rotterdam")
+
+        assert success is True
+
+    @patch("travelers.log_activity")
+    @patch("travelers.get_connection")
+    @patch("travelers.encrypt_field")
+    @patch("travelers.get_current_user")
+    @patch("travelers.check_permission")
+    def test_update_traveler_driving_license(
+        self, mock_check_perm, mock_get_user, mock_encrypt, mock_conn, mock_log
+    ):
+        """Test updating traveler driving_license field"""
+        mock_check_perm.return_value = True
+        mock_get_user.return_value = {"username": "admin_001"}
+        mock_encrypt.return_value = "encrypted_license"
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1,) + ("data",) * 12
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        success, msg = update_traveler("1234567890", driving_license="CD9876543")
+
+        assert success is True
+
+    @patch("travelers.get_connection")
+    @patch("travelers.get_current_user")
+    @patch("travelers.check_permission")
+    def test_update_traveler_validation_error(
+        self, mock_check_perm, mock_get_user, mock_conn
+    ):
+        """Test update_traveler with validation error"""
+        mock_check_perm.return_value = True
+        mock_get_user.return_value = {"username": "admin_001"}
+
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1,) + ("data",) * 12
+        mock_conn.return_value.cursor.return_value = mock_cursor
+
+        # Invalid email should trigger validation error
+        success, msg = update_traveler("1234567890", email="invalid_email")
+
+        assert success is False
+        assert "validation error" in msg.lower()
+
 
 # ============================================================================
 # Delete Traveler Tests
