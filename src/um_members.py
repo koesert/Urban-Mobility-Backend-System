@@ -1046,19 +1046,13 @@ def add_scooter_ui():
     )
 
     # Brand - validated
-    brand = prompt_with_validation(
-        "Brand (e.g., Segway, NIU): ", validate_brand
-    )
+    brand = prompt_with_validation("Brand (e.g., Segway, NIU): ", validate_brand)
 
     # Model - validated
-    model = prompt_with_validation(
-        "Model (e.g., ES2, Pro Max): ", validate_model
-    )
+    model = prompt_with_validation("Model (e.g., ES2, Pro Max): ", validate_model)
 
     # Top speed - validated
-    top_speed = prompt_with_validation(
-        "Top speed in km/h (0-80): ", validate_top_speed
-    )
+    top_speed = prompt_with_validation("Top speed in km/h (0-80): ", validate_top_speed)
 
     # Battery capacity - validated
     battery_capacity = prompt_integer_with_validation(
@@ -1081,15 +1075,11 @@ def add_scooter_ui():
 
     # GPS Location
     print("\nGPS Location (Rotterdam region):")
-    print("Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)")
-    latitude = prompt_with_validation(
-        "Latitude (51.8-52.05): ",
-        lambda x: float(x)
+    print(
+        "Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)"
     )
-    longitude = prompt_with_validation(
-        "Longitude (4.25-4.65): ",
-        lambda x: float(x)
-    )
+    latitude = prompt_with_validation("Latitude (51.8-52.05): ", lambda x: float(x))
+    longitude = prompt_with_validation("Longitude (4.25-4.65): ", lambda x: float(x))
 
     # Out-of-service status - validated with menu choice
     print("\nOut-of-service status:")
@@ -1105,14 +1095,14 @@ def add_scooter_ui():
             print("❌ Error: Please enter 1 or 2\n")
 
     # Mileage - validated
-    mileage = prompt_with_validation(
-        "Mileage in km (0-999999): ", validate_mileage
-    )
+    mileage = prompt_with_validation("Mileage in km (0-999999): ", validate_mileage)
 
     # Last maintenance date - optional
     print("\nLast maintenance date (optional, press Enter to skip):")
     last_maintenance_date_input = input("Date (YYYY-MM-DD): ").strip()
-    last_maintenance_date = last_maintenance_date_input if last_maintenance_date_input else None
+    last_maintenance_date = (
+        last_maintenance_date_input if last_maintenance_date_input else None
+    )
 
     # All fields validated - now add to database
     success, msg = add_scooter(
@@ -1163,7 +1153,9 @@ def search_scooters_ui():
             print(f"Top Speed: {s['top_speed']} km/h")
             print(f"Battery Capacity: {s['battery_capacity']} Wh")
             print(f"State of Charge: {s['state_of_charge']}%")
-            print(f"Target SoC Range: {s['target_range_soc_min']}-{s['target_range_soc_max']}%")
+            print(
+                f"Target SoC Range: {s['target_range_soc_min']}-{s['target_range_soc_max']}%"
+            )
             print(f"Location: {s['latitude']}, {s['longitude']}")
             print(f"Out of Service: {'Yes' if s['out_of_service_status'] else 'No'}")
             print(f"Mileage: {s['mileage']} km")
@@ -1194,7 +1186,9 @@ def list_scooters_ui():
             print(f"Top Speed: {s['top_speed']} km/h")
             print(f"Battery Capacity: {s['battery_capacity']} Wh")
             print(f"State of Charge: {s['state_of_charge']}%")
-            print(f"Target SoC Range: {s['target_range_soc_min']}-{s['target_range_soc_max']}%")
+            print(
+                f"Target SoC Range: {s['target_range_soc_min']}-{s['target_range_soc_max']}%"
+            )
             print(f"Location: {s['latitude']}, {s['longitude']}")
             print(f"Out of Service: {'Yes' if s['out_of_service_status'] else 'No'}")
             print(f"Mileage: {s['mileage']} km")
@@ -1226,8 +1220,12 @@ def update_scooter_ui():
     print(f"Top Speed: {scooter.get('top_speed', 'N/A')} km/h")
     print(f"Battery Capacity: {scooter.get('battery_capacity', 'N/A')} Wh")
     print(f"State of Charge: {scooter.get('state_of_charge', 'N/A')}%")
-    print(f"Target SoC Range: {scooter.get('target_range_soc_min', 'N/A')}-{scooter.get('target_range_soc_max', 'N/A')}%")
-    print(f"Location: {scooter.get('latitude', 'N/A')}, {scooter.get('longitude', 'N/A')}")
+    print(
+        f"Target SoC Range: {scooter.get('target_range_soc_min', 'N/A')}-{scooter.get('target_range_soc_max', 'N/A')}%"
+    )
+    print(
+        f"Location: {scooter.get('latitude', 'N/A')}, {scooter.get('longitude', 'N/A')}"
+    )
     print(f"Out of Service: {scooter.get('out_of_service_status', 'N/A')}")
     print(f"Mileage: {scooter.get('mileage', 'N/A')} km")
     print(f"Last Maintenance: {scooter.get('last_maintenance_date', 'N/A')}")
@@ -1297,8 +1295,12 @@ def update_scooter_engineer_ui():
     print_header("UPDATE SCOOTER (SERVICE ENGINEER)")
     print_user_info()
 
-    print("\nNote: You can update operational fields (battery, location, status, mileage, maintenance).")
-    print("You cannot modify scooter specifications (brand, model, top speed, battery capacity).")
+    print(
+        "\nNote: You can update operational fields (battery, location, status, mileage, maintenance)."
+    )
+    print(
+        "You cannot modify scooter specifications (brand, model, top speed, battery capacity)."
+    )
 
     serial_number = input("\nEnter scooter serial number: ").strip()
 
@@ -1311,8 +1313,12 @@ def update_scooter_engineer_ui():
 
     print(f"\nCurrent information:")
     print(f"State of Charge: {scooter.get('state_of_charge', 'N/A')}%")
-    print(f"Target SoC Range: {scooter.get('target_range_soc_min', 'N/A')}-{scooter.get('target_range_soc_max', 'N/A')}%")
-    print(f"Location: {scooter.get('latitude', 'N/A')}, {scooter.get('longitude', 'N/A')}")
+    print(
+        f"Target SoC Range: {scooter.get('target_range_soc_min', 'N/A')}-{scooter.get('target_range_soc_max', 'N/A')}%"
+    )
+    print(
+        f"Location: {scooter.get('latitude', 'N/A')}, {scooter.get('longitude', 'N/A')}"
+    )
     print(f"Out of Service: {scooter.get('out_of_service_status', 'N/A')}")
     print(f"Mileage: {scooter.get('mileage', 'N/A')} km")
     print(f"Last Maintenance: {scooter.get('last_maintenance_date', 'N/A')}")
@@ -1324,7 +1330,9 @@ def update_scooter_engineer_ui():
     target_max = input("New target max SoC (%): ").strip()
 
     print("\nGPS Location (Rotterdam region - enter both or leave both blank):")
-    print("Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)")
+    print(
+        "Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)"
+    )
     latitude = input("New latitude: ").strip()
     longitude = input("New longitude: ").strip()
 
@@ -1642,6 +1650,25 @@ def restore_backup_ui():
     restore_code = None
     if user and user["role"] == "system_admin":
         restore_code = input("\nEnter restore code: ").strip()
+
+        # Validate restore code BEFORE asking for confirmation
+        from backup import _validate_restore_code
+
+        code_valid, code_backup = _validate_restore_code(restore_code)
+
+        if not code_valid:
+            print("\n❌ Invalid or expired restore code.")
+            wait_for_enter()
+            return
+
+        if code_backup != backup_filename:
+            print(
+                f"\n❌ Restore code is valid for '{code_backup}', not '{backup_filename}'."
+            )
+            wait_for_enter()
+            return
+
+        print(f"\n✓ Restore code validated successfully.")
 
     confirm = (
         input(

@@ -438,6 +438,6 @@ def init_database():
     print("=" * 60)
     print("✓ Database initialization complete!")
     print(f"✓ Database location: {DB_PATH}")
-    print(f"✓ AES key (usernames): {AES_KEY_PATH}")
-    print(f"✓ Fernet key (other data): {FERNET_KEY_PATH}")
+    print(f"✓ AES key: {AES_KEY_PATH}")
+    print(f"✓ Fernet key: {FERNET_KEY_PATH}")
     print("=" * 60)

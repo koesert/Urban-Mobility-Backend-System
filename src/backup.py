@@ -221,6 +221,11 @@ def restore_backup(backup_filename, restore_code=None):
         return False, f"Backup file '{backup_filename}' not found"
 
     try:
+        # Mark restore code as used BEFORE restoring (if System Admin)
+        # This must happen before database is replaced
+        if is_system_admin and restore_code:
+            _mark_code_as_used(restore_code)
+
         # Extract ZIP file
         with zipfile.ZipFile(backup_path, "r") as zipf:
             # Restore database
@@ -237,10 +242,6 @@ def restore_backup(backup_filename, restore_code=None):
             # Restore logs
             if "system.log" in zipf.namelist():
                 zipf.extract("system.log", DATA_DIR)
-
-        # Mark restore code as used (if System Admin)
-        if is_system_admin and restore_code:
-            _mark_code_as_used(restore_code)
 
         # Log activity
         log_activity(
@@ -588,7 +589,9 @@ def _mark_code_as_used(restore_code):
             decrypted_code = decrypt_field(encrypted_code)
             if decrypted_code == restore_code:
                 # Found match! Mark this code as used
-                cursor.execute("UPDATE restore_codes SET used = 1 WHERE id = ?", (row_id,))
+                cursor.execute(
+                    "UPDATE restore_codes SET used = 1 WHERE id = ?", (row_id,)
+                )
                 break
         except Exception:
             # Skip corrupted entries
