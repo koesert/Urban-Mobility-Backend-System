@@ -10,9 +10,16 @@ from database import get_connection, encrypt_username, decrypt_username
 from validation import (
     ValidationError,
     validate_serial_number,
-    validate_scooter_type,
-    validate_battery_level,
-    validate_location,
+    validate_brand,
+    validate_model,
+    validate_top_speed,
+    validate_battery_capacity,
+    validate_state_of_charge,
+    validate_target_range_soc,
+    validate_gps_location,
+    validate_out_of_service_status,
+    validate_mileage,
+    validate_date,
 )
 from auth import get_current_user, check_permission
 from activity_log import log_activity
@@ -28,7 +35,21 @@ from activity_log import log_activity
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def add_scooter(serial_number, scooter_type, battery_level, status, location):
+def add_scooter(
+    serial_number,
+    brand,
+    model,
+    top_speed,
+    battery_capacity,
+    state_of_charge,
+    target_range_soc_min,
+    target_range_soc_max,
+    latitude,
+    longitude,
+    out_of_service_status,
+    mileage,
+    last_maintenance_date=None,
+):
     """
     Create new scooter record.
 
@@ -37,16 +58,24 @@ def add_scooter(serial_number, scooter_type, battery_level, status, location):
 
     Args:
         serial_number (str): Serial number (will be encrypted)
-        scooter_type (str): Scooter type/model
-        battery_level (int): Battery level (0-100)
-        status (str): Status (available/in_use/maintenance)
-        location (str): Current location
+        brand (str): Manufacturer name
+        model (str): Model name/number
+        top_speed (float): Maximum speed in km/h
+        battery_capacity (int): Total battery capacity in Wh
+        state_of_charge (int): Current battery charge (0-100%)
+        target_range_soc_min (int): Minimum recommended SoC (0-100%)
+        target_range_soc_max (int): Maximum recommended SoC (0-100%)
+        latitude (float): GPS latitude coordinate
+        longitude (float): GPS longitude coordinate
+        out_of_service_status (bool): True if out of service
+        mileage (float): Total distance traveled in km
+        last_maintenance_date (str, optional): Last maintenance date (YYYY-MM-DD)
 
     Returns:
         tuple: (success: bool, message: str)
 
     Example:
-        success, msg = add_scooter("SC123456", "Model X", 100, "available", "Amsterdam Central")
+        success, msg = add_scooter("ABC1234567", "Segway", "ES2", 25, 500, 100, 20, 80, 51.92481, 4.46910, False, 0)
     """
     # Check permission
     if not check_permission("manage_scooters"):
@@ -56,22 +85,21 @@ def add_scooter(serial_number, scooter_type, battery_level, status, location):
 
     # Validate inputs using validation.py functions
     try:
-        # Validate serial number with proper format and length checks
         serial_number = validate_serial_number(serial_number)
+        brand = validate_brand(brand)
+        model = validate_model(model)
+        top_speed = validate_top_speed(top_speed)
+        battery_capacity = validate_battery_capacity(battery_capacity)
+        state_of_charge = validate_state_of_charge(state_of_charge)
+        target_range_soc_min, target_range_soc_max = validate_target_range_soc(
+            target_range_soc_min, target_range_soc_max
+        )
+        latitude, longitude = validate_gps_location(latitude, longitude)
+        out_of_service_status = validate_out_of_service_status(out_of_service_status)
+        mileage = validate_mileage(mileage)
 
-        # Validate scooter type
-        scooter_type = validate_scooter_type(scooter_type)
-
-        # Validate battery level (handles int conversion and range)
-        battery_level = validate_battery_level(battery_level)
-
-        # Validate location
-        location = validate_location(location)
-
-        # Validate status (enum validation)
-        valid_statuses = ["available", "in_use", "maintenance"]
-        if status not in valid_statuses:
-            raise ValidationError(f"Status must be one of: {', '.join(valid_statuses)}")
+        if last_maintenance_date:
+            last_maintenance_date = validate_date(last_maintenance_date)
 
     except ValidationError as e:
         return False, f"Validation error: {e}"
@@ -82,7 +110,6 @@ def add_scooter(serial_number, scooter_type, battery_level, status, location):
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Prepared statement
     cursor.execute(
         "SELECT id FROM scooters WHERE serial_number = ?", (encrypted_serial,)
     )
@@ -95,11 +122,27 @@ def add_scooter(serial_number, scooter_type, battery_level, status, location):
     cursor.execute(
         """
         INSERT INTO scooters (
-            serial_number, type, battery_level, status, location
+            serial_number, brand, model, top_speed, battery_capacity,
+            state_of_charge, target_range_soc_min, target_range_soc_max,
+            latitude, longitude, out_of_service_status, mileage, last_maintenance_date
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (encrypted_serial, scooter_type, battery_level, status, location),
+        (
+            encrypted_serial,
+            brand,
+            model,
+            top_speed,
+            battery_capacity,
+            state_of_charge,
+            target_range_soc_min,
+            target_range_soc_max,
+            latitude,
+            longitude,
+            1 if out_of_service_status else 0,
+            mileage,
+            last_maintenance_date,
+        ),
     )
 
     conn.commit()
@@ -110,7 +153,7 @@ def add_scooter(serial_number, scooter_type, battery_level, status, location):
         log_activity(
             current_user["username"],
             "New scooter added",
-            f"Serial: {serial_number}, Type: {scooter_type}",
+            f"Serial: {serial_number}, Brand: {brand}, Model: {model}",
         )
 
     return True, f"Scooter '{serial_number}' added successfully"
@@ -133,12 +176,16 @@ def update_scooter(serial_number, **updates):
     Update scooter information with role-based field restrictions.
 
     Service Engineers can ONLY update:
-    - battery_level (State of Charge)
-    - status (Out-of-Service Status)
-    - location
-    - last_service_date (Last Maintenance Date)
+    - state_of_charge (Current battery %)
+    - target_range_soc_min, target_range_soc_max (Target SoC range)
+    - latitude, longitude (GPS location)
+    - out_of_service_status (Availability status)
+    - mileage (Total distance)
+    - last_maintenance_date (Last maintenance)
 
-    Super Admin / System Admin can update ALL fields.
+    Super Admin / System Admin can update ALL fields including:
+    - serial_number, brand, model, top_speed, battery_capacity
+    - + all Service Engineer fields
 
     Args:
         serial_number (str): Serial number
@@ -148,7 +195,7 @@ def update_scooter(serial_number, **updates):
         tuple: (success: bool, message: str)
 
     Example:
-        success, msg = update_scooter("SC123456", battery_level=85, location="Rotterdam")
+        success, msg = update_scooter("ABC1234567", state_of_charge=85, latitude=51.92481, longitude=4.46910)
     """
     # Check permission
     if not check_permission("manage_scooters"):
@@ -161,17 +208,29 @@ def update_scooter(serial_number, **updates):
 
     # Define allowed fields per role
     service_engineer_fields = {
-        "battery_level",
-        "status",
-        "location",
-        "last_service_date",
+        "state_of_charge",
+        "target_range_soc_min",
+        "target_range_soc_max",
+        "latitude",
+        "longitude",
+        "out_of_service_status",
+        "mileage",
+        "last_maintenance_date",
     }
     all_fields = {
-        "type",
-        "battery_level",
-        "status",
-        "location",
-        "last_service_date",
+        "serial_number",
+        "brand",
+        "model",
+        "top_speed",
+        "battery_capacity",
+        "state_of_charge",
+        "target_range_soc_min",
+        "target_range_soc_max",
+        "latitude",
+        "longitude",
+        "out_of_service_status",
+        "mileage",
+        "last_maintenance_date",
     }
 
     # Check field permissions based on role
@@ -202,7 +261,6 @@ def update_scooter(serial_number, **updates):
 
     encrypted_serial = encrypt_username(serial_number)
 
-    # Prepared statement
     cursor.execute(
         "SELECT * FROM scooters WHERE serial_number = ?", (encrypted_serial,)
     )
@@ -217,26 +275,42 @@ def update_scooter(serial_number, **updates):
     update_fields = []
     params = []
     changes = []
+    latitude_update = None
+    longitude_update = None
 
     for field, value in updates.items():
         try:
-            # Validate based on field type using validation.py functions (L03)
-            if field == "battery_level":
-                value = validate_battery_level(value)
-            elif field == "status":
-                valid_statuses = ["available", "in_use", "maintenance"]
-                if value not in valid_statuses:
-                    raise ValidationError(
-                        f"Status must be one of: {', '.join(valid_statuses)}"
-                    )
-            elif field == "type":
-                value = validate_scooter_type(value)
-            elif field == "location":
-                value = validate_location(value)
-            elif field == "last_service_date":
-                # Basic date validation (DD-MM-YYYY format)
-                if not value or len(value) != 10:
-                    raise ValidationError("Date must be in DD-MM-YYYY format")
+            # Validate based on field type
+            if field == "serial_number":
+                value = validate_serial_number(value)
+                value = encrypt_username(value)
+            elif field == "brand":
+                value = validate_brand(value)
+            elif field == "model":
+                value = validate_model(value)
+            elif field == "top_speed":
+                value = validate_top_speed(value)
+            elif field == "battery_capacity":
+                value = validate_battery_capacity(value)
+            elif field == "state_of_charge":
+                value = validate_state_of_charge(value)
+            elif field == "target_range_soc_min":
+                value = validate_state_of_charge(value)
+            elif field == "target_range_soc_max":
+                value = validate_state_of_charge(value)
+            elif field == "latitude":
+                latitude_update = value
+                continue
+            elif field == "longitude":
+                longitude_update = value
+                continue
+            elif field == "out_of_service_status":
+                value = validate_out_of_service_status(value)
+                value = 1 if value else 0
+            elif field == "mileage":
+                value = validate_mileage(value)
+            elif field == "last_maintenance_date":
+                value = validate_date(value)
 
         except ValidationError as e:
             conn.close()
@@ -245,6 +319,31 @@ def update_scooter(serial_number, **updates):
         update_fields.append(f"{field} = ?")
         params.append(value)
         changes.append(field)
+
+    # Handle GPS location validation (must validate together)
+    if latitude_update is not None or longitude_update is not None:
+        try:
+            if latitude_update is None or longitude_update is None:
+                conn.close()
+                return False, "Both latitude and longitude must be provided together"
+
+            lat, lon = validate_gps_location(latitude_update, longitude_update)
+            update_fields.append("latitude = ?")
+            params.append(lat)
+            update_fields.append("longitude = ?")
+            params.append(lon)
+            changes.extend(["latitude", "longitude"])
+        except ValidationError as e:
+            conn.close()
+            return False, f"Validation error for GPS location: {e}"
+
+    # Validate target_range_soc if both min and max are being updated
+    if "target_range_soc_min" in updates and "target_range_soc_max" in updates:
+        try:
+            validate_target_range_soc(updates["target_range_soc_min"], updates["target_range_soc_max"])
+        except ValidationError as e:
+            conn.close()
+            return False, f"Validation error for target range SoC: {e}"
 
     params.append(encrypted_serial)
 
@@ -310,7 +409,7 @@ def delete_scooter(serial_number):
 
     # Prepared statement
     cursor.execute(
-        "SELECT type, location FROM scooters WHERE serial_number = ?",
+        "SELECT brand, model FROM scooters WHERE serial_number = ?",
         (encrypted_serial,),
     )
 
@@ -320,7 +419,7 @@ def delete_scooter(serial_number):
         conn.close()
         return False, f"Scooter with serial number '{serial_number}' not found"
 
-    scooter_type, location = scooter
+    brand, model = scooter
 
     # Prepared statement for DELETE
     cursor.execute("DELETE FROM scooters WHERE serial_number = ?", (encrypted_serial,))
@@ -333,7 +432,7 @@ def delete_scooter(serial_number):
         log_activity(
             current_user["username"],
             "Scooter deleted",
-            f"Serial: {serial_number}, Type: {scooter_type}",
+            f"Serial: {serial_number}, Brand: {brand}, Model: {model}",
         )
 
     return True, f"Scooter '{serial_number}' deleted successfully"
@@ -381,12 +480,13 @@ def search_scooters(search_key):
     cursor.execute(
         """
         SELECT * FROM scooters
-        WHERE LOWER(type) LIKE LOWER(?)
-           OR LOWER(location) LIKE LOWER(?)
-           OR LOWER(status) LIKE LOWER(?)
-        ORDER BY type, location
+        WHERE LOWER(brand) LIKE LOWER(?)
+           OR LOWER(model) LIKE LOWER(?)
+           OR CAST(latitude AS TEXT) LIKE ?
+           OR CAST(longitude AS TEXT) LIKE ?
+        ORDER BY brand, model
         """,
-        (search_pattern, search_pattern, search_pattern),
+        (search_pattern, search_pattern, search_pattern, search_pattern),
     )
 
     results = cursor.fetchall()
@@ -398,12 +498,19 @@ def search_scooters(search_key):
             {
                 "id": row[0],
                 "serial_number": decrypt_username(row[1]),
-                "type": row[2],
-                "battery_level": row[3],
-                "status": row[4],
-                "location": row[5],
-                "last_service_date": row[6],
-                "added_date": row[7],
+                "brand": row[2],
+                "model": row[3],
+                "top_speed": row[4],
+                "battery_capacity": row[5],
+                "state_of_charge": row[6],
+                "target_range_soc_min": row[7],
+                "target_range_soc_max": row[8],
+                "latitude": row[9],
+                "longitude": row[10],
+                "out_of_service_status": row[11],
+                "mileage": row[12],
+                "last_maintenance_date": row[13],
+                "in_service_date": row[14],
             }
         )
 
@@ -442,12 +549,19 @@ def get_scooter_by_serial(serial_number):
     return {
         "id": row[0],
         "serial_number": decrypt_username(row[1]),
-        "type": row[2],
-        "battery_level": row[3],
-        "status": row[4],
-        "location": row[5],
-        "last_service_date": row[6],
-        "added_date": row[7],
+        "brand": row[2],
+        "model": row[3],
+        "top_speed": row[4],
+        "battery_capacity": row[5],
+        "state_of_charge": row[6],
+        "target_range_soc_min": row[7],
+        "target_range_soc_max": row[8],
+        "latitude": row[9],
+        "longitude": row[10],
+        "out_of_service_status": row[11],
+        "mileage": row[12],
+        "last_maintenance_date": row[13],
+        "in_service_date": row[14],
     }
 
 
@@ -464,7 +578,7 @@ def list_all_scooters():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM scooters ORDER BY type, location")
+    cursor.execute("SELECT * FROM scooters ORDER BY brand, model")
 
     results = cursor.fetchall()
     conn.close()
@@ -475,12 +589,19 @@ def list_all_scooters():
             {
                 "id": row[0],
                 "serial_number": decrypt_username(row[1]),
-                "type": row[2],
-                "battery_level": row[3],
-                "status": row[4],
-                "location": row[5],
-                "last_service_date": row[6],
-                "added_date": row[7],
+                "brand": row[2],
+                "model": row[3],
+                "top_speed": row[4],
+                "battery_capacity": row[5],
+                "state_of_charge": row[6],
+                "target_range_soc_min": row[7],
+                "target_range_soc_max": row[8],
+                "latitude": row[9],
+                "longitude": row[10],
+                "out_of_service_status": row[11],
+                "mileage": row[12],
+                "last_maintenance_date": row[13],
+                "in_service_date": row[14],
             }
         )
 

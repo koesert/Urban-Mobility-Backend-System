@@ -345,12 +345,19 @@ def create_tables():
         CREATE TABLE IF NOT EXISTS scooters (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             serial_number TEXT NOT NULL UNIQUE,
-            type TEXT NOT NULL,
-            battery_level INTEGER NOT NULL CHECK(battery_level >= 0 AND battery_level <= 100),
-            status TEXT NOT NULL CHECK(status IN ('available', 'in_use', 'maintenance')),
-            location TEXT NOT NULL,
-            last_service_date TEXT,
-            added_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            brand TEXT NOT NULL,
+            model TEXT NOT NULL,
+            top_speed REAL NOT NULL,
+            battery_capacity INTEGER NOT NULL,
+            state_of_charge INTEGER NOT NULL CHECK(state_of_charge >= 0 AND state_of_charge <= 100),
+            target_range_soc_min INTEGER NOT NULL CHECK(target_range_soc_min >= 0 AND target_range_soc_min <= 100),
+            target_range_soc_max INTEGER NOT NULL CHECK(target_range_soc_max >= 0 AND target_range_soc_max <= 100),
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            out_of_service_status INTEGER NOT NULL DEFAULT 0,
+            mileage REAL NOT NULL DEFAULT 0,
+            last_maintenance_date TEXT,
+            in_service_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """
     )

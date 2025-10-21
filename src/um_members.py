@@ -53,16 +53,23 @@ from validation import (
     validate_email,
     validate_phone,
     validate_zipcode,
-    validate_date,
+    validate_birthday,
     validate_driving_license,
     validate_name,
     validate_house_number,
     validate_username,
     validate_password,
     validate_serial_number,
-    validate_scooter_type,
-    validate_battery_level,
-    validate_location,
+    validate_brand,
+    validate_model,
+    validate_top_speed,
+    validate_battery_capacity,
+    validate_state_of_charge,
+    validate_target_range_soc,
+    validate_gps_location,
+    validate_out_of_service_status,
+    validate_mileage,
+    validate_date,
 )
 from input_handlers import (
     CancelInputException,
@@ -792,7 +799,7 @@ def add_traveler_ui():
         # Birthday - validated
         birthday = prompt_with_validation(
             "Birthday (DD-MM-YYYY): ",
-            lambda x: validate_date(x, "Birthday", must_be_past=True),
+            validate_birthday,
         )
 
         # Gender - validated with menu choice
@@ -1035,40 +1042,93 @@ def add_scooter_ui():
 
     # Serial number - validated with uniqueness check
     serial_number = prompt_with_validation(
-        "Serial number (6-15 characters): ", validate_unique_serial_number
+        "Serial number (10-17 characters): ", validate_unique_serial_number
     )
 
-    # Scooter type/model - validated
-    scooter_type = prompt_with_validation(
-        "Scooter type/model (2-30 characters): ", validate_scooter_type
+    # Brand - validated
+    brand = prompt_with_validation(
+        "Brand (e.g., Segway, NIU): ", validate_brand
     )
 
-    # Battery level - validated as integer with range
-    battery_level = prompt_integer_with_validation(
-        "Battery level (0-100): ", validate_battery_level
+    # Model - validated
+    model = prompt_with_validation(
+        "Model (e.g., ES2, Pro Max): ", validate_model
     )
 
-    # Status - validated with menu choice
-    print("\nStatus options:")
-    print("  1) available")
-    print("  2) in_use")
-    print("  3) maintenance")
+    # Top speed - validated
+    top_speed = prompt_with_validation(
+        "Top speed in km/h (0-80): ", validate_top_speed
+    )
+
+    # Battery capacity - validated
+    battery_capacity = prompt_integer_with_validation(
+        "Battery capacity in Wh (0-10000): ", validate_battery_capacity
+    )
+
+    # State of Charge - validated
+    state_of_charge = prompt_integer_with_validation(
+        "Current State of Charge % (0-100): ", validate_state_of_charge
+    )
+
+    # Target range SoC
+    print("\nTarget-range State of Charge (recommended battery operating range):")
+    target_range_soc_min = prompt_integer_with_validation(
+        "Minimum SoC % (e.g., 20): ", validate_state_of_charge
+    )
+    target_range_soc_max = prompt_integer_with_validation(
+        "Maximum SoC % (e.g., 80): ", validate_state_of_charge
+    )
+
+    # GPS Location
+    print("\nGPS Location (Rotterdam region):")
+    print("Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)")
+    latitude = prompt_with_validation(
+        "Latitude (51.8-52.05): ",
+        lambda x: float(x)
+    )
+    longitude = prompt_with_validation(
+        "Longitude (4.25-4.65): ",
+        lambda x: float(x)
+    )
+
+    # Out-of-service status - validated with menu choice
+    print("\nOut-of-service status:")
+    print("  1) In service (available)")
+    print("  2) Out of service (maintenance/unavailable)")
 
     while True:
-        status_choice = input("Enter choice (1-3): ").strip()
-        if status_choice in ["1", "2", "3"]:
-            status_map = {"1": "available", "2": "in_use", "3": "maintenance"}
-            status = status_map[status_choice]
+        status_choice = input("Enter choice (1-2): ").strip()
+        if status_choice in ["1", "2"]:
+            out_of_service_status = status_choice == "2"
             break
         else:
-            print("❌ Error: Please enter 1, 2, or 3\n")
+            print("❌ Error: Please enter 1 or 2\n")
 
-    # Location - validated
-    location = prompt_with_validation("Location (2-50 characters): ", validate_location)
+    # Mileage - validated
+    mileage = prompt_with_validation(
+        "Mileage in km (0-999999): ", validate_mileage
+    )
+
+    # Last maintenance date - optional
+    print("\nLast maintenance date (optional, press Enter to skip):")
+    last_maintenance_date_input = input("Date (YYYY-MM-DD): ").strip()
+    last_maintenance_date = last_maintenance_date_input if last_maintenance_date_input else None
 
     # All fields validated - now add to database
     success, msg = add_scooter(
-        serial_number, scooter_type, battery_level, status, location
+        serial_number=serial_number,
+        brand=brand,
+        model=model,
+        top_speed=top_speed,
+        battery_capacity=battery_capacity,
+        state_of_charge=state_of_charge,
+        target_range_soc_min=target_range_soc_min,
+        target_range_soc_max=target_range_soc_max,
+        latitude=latitude,
+        longitude=longitude,
+        out_of_service_status=out_of_service_status,
+        mileage=mileage,
+        last_maintenance_date=last_maintenance_date,
     )
 
     print(f"\n{msg}")
@@ -1081,7 +1141,7 @@ def search_scooters_ui():
     print_header("SEARCH SCOOTERS")
     print_user_info()
 
-    print("\nSearch by: type, location, or status")
+    print("\nSearch by: brand, model, or GPS coordinates")
     search_key = input("Enter search term: ").strip()
 
     if not search_key:
@@ -1095,16 +1155,21 @@ def search_scooters_ui():
         print(f"\nNo scooters found matching '{search_key}'.")
     else:
         print(f"\nFound {len(results)} scooter(s):")
-        print("\n" + "-" * 70)
+        print("\n" + "-" * 80)
         for s in results:
             print(f"Serial Number: {s['serial_number']}")
-            print(f"Type: {s['type']}")
-            print(f"Battery: {s['battery_level']}%")
-            print(f"Status: {s['status']}")
-            print(f"Location: {s['location']}")
-            print(f"Last Service: {s['last_service_date'] or 'Never'}")
-            print(f"Added: {s['added_date']}")
-            print("-" * 70)
+            print(f"Brand: {s['brand']}")
+            print(f"Model: {s['model']}")
+            print(f"Top Speed: {s['top_speed']} km/h")
+            print(f"Battery Capacity: {s['battery_capacity']} Wh")
+            print(f"State of Charge: {s['state_of_charge']}%")
+            print(f"Target SoC Range: {s['target_range_soc_min']}-{s['target_range_soc_max']}%")
+            print(f"Location: {s['latitude']}, {s['longitude']}")
+            print(f"Out of Service: {'Yes' if s['out_of_service_status'] else 'No'}")
+            print(f"Mileage: {s['mileage']} km")
+            print(f"Last Maintenance: {s['last_maintenance_date'] or 'Never'}")
+            print(f"In Service Since: {s['in_service_date']}")
+            print("-" * 80)
 
     wait_for_enter()
 
@@ -1121,16 +1186,21 @@ def list_scooters_ui():
         print("\nNo scooters found.")
     else:
         print(f"\nTotal: {len(scooters)} scooter(s)")
-        print("\n" + "-" * 70)
+        print("\n" + "-" * 80)
         for s in scooters:
             print(f"Serial Number: {s['serial_number']}")
-            print(f"Type: {s['type']}")
-            print(f"Battery: {s['battery_level']}%")
-            print(f"Status: {s['status']}")
-            print(f"Location: {s['location']}")
-            print(f"Last Service: {s['last_service_date'] or 'Never'}")
-            print(f"Added: {s['added_date']}")
-            print("-" * 70)
+            print(f"Brand: {s['brand']}")
+            print(f"Model: {s['model']}")
+            print(f"Top Speed: {s['top_speed']} km/h")
+            print(f"Battery Capacity: {s['battery_capacity']} Wh")
+            print(f"State of Charge: {s['state_of_charge']}%")
+            print(f"Target SoC Range: {s['target_range_soc_min']}-{s['target_range_soc_max']}%")
+            print(f"Location: {s['latitude']}, {s['longitude']}")
+            print(f"Out of Service: {'Yes' if s['out_of_service_status'] else 'No'}")
+            print(f"Mileage: {s['mileage']} km")
+            print(f"Last Maintenance: {s['last_maintenance_date'] or 'Never'}")
+            print(f"In Service Since: {s['in_service_date']}")
+            print("-" * 80)
 
     wait_for_enter()
 
@@ -1151,36 +1221,66 @@ def update_scooter_ui():
         return
 
     print(f"\nCurrent information:")
-    print(f"Type: {scooter['type']}")
-    print(f"Battery: {scooter['battery_level']}%")
-    print(f"Status: {scooter['status']}")
-    print(f"Location: {scooter['location']}")
+    print(f"Brand: {scooter.get('brand', 'N/A')}")
+    print(f"Model: {scooter.get('model', 'N/A')}")
+    print(f"Top Speed: {scooter.get('top_speed', 'N/A')} km/h")
+    print(f"Battery Capacity: {scooter.get('battery_capacity', 'N/A')} Wh")
+    print(f"State of Charge: {scooter.get('state_of_charge', 'N/A')}%")
+    print(f"Target SoC Range: {scooter.get('target_range_soc_min', 'N/A')}-{scooter.get('target_range_soc_max', 'N/A')}%")
+    print(f"Location: {scooter.get('latitude', 'N/A')}, {scooter.get('longitude', 'N/A')}")
+    print(f"Out of Service: {scooter.get('out_of_service_status', 'N/A')}")
+    print(f"Mileage: {scooter.get('mileage', 'N/A')} km")
+    print(f"Last Maintenance: {scooter.get('last_maintenance_date', 'N/A')}")
 
     print("\nLeave blank to keep current value.")
 
-    scooter_type = input("New type: ").strip()
-    battery_input = input("New battery level (0-100): ").strip()
-    location = input("New location: ").strip()
+    brand = input("New brand: ").strip()
+    model = input("New model: ").strip()
+    top_speed = input("New top speed (km/h): ").strip()
+    battery_capacity = input("New battery capacity (Wh): ").strip()
+    state_of_charge = input("New state of charge (%): ").strip()
+    target_min = input("New target min SoC (%): ").strip()
+    target_max = input("New target max SoC (%): ").strip()
 
-    print("\nStatus: 1) available  2) in_use  3) maintenance  (blank to keep)")
-    status_choice = input("Enter choice: ").strip()
-    status_map = {"1": "available", "2": "in_use", "3": "maintenance"}
-    status = status_map.get(status_choice, None)
+    print("\nGPS Location (enter both or leave both blank):")
+    latitude = input("New latitude: ").strip()
+    longitude = input("New longitude: ").strip()
+
+    print("\nOut-of-service status: 1) In service  2) Out of service  (blank to keep)")
+    service_choice = input("Enter choice: ").strip()
+
+    mileage = input("\nNew mileage (km): ").strip()
+    last_maintenance = input("New last maintenance date (YYYY-MM-DD): ").strip()
 
     updates = {}
-    if scooter_type:
-        updates["type"] = scooter_type
-    if battery_input:
-        try:
-            updates["battery_level"] = int(battery_input)
-        except ValueError:
-            print("\nInvalid battery level.")
-            wait_for_enter()
-            return
-    if location:
-        updates["location"] = location
-    if status:
-        updates["status"] = status
+
+    if brand:
+        updates["brand"] = brand
+    if model:
+        updates["model"] = model
+    if top_speed:
+        updates["top_speed"] = top_speed
+    if battery_capacity:
+        updates["battery_capacity"] = battery_capacity
+    if state_of_charge:
+        updates["state_of_charge"] = state_of_charge
+    if target_min:
+        updates["target_range_soc_min"] = target_min
+    if target_max:
+        updates["target_range_soc_max"] = target_max
+    if latitude and longitude:
+        updates["latitude"] = latitude
+        updates["longitude"] = longitude
+    elif latitude or longitude:
+        print("\n❌ Error: Both latitude and longitude must be provided together.")
+        wait_for_enter()
+        return
+    if service_choice in ["1", "2"]:
+        updates["out_of_service_status"] = service_choice == "2"
+    if mileage:
+        updates["mileage"] = mileage
+    if last_maintenance:
+        updates["last_maintenance_date"] = last_maintenance
 
     if not updates:
         print("\nNo changes made.")
@@ -1197,7 +1297,8 @@ def update_scooter_engineer_ui():
     print_header("UPDATE SCOOTER (SERVICE ENGINEER)")
     print_user_info()
 
-    print("\nNote: You can only update battery level, status, and location.")
+    print("\nNote: You can update operational fields (battery, location, status, mileage, maintenance).")
+    print("You cannot modify scooter specifications (brand, model, top speed, battery capacity).")
 
     serial_number = input("\nEnter scooter serial number: ").strip()
 
@@ -1209,32 +1310,51 @@ def update_scooter_engineer_ui():
         return
 
     print(f"\nCurrent information:")
-    print(f"Battery: {scooter['battery_level']}%")
-    print(f"Status: {scooter['status']}")
-    print(f"Location: {scooter['location']}")
+    print(f"State of Charge: {scooter.get('state_of_charge', 'N/A')}%")
+    print(f"Target SoC Range: {scooter.get('target_range_soc_min', 'N/A')}-{scooter.get('target_range_soc_max', 'N/A')}%")
+    print(f"Location: {scooter.get('latitude', 'N/A')}, {scooter.get('longitude', 'N/A')}")
+    print(f"Out of Service: {scooter.get('out_of_service_status', 'N/A')}")
+    print(f"Mileage: {scooter.get('mileage', 'N/A')} km")
+    print(f"Last Maintenance: {scooter.get('last_maintenance_date', 'N/A')}")
 
     print("\nLeave blank to keep current value.")
 
-    battery_input = input("New battery level (0-100): ").strip()
-    location = input("New location: ").strip()
+    state_of_charge = input("New state of charge (0-100%): ").strip()
+    target_min = input("New target min SoC (%): ").strip()
+    target_max = input("New target max SoC (%): ").strip()
 
-    print("\nStatus: 1) available  2) in_use  3) maintenance  (blank to keep)")
-    status_choice = input("Enter choice: ").strip()
-    status_map = {"1": "available", "2": "in_use", "3": "maintenance"}
-    status = status_map.get(status_choice, None)
+    print("\nGPS Location (Rotterdam region - enter both or leave both blank):")
+    print("Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)")
+    latitude = input("New latitude: ").strip()
+    longitude = input("New longitude: ").strip()
+
+    print("\nOut-of-service status: 1) In service  2) Out of service  (blank to keep)")
+    service_choice = input("Enter choice: ").strip()
+
+    mileage = input("\nNew mileage (km): ").strip()
+    last_maintenance = input("New last maintenance date (YYYY-MM-DD): ").strip()
 
     updates = {}
-    if battery_input:
-        try:
-            updates["battery_level"] = int(battery_input)
-        except ValueError:
-            print("\nInvalid battery level.")
-            wait_for_enter()
-            return
-    if location:
-        updates["location"] = location
-    if status:
-        updates["status"] = status
+
+    if state_of_charge:
+        updates["state_of_charge"] = state_of_charge
+    if target_min:
+        updates["target_range_soc_min"] = target_min
+    if target_max:
+        updates["target_range_soc_max"] = target_max
+    if latitude and longitude:
+        updates["latitude"] = latitude
+        updates["longitude"] = longitude
+    elif latitude or longitude:
+        print("\n❌ Error: Both latitude and longitude must be provided together.")
+        wait_for_enter()
+        return
+    if service_choice in ["1", "2"]:
+        updates["out_of_service_status"] = service_choice == "2"
+    if mileage:
+        updates["mileage"] = mileage
+    if last_maintenance:
+        updates["last_maintenance_date"] = last_maintenance
 
     if not updates:
         print("\nNo changes made.")
@@ -1269,12 +1389,15 @@ def delete_scooter_ui():
     # Show scooter information
     print(f"\n✓ Scooter found:")
     print(f"  Serial Number: {scooter['serial_number']}")
-    print(f"  Type: {scooter['type']}")
-    print(f"  Battery: {scooter['battery_level']}%")
-    print(f"  Status: {scooter['status']}")
-    print(f"  Location: {scooter['location']}")
-    print(f"  Last Service: {scooter['last_service_date'] or 'Never'}")
-    print(f"  Added: {scooter['added_date']}")
+    print(f"  Brand: {scooter['brand']}")
+    print(f"  Model: {scooter['model']}")
+    print(f"  Top Speed: {scooter['top_speed']} km/h")
+    print(f"  State of Charge: {scooter['state_of_charge']}%")
+    print(f"  Location: {scooter['latitude']}, {scooter['longitude']}")
+    print(f"  Out of Service: {'Yes' if scooter['out_of_service_status'] else 'No'}")
+    print(f"  Mileage: {scooter['mileage']} km")
+    print(f"  Last Maintenance: {scooter['last_maintenance_date'] or 'Never'}")
+    print(f"  In Service Since: {scooter['in_service_date']}")
 
     # Now ask for confirmation
     confirm = (

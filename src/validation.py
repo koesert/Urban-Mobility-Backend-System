@@ -284,57 +284,85 @@ def validate_zipcode(zipcode):
     return zipcode
 
 
-def validate_date(date_str, field_name="Date", must_be_past=False):
+def validate_birthday(date_str):
     """
-    Validate date format and check if it's a valid calendar date.
+    Validate birthday format and check if it's a valid calendar date.
 
     Format: DD-MM-YYYY
     Example: 15-03-1995, 01-12-2024
 
     Args:
-        date_str (str): Date string
-        field_name (str): Field name for error messages
-        must_be_past (bool): If True, date must be in the past (for birthdays)
+        date_str (str): Birthday date string
 
     Returns:
-        str: Validated date (DD-MM-YYYY)
+        str: Validated birthday (DD-MM-YYYY)
 
     Raises:
-        ValidationError: If date is invalid or in the future when must_be_past=True
+        ValidationError: If birthday is invalid or in the future
     """
     if not isinstance(date_str, str):
-        raise ValidationError(f"{field_name} must be a string")
+        raise ValidationError("Birthday must be a string")
 
     date_str = date_str.strip()
 
     if not re.match(r"^\d{2}-\d{2}-\d{4}$", date_str):
         raise ValidationError(
-            f"Invalid {field_name.lower()} format. Expected: DD-MM-YYYY (e.g., 15-03-1995)"
+            "Invalid birthday format. Expected: DD-MM-YYYY (e.g., 15-03-1995)"
         )
 
     try:
         day, month, year = map(int, date_str.split("-"))
         date_obj = datetime(year, month, day)
     except ValueError:
+        raise ValidationError("Invalid birthday. Please enter a valid calendar date")
+
+    today = datetime.now()
+    if date_obj > today:
         raise ValidationError(
-            f"Invalid {field_name.lower()}. Please enter a valid calendar date"
+            "Birthday cannot be in the future. Expected: date in the past (e.g., 15-03-1995)"
         )
 
-    # Check if date must be in the past (e.g., for birthdays)
-    if must_be_past:
-        today = datetime.now()
-        if date_obj > today:
-            raise ValidationError(
-                f"{field_name} cannot be in the future. Expected: date in the past (e.g., 15-03-1995)"
-            )
+    max_years_ago = 150
+    earliest_allowed = datetime(today.year - max_years_ago, today.month, today.day)
+    if date_obj < earliest_allowed:
+        raise ValidationError(
+            f"Birthday cannot be more than {max_years_ago} years in the past. Expected: within last {max_years_ago} years"
+        )
 
-        # Check if date is not more than 150 years in the past
-        max_years_ago = 150
-        earliest_allowed = datetime(today.year - max_years_ago, today.month, today.day)
-        if date_obj < earliest_allowed:
-            raise ValidationError(
-                f"{field_name} cannot be more than {max_years_ago} years in the past. Expected: within last {max_years_ago} years"
-            )
+    return date_str
+
+
+def validate_date(date_str):
+    """
+    Validate date in ISO 8601 format and check if it's a valid calendar date.
+
+    Format: YYYY-MM-DD
+    Example: 2024-03-15, 1995-12-01
+
+    Args:
+        date_str (str): Date string in ISO 8601 format
+
+    Returns:
+        str: Validated date (YYYY-MM-DD)
+
+    Raises:
+        ValidationError: If date is invalid
+    """
+    if not isinstance(date_str, str):
+        raise ValidationError("Date must be a string")
+
+    date_str = date_str.strip()
+
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+        raise ValidationError(
+            "Invalid date format. Expected: YYYY-MM-DD (e.g., 2024-03-15)"
+        )
+
+    try:
+        year, month, day = map(int, date_str.split("-"))
+        datetime(year, month, day)
+    except ValueError:
+        raise ValidationError("Invalid date. Please enter a valid calendar date")
 
     return date_str
 
@@ -558,9 +586,8 @@ def validate_serial_number(serial_number):
     Validate scooter serial number format.
 
     Rules:
-    - 6-15 characters
+    - 10-17 alphanumeric characters
     - Alphanumeric only
-    - Must start with letter or digit
 
     Args:
         serial_number (str): Serial number to validate
@@ -576,20 +603,18 @@ def validate_serial_number(serial_number):
 
     serial_number = serial_number.strip().upper()
 
-    # Validate length
-    if len(serial_number) < 6:
+    if len(serial_number) < 10:
         raise ValidationError(
-            "Serial number must be at least 6 characters long. Expected: 6-15 alphanumeric chars (e.g., ABC123XYZ)"
+            "Serial number must be at least 10 characters long. Expected: 10-17 alphanumeric chars (e.g., ABC1234567XYZ)"
         )
-    if len(serial_number) > 15:
+    if len(serial_number) > 17:
         raise ValidationError(
-            "Serial number must be at most 15 characters long. Expected: 6-15 alphanumeric chars (e.g., ABC123XYZ)"
+            "Serial number must be at most 17 characters long. Expected: 10-17 alphanumeric chars (e.g., ABC1234567XYZ)"
         )
 
-    # Validate format (alphanumeric only)
     if not re.match(r"^[A-Z0-9]+$", serial_number):
         raise ValidationError(
-            "Serial number can only contain letters and digits. Expected: alphanumeric only (e.g., ABC123XYZ, SERIAL2024)"
+            "Serial number can only contain letters and digits. Expected: alphanumeric only (e.g., ABC1234567XYZ, SERIAL2024FLEET)"
         )
 
     return serial_number
@@ -636,83 +661,443 @@ def validate_scooter_type(scooter_type):
     return scooter_type
 
 
-def validate_battery_level(battery_level):
+def validate_state_of_charge(soc):
     """
-    Validate battery level value.
+    Validate State of Charge (SoC) percentage.
 
     Must be integer between 0 and 100.
 
     Args:
-        battery_level (int or str): Battery level to validate
+        soc (int or str): State of Charge percentage to validate
 
     Returns:
-        int: Validated battery level
+        int: Validated SoC percentage
 
     Raises:
-        ValidationError: If battery level is invalid
+        ValidationError: If SoC is invalid
     """
     # Convert string to int if needed
-    if isinstance(battery_level, str):
+    if isinstance(soc, str):
         try:
-            battery_level = int(battery_level.strip())
+            soc = int(soc.strip())
         except ValueError:
             raise ValidationError(
-                "Battery level must be a number. Expected: integer 0-100 (e.g., 75, 100)"
+                "State of Charge must be a number. Expected: integer 0-100 (e.g., 75, 100)"
             )
 
-    if not isinstance(battery_level, int):
+    if not isinstance(soc, int):
         raise ValidationError(
-            "Battery level must be an integer. Expected: integer 0-100 (e.g., 75, 100)"
+            "State of Charge must be an integer. Expected: integer 0-100 (e.g., 75, 100)"
         )
 
-    if battery_level < 0:
+    if soc < 0:
         raise ValidationError(
-            "Battery level cannot be negative. Expected: 0-100 (e.g., 0, 50, 100)"
+            "State of Charge cannot be negative. Expected: 0-100 (e.g., 0, 50, 100)"
         )
-    if battery_level > 100:
+    if soc > 100:
         raise ValidationError(
-            "Battery level cannot exceed 100. Expected: 0-100 (e.g., 0, 50, 100)"
+            "State of Charge cannot exceed 100. Expected: 0-100 (e.g., 0, 50, 100)"
         )
 
-    return battery_level
+    return soc
 
 
-def validate_location(location):
+def validate_gps_location(latitude, longitude):
     """
-    Validate location string.
+    Validate GPS coordinates for Rotterdam region.
+
+    Format: 5 decimal places for 2-meter accuracy
+    Rotterdam region bounds:
+    - Latitude: 51.8000 to 52.0500
+    - Longitude: 4.2500 to 4.6500
+
+    Examples:
+    - Rotterdam Centraal: 51.92481, 4.46910
+    - Erasmusbrug: 51.91081, 4.48250
+    - Markthal: 51.91988, 4.48548
+
+    Args:
+        latitude (float or str): Latitude coordinate
+        longitude (float or str): Longitude coordinate
+
+    Returns:
+        tuple: (latitude, longitude) as floats with 5 decimal places
+
+    Raises:
+        ValidationError: If coordinates are invalid or outside Rotterdam region
+    """
+    # Convert to float if string
+    try:
+        if isinstance(latitude, str):
+            latitude = float(latitude.strip())
+        if isinstance(longitude, str):
+            longitude = float(longitude.strip())
+    except (ValueError, AttributeError):
+        raise ValidationError(
+            "Coordinates must be valid numbers. Expected: latitude 51.8-52.05, longitude 4.25-4.65 (e.g., 51.92481, 4.46910)"
+        )
+
+    if not isinstance(latitude, (int, float)) or not isinstance(
+        longitude, (int, float)
+    ):
+        raise ValidationError(
+            "Coordinates must be numbers. Expected: latitude 51.8-52.05, longitude 4.25-4.65 (e.g., 51.92481, 4.46910)"
+        )
+
+    # Validate Rotterdam region bounds
+    if latitude < 51.8000 or latitude > 52.0500:
+        raise ValidationError(
+            "Latitude must be within Rotterdam region. Expected: 51.8000 to 52.0500 (e.g., 51.92481 for Rotterdam Centraal)"
+        )
+
+    if longitude < 4.2500 or longitude > 4.6500:
+        raise ValidationError(
+            "Longitude must be within Rotterdam region. Expected: 4.2500 to 4.6500 (e.g., 4.46910 for Rotterdam Centraal)"
+        )
+
+    # Round to 5 decimal places for 2-meter accuracy
+    latitude = round(latitude, 5)
+    longitude = round(longitude, 5)
+
+    return latitude, longitude
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 7: ADDITIONAL SCOOTER ATTRIBUTE VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Validate additional scooter fleet data
+#
+# Key components:
+# - validate_brand(): Manufacturer name
+# - validate_model(): Model name/number
+# - validate_top_speed(): Maximum speed in km/h
+# - validate_battery_capacity(): Total battery capacity in Wh
+# - validate_target_range_soc(): Min/max battery percentage range
+# - validate_out_of_service_status(): Availability status
+# - validate_mileage(): Total distance travelled in km
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def validate_brand(brand):
+    """
+    Validate scooter brand/manufacturer name.
 
     Rules:
     - 2-50 characters
-    - Can contain letters, digits, spaces, common punctuation
+    - Can contain letters, digits, spaces, hyphens
 
     Args:
-        location (str): Location to validate
+        brand (str): Brand name to validate
 
     Returns:
-        str: Validated location
+        str: Validated brand name
 
     Raises:
-        ValidationError: If location is invalid
+        ValidationError: If brand is invalid
     """
-    if not isinstance(location, str):
-        raise ValidationError("Location must be a string")
+    if not isinstance(brand, str):
+        raise ValidationError("Brand must be a string")
 
-    location = location.strip()
+    brand = brand.strip()
 
-    # Validate length
-    if len(location) < 2:
+    if len(brand) < 2:
         raise ValidationError(
-            "Location must be at least 2 characters long. Expected: 2-50 characters (e.g., Dam Square, Station 5)"
+            "Brand must be at least 2 characters long. Expected: 2-50 characters (e.g., Segway, NIU)"
         )
-    if len(location) > 50:
+    if len(brand) > 50:
         raise ValidationError(
-            "Location must be at most 50 characters long. Expected: 2-50 characters (e.g., Central Station)"
-        )
-
-    # Validate format (allow letters, digits, spaces, and common punctuation)
-    if not re.match(r"^[a-zA-Z0-9\s,.\-']+$", location):
-        raise ValidationError(
-            "Location can only contain letters, digits, spaces, and basic punctuation. Expected: letters, digits, spaces, ,.'-  (e.g., Dam Square, Station 5)"
+            "Brand must be at most 50 characters long. Expected: 2-50 characters (e.g., Segway)"
         )
 
-    return location
+    if not re.match(r"^[a-zA-Z0-9\s\-]+$", brand):
+        raise ValidationError(
+            "Brand can only contain letters, digits, spaces, and hyphens. Expected: letters, digits, spaces, - (e.g., Segway, NIU, E-Rider)"
+        )
+
+    return brand
+
+
+def validate_model(model):
+    """
+    Validate scooter model name/number.
+
+    Rules:
+    - 2-50 characters
+    - Can contain letters, digits, spaces, hyphens
+
+    Args:
+        model (str): Model name to validate
+
+    Returns:
+        str: Validated model name
+
+    Raises:
+        ValidationError: If model is invalid
+    """
+    if not isinstance(model, str):
+        raise ValidationError("Model must be a string")
+
+    model = model.strip()
+
+    if len(model) < 2:
+        raise ValidationError(
+            "Model must be at least 2 characters long. Expected: 2-50 characters (e.g., ES2, Pro Max)"
+        )
+    if len(model) > 50:
+        raise ValidationError(
+            "Model must be at most 50 characters long. Expected: 2-50 characters (e.g., ES2)"
+        )
+
+    if not re.match(r"^[a-zA-Z0-9\s\-]+$", model):
+        raise ValidationError(
+            "Model can only contain letters, digits, spaces, and hyphens. Expected: letters, digits, spaces, - (e.g., ES2, Pro Max, X-100)"
+        )
+
+    return model
+
+
+def validate_top_speed(speed):
+    """
+    Validate scooter top speed in km/h.
+
+    Rules:
+    - Must be number between 0 and 80 km/h
+    - Can be integer or float
+
+    Args:
+        speed (int, float, or str): Top speed to validate
+
+    Returns:
+        float: Validated top speed
+
+    Raises:
+        ValidationError: If speed is invalid
+    """
+    # Convert string to float if needed
+    if isinstance(speed, str):
+        try:
+            speed = float(speed.strip())
+        except ValueError:
+            raise ValidationError(
+                "Top speed must be a number. Expected: 0-80 km/h (e.g., 25, 45.5)"
+            )
+
+    if not isinstance(speed, (int, float)):
+        raise ValidationError(
+            "Top speed must be a number. Expected: 0-80 km/h (e.g., 25, 45.5)"
+        )
+
+    if speed < 0:
+        raise ValidationError(
+            "Top speed cannot be negative. Expected: 0-80 km/h (e.g., 25, 45.5)"
+        )
+    if speed > 80:
+        raise ValidationError(
+            "Top speed cannot exceed 80 km/h. Expected: 0-80 km/h (e.g., 25, 45.5)"
+        )
+
+    return float(speed)
+
+
+def validate_battery_capacity(capacity):
+    """
+    Validate battery capacity in watt-hours (Wh).
+
+    Rules:
+    - Must be integer between 0 and 10000 Wh
+    - Typical e-scooter range: 250-1000 Wh
+
+    Args:
+        capacity (int or str): Battery capacity to validate
+
+    Returns:
+        int: Validated battery capacity
+
+    Raises:
+        ValidationError: If capacity is invalid
+    """
+    # Convert string to int if needed
+    if isinstance(capacity, str):
+        try:
+            capacity = int(capacity.strip())
+        except ValueError:
+            raise ValidationError(
+                "Battery capacity must be a number. Expected: 0-10000 Wh (e.g., 500, 750)"
+            )
+
+    if not isinstance(capacity, int):
+        raise ValidationError(
+            "Battery capacity must be an integer. Expected: 0-10000 Wh (e.g., 500, 750)"
+        )
+
+    if capacity < 0:
+        raise ValidationError(
+            "Battery capacity cannot be negative. Expected: 0-10000 Wh (e.g., 500, 750)"
+        )
+    if capacity > 10000:
+        raise ValidationError(
+            "Battery capacity cannot exceed 10000 Wh. Expected: 0-10000 Wh (e.g., 500, 750)"
+        )
+
+    return capacity
+
+
+def validate_target_range_soc(min_soc, max_soc):
+    """
+    Validate target-range State of Charge (min/max percentages).
+
+    Rules:
+    - Both must be integers between 0 and 100
+    - min_soc must be less than max_soc
+
+    Args:
+        min_soc (int or str): Minimum SoC percentage
+        max_soc (int or str): Maximum SoC percentage
+
+    Returns:
+        tuple: (min_soc, max_soc) as integers
+
+    Raises:
+        ValidationError: If SoC range is invalid
+    """
+    # Convert strings to int if needed
+    if isinstance(min_soc, str):
+        try:
+            min_soc = int(min_soc.strip())
+        except ValueError:
+            raise ValidationError(
+                "Minimum SoC must be a number. Expected: 0-100 (e.g., 20)"
+            )
+
+    if isinstance(max_soc, str):
+        try:
+            max_soc = int(max_soc.strip())
+        except ValueError:
+            raise ValidationError(
+                "Maximum SoC must be a number. Expected: 0-100 (e.g., 80)"
+            )
+
+    if not isinstance(min_soc, int):
+        raise ValidationError(
+            "Minimum SoC must be an integer. Expected: 0-100 (e.g., 20)"
+        )
+
+    if not isinstance(max_soc, int):
+        raise ValidationError(
+            "Maximum SoC must be an integer. Expected: 0-100 (e.g., 80)"
+        )
+
+    if min_soc < 0:
+        raise ValidationError(
+            "Minimum SoC cannot be negative. Expected: 0-100 (e.g., 20)"
+        )
+    if min_soc > 100:
+        raise ValidationError(
+            "Minimum SoC cannot exceed 100. Expected: 0-100 (e.g., 20)"
+        )
+
+    if max_soc < 0:
+        raise ValidationError(
+            "Maximum SoC cannot be negative. Expected: 0-100 (e.g., 80)"
+        )
+    if max_soc > 100:
+        raise ValidationError(
+            "Maximum SoC cannot exceed 100. Expected: 0-100 (e.g., 80)"
+        )
+
+    if min_soc >= max_soc:
+        raise ValidationError(
+            "Minimum SoC must be less than Maximum SoC. Expected: min < max (e.g., min=20, max=80)"
+        )
+
+    return min_soc, max_soc
+
+
+def validate_out_of_service_status(status):
+    """
+    Validate out-of-service status.
+
+    Accepts:
+    - Boolean: True/False
+    - String: "Yes"/"No", "yes"/"no", "True"/"False", "1"/"0"
+    - Integer: 1/0
+
+    Returns: Boolean (True = out of service, False = in service)
+
+    Args:
+        status (bool, str, or int): Out-of-service status
+
+    Returns:
+        bool: True if out of service, False if in service
+
+    Raises:
+        ValidationError: If status is invalid
+    """
+    if isinstance(status, bool):
+        return status
+
+    if isinstance(status, str):
+        status = status.strip().lower()
+        if status in ["yes", "true", "1"]:
+            return True
+        if status in ["no", "false", "0"]:
+            return False
+        raise ValidationError(
+            "Invalid out-of-service status. Expected: Yes/No, True/False, 1/0 (e.g., Yes, No)"
+        )
+
+    if isinstance(status, int):
+        if status == 1:
+            return True
+        if status == 0:
+            return False
+        raise ValidationError(
+            "Invalid out-of-service status. Expected: 1 (out of service) or 0 (in service)"
+        )
+
+    raise ValidationError(
+        "Out-of-service status must be boolean, string, or integer. Expected: Yes/No, True/False, 1/0"
+    )
+
+
+def validate_mileage(mileage):
+    """
+    Validate scooter mileage in kilometres.
+
+    Rules:
+    - Must be number between 0 and 999999 km (6 figures max)
+    - Can be integer or float
+
+    Args:
+        mileage (int, float, or str): Mileage to validate
+
+    Returns:
+        float: Validated mileage
+
+    Raises:
+        ValidationError: If mileage is invalid
+    """
+    # Convert string to float if needed
+    if isinstance(mileage, str):
+        try:
+            mileage = float(mileage.strip())
+        except ValueError:
+            raise ValidationError(
+                "Mileage must be a number. Expected: 0-999999 km (e.g., 1500, 2500.5)"
+            )
+
+    if not isinstance(mileage, (int, float)):
+        raise ValidationError(
+            "Mileage must be a number. Expected: 0-999999 km (e.g., 1500, 2500.5)"
+        )
+
+    if mileage < 0:
+        raise ValidationError(
+            "Mileage cannot be negative. Expected: 0-999999 km (e.g., 1500, 2500.5)"
+        )
+    if mileage > 999999:
+        raise ValidationError(
+            "Mileage cannot exceed 999999 km (6 figures). Expected: 0-999999 km (e.g., 1500)"
+        )
+
+    return float(mileage)
