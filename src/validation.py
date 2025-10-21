@@ -284,89 +284,6 @@ def validate_zipcode(zipcode):
     return zipcode
 
 
-def validate_birthday(date_str):
-    """
-    Validate birthday format and check if it's a valid calendar date.
-
-    Format: DD-MM-YYYY
-    Example: 15-03-1995, 01-12-2024
-
-    Args:
-        date_str (str): Birthday date string
-
-    Returns:
-        str: Validated birthday (DD-MM-YYYY)
-
-    Raises:
-        ValidationError: If birthday is invalid or in the future
-    """
-    if not isinstance(date_str, str):
-        raise ValidationError("Birthday must be a string")
-
-    date_str = date_str.strip()
-
-    if not re.match(r"^\d{2}-\d{2}-\d{4}$", date_str):
-        raise ValidationError(
-            "Invalid birthday format. Expected: DD-MM-YYYY (e.g., 15-03-1995)"
-        )
-
-    try:
-        day, month, year = map(int, date_str.split("-"))
-        date_obj = datetime(year, month, day)
-    except ValueError:
-        raise ValidationError("Invalid birthday. Please enter a valid calendar date")
-
-    today = datetime.now()
-    if date_obj > today:
-        raise ValidationError(
-            "Birthday cannot be in the future. Expected: date in the past (e.g., 15-03-1995)"
-        )
-
-    max_years_ago = 150
-    earliest_allowed = datetime(today.year - max_years_ago, today.month, today.day)
-    if date_obj < earliest_allowed:
-        raise ValidationError(
-            f"Birthday cannot be more than {max_years_ago} years in the past. Expected: within last {max_years_ago} years"
-        )
-
-    return date_str
-
-
-def validate_date(date_str):
-    """
-    Validate date in ISO 8601 format and check if it's a valid calendar date.
-
-    Format: YYYY-MM-DD
-    Example: 2024-03-15, 1995-12-01
-
-    Args:
-        date_str (str): Date string in ISO 8601 format
-
-    Returns:
-        str: Validated date (YYYY-MM-DD)
-
-    Raises:
-        ValidationError: If date is invalid
-    """
-    if not isinstance(date_str, str):
-        raise ValidationError("Date must be a string")
-
-    date_str = date_str.strip()
-
-    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
-        raise ValidationError(
-            "Invalid date format. Expected: YYYY-MM-DD (e.g., 2024-03-15)"
-        )
-
-    try:
-        year, month, day = map(int, date_str.split("-"))
-        datetime(year, month, day)
-    except ValueError:
-        raise ValidationError("Invalid date. Please enter a valid calendar date")
-
-    return date_str
-
-
 def validate_house_number(house_number):
     """
     Validate house number format.
@@ -464,7 +381,8 @@ def validate_city(city):
 #
 # Key components:
 # - validate_name(): Names and street names (letters, spaces, hyphens, apostrophes)
-# - validate_date(): Date in DD-MM-YYYY format with calendar validation
+# - validate_birthday(): Date in DD-MM-YYYY format with calendar validation
+# - validate_date(): Date in ISO YYYY-MM-DD format
 # - validate_gender(): Male or Female
 # - validate_driving_license(): Dutch license format (X(X)DDDDDDD)
 #
@@ -507,6 +425,89 @@ def validate_name(name, field_name="Name"):
         )
 
     return name
+
+
+def validate_birthday(date_str):
+    """
+    Validate birthday format and check if it's a valid calendar date.
+
+    Format: DD-MM-YYYY
+    Example: 15-03-1995, 01-12-2024
+
+    Args:
+        date_str (str): Birthday date string
+
+    Returns:
+        str: Validated birthday (DD-MM-YYYY)
+
+    Raises:
+        ValidationError: If birthday is invalid or in the future
+    """
+    if not isinstance(date_str, str):
+        raise ValidationError("Birthday must be a string")
+
+    date_str = date_str.strip()
+
+    if not re.match(r"^\d{2}-\d{2}-\d{4}$", date_str):
+        raise ValidationError(
+            "Invalid birthday format. Expected: DD-MM-YYYY (e.g., 15-03-1995)"
+        )
+
+    try:
+        day, month, year = map(int, date_str.split("-"))
+        date_obj = datetime(year, month, day)
+    except ValueError:
+        raise ValidationError("Invalid birthday. Please enter a valid calendar date")
+
+    today = datetime.now()
+    if date_obj > today:
+        raise ValidationError(
+            "Birthday cannot be in the future. Expected: date in the past (e.g., 15-03-1995)"
+        )
+
+    max_years_ago = 150
+    earliest_allowed = datetime(today.year - max_years_ago, today.month, today.day)
+    if date_obj < earliest_allowed:
+        raise ValidationError(
+            f"Birthday cannot be more than {max_years_ago} years in the past. Expected: within last {max_years_ago} years"
+        )
+
+    return date_str
+
+
+def validate_date(date_str):
+    """
+    Validate date in ISO 8601 format and check if it's a valid calendar date.
+
+    Format: YYYY-MM-DD
+    Example: 2024-03-15, 1995-12-01
+
+    Args:
+        date_str (str): Date string in ISO 8601 format
+
+    Returns:
+        str: Validated date (YYYY-MM-DD)
+
+    Raises:
+        ValidationError: If date is invalid
+    """
+    if not isinstance(date_str, str):
+        raise ValidationError("Date must be a string")
+
+    date_str = date_str.strip()
+
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+        raise ValidationError(
+            "Invalid date format. Expected: YYYY-MM-DD (e.g., 2024-03-15)"
+        )
+
+    try:
+        year, month, day = map(int, date_str.split("-"))
+        datetime(year, month, day)
+    except ValueError:
+        raise ValidationError("Invalid date. Please enter a valid calendar date")
+
+    return date_str
 
 
 def validate_gender(gender):
@@ -572,10 +573,10 @@ def validate_driving_license(license_number):
 # Description: Validate scooter fleet data
 #
 # Key components:
-# - validate_serial_number(): 6-15 alphanumeric characters
+# - validate_serial_number(): 10-17 alphanumeric characters
 # - validate_scooter_type(): Scooter model/type (2-30 chars)
-# - validate_battery_level(): Integer 0-100
-# - validate_location(): Location string (2-50 chars)
+# - validate_state_of_charge(): Integer 0-100 (battery percentage)
+# - validate_gps_location(): GPS coordinates for Rotterdam region
 #
 # Note: Serial numbers are automatically converted to uppercase
 # ═══════════════════════════════════════════════════════════════════════════

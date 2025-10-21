@@ -444,7 +444,7 @@ def delete_scooter(serial_number):
 # Description: Search and retrieve scooter information
 #
 # Key components:
-# - search_scooters(): Partial key search in type, location, status
+# - search_scooters(): Partial key search in brand, model, GPS coordinates
 # - get_scooter_by_serial(): Get specific scooter by serial number
 # - list_all_scooters(): Get all scooters with decrypted serial numbers
 #

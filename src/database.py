@@ -47,10 +47,12 @@ SUPER_ADMIN_PASSWORD = "Admin_123?"
 # ═══════════════════════════════════════════════════════════════════════════
 # SECTION 2: ENCRYPTION KEY MANAGEMENT
 # ═══════════════════════════════════════════════════════════════════════════
-# Description: Load or create encryption keys for system security
+# Description: Load or create encryption keys and username encryption/decryption
 #
 # Key components:
 # - load_or_create_aes_key(): AES-256 key for deterministic username encryption
+# - encrypt_username(): Encrypt username using AES-256 ECB (deterministic)
+# - decrypt_username(): Decrypt username back to plain text
 # - load_or_create_fernet_key(): Fernet key for non-deterministic data encryption
 #
 # Note: Keys are persisted to disk for consistency across application restarts
@@ -154,18 +156,18 @@ fernet_cipher = load_or_create_fernet_key()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# SECTION 3: ENCRYPTION FUNCTIONS
+# SECTION 3: SENSITIVE DATA ENCRYPTION
 # ═══════════════════════════════════════════════════════════════════════════
-# Description: Encrypt and decrypt sensitive data
+# Description: Encrypt and decrypt sensitive data (non-searchable fields)
 #
 # Key components:
-# - encrypt_username() / decrypt_username(): Deterministic AES-256 ECB for searchable usernames
-# - encrypt_field() / decrypt_field(): Non-deterministic Fernet for sensitive data
+# - encrypt_field(): Non-deterministic Fernet encryption for sensitive data
+# - decrypt_field(): Decrypt Fernet-encrypted data back to plain text
 #
 # Encryption strategy:
-# - Usernames: AES-256 ECB (deterministic) - allows WHERE username = ? queries
-# - Sensitive data: Fernet (non-deterministic) - better security, not searchable
-#   (emails, phones, driving licenses, serial numbers)
+# - Used for data that doesn't need to be searched: emails, phones, licenses, serial numbers
+# - Non-deterministic (different output each time) for better security
+# - Cannot be used in WHERE clauses (use username encryption for searchable fields)
 # ═══════════════════════════════════════════════════════════════════════════
 
 

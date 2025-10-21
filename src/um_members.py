@@ -92,10 +92,10 @@ from input_handlers import (
 # - print_header(): Formatted section headers
 # - print_user_info(): Display current logged-in user
 # - wait_for_enter(): Input blocking for user interaction
-# - prompt_with_validation(): Reusable input validation loop
-# - prompt_integer_with_validation(): Integer input with validation
 # - validate_unique_username(): Check username uniqueness
 # - validate_unique_serial_number(): Check scooter serial uniqueness
+#
+# Note: Input validation functions (prompt_with_validation, etc.) are imported from input_handlers
 # ═══════════════════════════════════════════════════════════════════════════
 
 
