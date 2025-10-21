@@ -568,18 +568,31 @@ def _mark_code_as_used(restore_code):
     """
     Mark restore code as used (internal helper).
 
+    Note: Must decrypt all codes to find match because Fernet encryption
+    is non-deterministic (same input produces different encrypted values).
+    Cannot use WHERE code = ? with encrypted value.
+
     Args:
-        restore_code (str): Code to mark as used
+        restore_code (str): Plaintext code to mark as used
     """
     conn = get_connection()
     cursor = conn.cursor()
 
-    encrypted_code = encrypt_field(restore_code)
+    # Get all unused codes - can't search encrypted Fernet directly in WHERE clause
+    cursor.execute("SELECT id, code FROM restore_codes WHERE used = 0")
+    results = cursor.fetchall()
 
-    # Prepared statement for UPDATE
-    cursor.execute(
-        "UPDATE restore_codes SET used = 1 WHERE code = ?", (encrypted_code,)
-    )
+    # Decrypt each code to find the matching one
+    for row_id, encrypted_code in results:
+        try:
+            decrypted_code = decrypt_field(encrypted_code)
+            if decrypted_code == restore_code:
+                # Found match! Mark this code as used
+                cursor.execute("UPDATE restore_codes SET used = 1 WHERE id = ?", (row_id,))
+                break
+        except Exception:
+            # Skip corrupted entries
+            continue
 
     conn.commit()
     conn.close()
