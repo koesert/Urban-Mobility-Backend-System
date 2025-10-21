@@ -105,6 +105,10 @@ def add_traveler(
     encrypted_email = encrypt_field(email)
     encrypted_phone = encrypt_field(mobile_phone)
     encrypted_license = encrypt_field(driving_license)
+    encrypted_street = encrypt_field(street_name)
+    encrypted_house = encrypt_field(house_number)
+    encrypted_zip = encrypt_field(zip_code)
+    encrypted_city = encrypt_field(city)
 
     # Insert into database
     conn = get_connection()
@@ -126,10 +130,10 @@ def add_traveler(
             last_name,
             birthday,
             gender,
-            street_name,
-            house_number,
-            zip_code,
-            city,
+            encrypted_street,
+            encrypted_house,
+            encrypted_zip,
+            encrypted_city,
             encrypted_email,
             encrypted_phone,
             encrypted_license,
@@ -270,12 +274,16 @@ def update_traveler(customer_id, **updates):
                 value = validate_gender(value)
             elif field == "street_name":
                 value = validate_name(value, "Street name")
+                value = encrypt_field(value)
             elif field == "house_number":
                 value = validate_house_number(value)
+                value = encrypt_field(value)
             elif field == "zip_code":
                 value = validate_zipcode(value)
+                value = encrypt_field(value)
             elif field == "city":
                 value = validate_city(value)
+                value = encrypt_field(value)
             elif field == "email":
                 value = validate_email(value)
                 value = encrypt_field(value)
@@ -442,10 +450,10 @@ def search_travelers(search_key):
                 "last_name": row[3],
                 "birthday": row[4],
                 "gender": row[5],
-                "street_name": row[6],
-                "house_number": row[7],
-                "zip_code": row[8],
-                "city": row[9],
+                "street_name": decrypt_field(row[6]),
+                "house_number": decrypt_field(row[7]),
+                "zip_code": decrypt_field(row[8]),
+                "city": decrypt_field(row[9]),
                 "email": decrypt_field(row[10]),
                 "mobile_phone": decrypt_field(row[11]),
                 "driving_license": decrypt_field(row[12]),
@@ -488,10 +496,10 @@ def get_traveler_by_id(customer_id):
         "last_name": row[3],
         "birthday": row[4],
         "gender": row[5],
-        "street_name": row[6],
-        "house_number": row[7],
-        "zip_code": row[8],
-        "city": row[9],
+        "street_name": decrypt_field(row[6]),
+        "house_number": decrypt_field(row[7]),
+        "zip_code": decrypt_field(row[8]),
+        "city": decrypt_field(row[9]),
         "email": decrypt_field(row[10]),
         "mobile_phone": decrypt_field(row[11]),
         "driving_license": decrypt_field(row[12]),
@@ -527,10 +535,10 @@ def list_all_travelers():
                 "last_name": row[3],
                 "birthday": row[4],
                 "gender": row[5],
-                "street_name": row[6],
-                "house_number": row[7],
-                "zip_code": row[8],
-                "city": row[9],
+                "street_name": decrypt_field(row[6]),
+                "house_number": decrypt_field(row[7]),
+                "zip_code": decrypt_field(row[8]),
+                "city": decrypt_field(row[9]),
                 "email": decrypt_field(row[10]),
                 "mobile_phone": decrypt_field(row[11]),
                 "driving_license": decrypt_field(row[12]),

@@ -340,7 +340,9 @@ def update_scooter(serial_number, **updates):
     # Validate target_range_soc if both min and max are being updated
     if "target_range_soc_min" in updates and "target_range_soc_max" in updates:
         try:
-            validate_target_range_soc(updates["target_range_soc_min"], updates["target_range_soc_max"])
+            validate_target_range_soc(
+                updates["target_range_soc_min"], updates["target_range_soc_max"]
+            )
         except ValidationError as e:
             conn.close()
             return False, f"Validation error for target range SoC: {e}"
