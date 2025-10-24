@@ -1374,8 +1374,8 @@ def update_scooter_ui():
         print("\n--- Service Status ---")
         print(f"Current status: {'Out of service' if scooter.get('out_of_service_status') else 'In service'}")
         service_input = prompt_optional_field(
-            "New status (1=In service, 2=Out of service)",
-            lambda x: validate_out_of_service_status(x if x in ["1", "2", "yes", "no"] else None),
+            "New status (1/Yes=Out of service, 0/No=In service)",
+            lambda x: validate_out_of_service_status(x),
             allow_exit=True
         )
         out_of_service_status = service_input if service_input is not None else None
@@ -1511,8 +1511,8 @@ def update_scooter_engineer_ui():
         print("\n--- Service Status ---")
         print(f"Current status: {'Out of service' if scooter.get('out_of_service_status') else 'In service'}")
         service_input = prompt_optional_field(
-            "New status (1=In service, 2=Out of service)",
-            lambda x: validate_out_of_service_status(x if x in ["1", "2", "yes", "no"] else None),
+            "New status (1/Yes=Out of service, 0/No=In service)",
+            lambda x: validate_out_of_service_status(x),
             allow_exit=True
         )
         out_of_service_status = service_input if service_input is not None else None
@@ -2111,6 +2111,12 @@ def update_my_password_ui():
     # Step 2: Get new password with immediate validation
     print("\n✓ Current password verified.")
     new_password = prompt_with_validation("Enter new password: ", validate_password)
+
+    # Check if new password is different from current
+    if new_password == current_password:
+        print("\n❌ New password must be different from current password.")
+        wait_for_enter()
+        return
 
     # Step 3: Confirm new password
     confirm_password = input("Confirm new password: ").strip()
