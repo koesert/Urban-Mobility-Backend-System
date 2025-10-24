@@ -317,14 +317,51 @@ class TestDeleteUser:
         assert "cannot delete" in msg.lower()
 
     @patch("users.get_current_user")
-    def test_delete_user_cannot_delete_self(self, mock_get_user):
-        """Test that user cannot delete their own account"""
+    def test_delete_user_super_admin_cannot_delete_self(self, mock_get_user):
+        """Test that Super Admin cannot delete their own account"""
+        mock_get_user.return_value = {"username": "super_admin", "role": "super_admin"}
+
+        success, msg = delete_user("super_admin")
+
+        assert success is False
+        assert "cannot delete" in msg.lower()
+
+    @patch("users.get_current_user")
+    def test_delete_user_service_engineer_cannot_delete_self(self, mock_get_user):
+        """Test that Service Engineer cannot delete their own account"""
+        mock_get_user.return_value = {"username": "engineer1", "role": "service_engineer"}
+
+        success, msg = delete_user("engineer1")
+
+        assert success is False
+        assert "cannot delete" in msg.lower()
+
+    @patch("users.log_activity")
+    @patch("users.get_connection")
+    @patch("users.encrypt_username")
+    @patch("users.check_permission")
+    @patch("users.get_current_user")
+    def test_delete_user_system_admin_can_delete_self(
+        self, mock_get_user, mock_check_perm, mock_encrypt, mock_conn, mock_log
+    ):
+        """Test that System Admin CAN delete their own account (assignment requirement)"""
         mock_get_user.return_value = {"username": "admin_001", "role": "system_admin"}
+        mock_check_perm.return_value = True
+        mock_encrypt.return_value = "encrypted_admin"
+
+        # Mock database connection
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = (1, "system_admin", "John", "Doe")
+        mock_conn.return_value.cursor.return_value = mock_cursor
+        mock_conn.return_value.commit = Mock()
+        mock_conn.return_value.close = Mock()
 
         success, msg = delete_user("admin_001")
 
-        assert success is False
-        assert "cannot delete your own" in msg.lower()
+        assert success is True
+        assert "deleted successfully" in msg.lower()
+        mock_cursor.execute.assert_called()
+        mock_conn.return_value.commit.assert_called_once()
 
     @patch("users.get_connection")
     @patch("users.encrypt_username")
