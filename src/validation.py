@@ -3,11 +3,12 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # Description: Input validation libraries
 #
-# External libraries: re (regex), datetime (date validation)
+# External libraries: re (regex), datetime (date validation), logging (security monitoring)
 # ═══════════════════════════════════════════════════════════════════════════
 
 import re
 from datetime import datetime
+from activity_log import log_activity
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -24,6 +25,40 @@ class ValidationError(Exception):
     """Custom exception for input validation failures."""
 
     pass
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# HELPER FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════════
+# Description: Internal helper functions for validation
+#
+# Key components:
+# - _check_null_bytes(): Check for null bytes in string input
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _check_null_bytes(value, field_name):
+    """
+    Check for null bytes in string input.
+
+    Null bytes should never be present in non-binary input and can indicate
+    attack attempts (e.g., null-byte injection attacks).
+
+    Args:
+        value: The value to check (typically a string)
+        field_name (str): Name of the field being validated (for logging)
+
+    Raises:
+        ValidationError: If null byte is detected
+    """
+    if isinstance(value, str) and "\0" in value:
+        log_activity(
+            username="SYSTEM",
+            activity="Null-byte attack detected",
+            additional_info=f"Field: {field_name}, Value: {repr(value[:50])}",
+            suspicious=True,
+        )
+        raise ValidationError(f"{field_name} contains invalid null-byte character")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -61,6 +96,7 @@ def validate_username(username):
     if not isinstance(username, str):
         raise ValidationError("Username must be a string")
 
+    _check_null_bytes(username, "Username")
     username = username.strip()
 
     # Special case: allow "super_admin" system account (bypasses length rule)
@@ -116,6 +152,8 @@ def validate_password(password):
     """
     if not isinstance(password, str):
         raise ValidationError("Password must be a string")
+
+    _check_null_bytes(password, "Password")
 
     if len(password) < 12:
         raise ValidationError(
@@ -183,6 +221,7 @@ def validate_email(email):
     if not isinstance(email, str):
         raise ValidationError("Email must be a string")
 
+    _check_null_bytes(email, "Email")
     email = email.strip()
 
     if len(email) > 50:
@@ -221,6 +260,8 @@ def validate_phone(phone):
     """
     if not isinstance(phone, str):
         raise ValidationError("Phone number must be a string")
+
+    _check_null_bytes(phone, "Phone")
 
     # Remove all formatting characters
     phone_clean = phone.replace(" ", "").replace("-", "").replace("+", "")
@@ -274,6 +315,7 @@ def validate_zipcode(zipcode):
     if not isinstance(zipcode, str):
         raise ValidationError("Zipcode must be a string")
 
+    _check_null_bytes(zipcode, "Zipcode")
     zipcode = zipcode.replace(" ", "").upper()
 
     if not re.match(r"^\d{4}[A-Z]{2}$", zipcode):
@@ -307,6 +349,7 @@ def validate_house_number(house_number):
     if not isinstance(house_number, str):
         raise ValidationError("House number must be a string")
 
+    _check_null_bytes(house_number, "House number")
     house_number = house_number.strip()
 
     if not house_number:
@@ -366,6 +409,7 @@ def validate_city(city):
     if not isinstance(city, str):
         raise ValidationError("City must be a string")
 
+    _check_null_bytes(city, "City")
     city = city.strip()
 
     if city not in VALID_CITIES:
@@ -411,6 +455,7 @@ def validate_name(name, field_name="Name"):
     if not isinstance(name, str):
         raise ValidationError(f"{field_name} must be a string")
 
+    _check_null_bytes(name, field_name)
     name = name.strip()
 
     if not name:
@@ -446,6 +491,7 @@ def validate_birthday(date_str):
     if not isinstance(date_str, str):
         raise ValidationError("Birthday must be a string")
 
+    _check_null_bytes(date_str, "Birthday")
     date_str = date_str.strip()
 
     if not re.match(r"^\d{2}-\d{2}-\d{4}$", date_str):
@@ -494,6 +540,7 @@ def validate_date(date_str):
     if not isinstance(date_str, str):
         raise ValidationError("Date must be a string")
 
+    _check_null_bytes(date_str, "Date")
     date_str = date_str.strip()
 
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
@@ -528,6 +575,7 @@ def validate_gender(gender):
     if not isinstance(gender, str):
         raise ValidationError("Gender must be a string")
 
+    _check_null_bytes(gender, "Gender")
     gender = gender.strip()
 
     if gender not in ["Male", "Female"]:
@@ -557,6 +605,7 @@ def validate_driving_license(license_number):
     if not isinstance(license_number, str):
         raise ValidationError("Driving license must be a string")
 
+    _check_null_bytes(license_number, "Driving license")
     license_number = license_number.replace(" ", "").upper()
 
     if not re.match(r"^[A-Z]{1,2}\d{7}$", license_number):
@@ -602,6 +651,7 @@ def validate_serial_number(serial_number):
     if not isinstance(serial_number, str):
         raise ValidationError("Serial number must be a string")
 
+    _check_null_bytes(serial_number, "Serial number")
     serial_number = serial_number.strip().upper()
 
     if len(serial_number) < 10:
@@ -641,6 +691,7 @@ def validate_scooter_type(scooter_type):
     if not isinstance(scooter_type, str):
         raise ValidationError("Scooter type must be a string")
 
+    _check_null_bytes(scooter_type, "Scooter type")
     scooter_type = scooter_type.strip()
 
     # Validate length
@@ -727,6 +778,12 @@ def validate_gps_location(latitude, longitude):
     Raises:
         ValidationError: If coordinates are invalid or outside Rotterdam region
     """
+    # Check for null bytes in string inputs
+    if isinstance(latitude, str):
+        _check_null_bytes(latitude, "Latitude")
+    if isinstance(longitude, str):
+        _check_null_bytes(longitude, "Longitude")
+
     # Convert to float if string
     try:
         if isinstance(latitude, str):
@@ -799,6 +856,7 @@ def validate_brand(brand):
     if not isinstance(brand, str):
         raise ValidationError("Brand must be a string")
 
+    _check_null_bytes(brand, "Brand")
     brand = brand.strip()
 
     if len(brand) < 2:
@@ -838,6 +896,7 @@ def validate_model(model):
     if not isinstance(model, str):
         raise ValidationError("Model must be a string")
 
+    _check_null_bytes(model, "Model")
     model = model.strip()
 
     if len(model) < 2:
@@ -1037,6 +1096,7 @@ def validate_out_of_service_status(status):
     if isinstance(status, bool):
         return status
 
+    _check_null_bytes(status, "Status")
     if isinstance(status, str):
         status = status.strip().lower()
         if status in ["yes", "true", "1"]:
