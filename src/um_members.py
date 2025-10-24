@@ -82,6 +82,7 @@ from input_handlers import (
     CancelInputException,
     prompt_with_validation,
     prompt_integer_with_validation,
+    prompt_password_with_confirmation,
     prompt_menu_choice,
     prompt_confirmation,
     prompt_optional_field,
@@ -2108,30 +2109,13 @@ def update_my_password_ui():
         wait_for_enter()
         return
 
-    # Step 2: Get new password with immediate validation
+    # Step 2: Get new password with validation and confirmation
     print("\n✓ Current password verified.")
-    new_password = prompt_with_validation("Enter new password: ", validate_password)
+    new_password = prompt_password_with_confirmation(
+        "Enter new password: ", validate_password, current_password=current_password
+    )
 
-    # Check if new password is different from current
-    if new_password == current_password:
-        print("\n❌ New password must be different from current password.")
-        wait_for_enter()
-        return
-
-    # Step 3: Confirm new password
-    confirm_password = input("Confirm new password: ").strip()
-
-    if not confirm_password:
-        print("\n❌ Confirmation password cannot be empty.")
-        wait_for_enter()
-        return
-
-    if new_password != confirm_password:
-        print("\n❌ Passwords do not match.")
-        wait_for_enter()
-        return
-
-    # Step 4: Update password
+    # Step 3: Update password
     success, msg = update_password(current_password, new_password)
 
     print(f"\n{msg}")
@@ -2159,81 +2143,59 @@ def force_password_change_ui():
     print("  - At least 1 digit")
     print("  - At least 1 special character (~!@#$%&_-+=|\\(){}[]:;'<>,.?/)")
 
-    max_attempts = 3
-    for attempt in range(max_attempts):
-        new_password = prompt_with_validation("Enter new password: ", validate_password)
+    # Get new password with validation and confirmation
+    try:
+        new_password = prompt_password_with_confirmation(
+            "Enter new password: ", validate_password
+        )
+    except CancelInputException:
+        print("\n⚠️  Password change cancelled. You will be logged out.")
+        logout()
+        wait_for_enter()
+        return
 
-        # Confirm new password
-        confirm_password = input("Confirm new password: ").strip()
+    # Update password (no current password needed - user just logged in)
+    user = get_current_user()
+    from database import get_connection
+    from auth import hash_password
 
-        if not confirm_password:
-            print("\n❌ Confirmation password cannot be empty.")
-            if attempt < max_attempts - 1:
-                print(f"Try again ({max_attempts - attempt - 1} attempts remaining)\n")
-                continue
-            else:
-                print("⚠️  Maximum attempts reached. You will be logged out.")
-                logout()
-                wait_for_enter()
-                return
-
-        if new_password != confirm_password:
-            print("\n❌ Passwords do not match.")
-            if attempt < max_attempts - 1:
-                print(f"Try again ({max_attempts - attempt - 1} attempts remaining)\n")
-                continue
-            else:
-                print("⚠️  Maximum attempts reached. You will be logged out.")
-                logout()
-                wait_for_enter()
-                return
-
-        # Update password (no current password needed - user just logged in)
-        user = get_current_user()
-        from database import get_connection
-        from auth import hash_password
-
-        try:
-            if not user:
-                print("\n❌ Error: No user logged in.")
-                return
-
-            conn = get_connection()
-            cursor = conn.cursor()
-
-            # Hash the new password
-            new_hash = hash_password(new_password, user["username"])
-
-            # Update password and reset must_change_password flag
-            cursor.execute(
-                """
-                UPDATE users
-                SET password_hash = ?, must_change_password = 0
-                WHERE id = ?
-            """,
-                (new_hash, user["user_id"]),
-            )
-
-            conn.commit()
-            conn.close()
-
-            # Update session state
-            user["must_change_password"] = False
-
-            print("\n✓ Password changed successfully!")
-            print("✓ You can now use the system.")
-            wait_for_enter()
+    try:
+        if not user:
+            print("\n❌ Error: No user logged in.")
             return
 
-        except Exception as e:
-            print(f"\n❌ Error updating password: {e}")
-            if attempt < max_attempts - 1:
-                print(f"Try again ({max_attempts - attempt - 1} attempts remaining)\n")
-            else:
-                print("⚠️  Maximum attempts reached. You will be logged out.")
-                logout()
-                wait_for_enter()
-                return
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # Hash the new password
+        new_hash = hash_password(new_password, user["username"])
+
+        # Update password and reset must_change_password flag
+        cursor.execute(
+            """
+            UPDATE users
+            SET password_hash = ?, must_change_password = 0
+            WHERE id = ?
+        """,
+            (new_hash, user["user_id"]),
+        )
+
+        conn.commit()
+        conn.close()
+
+        # Update session state
+        user["must_change_password"] = False
+
+        print("\n✓ Password changed successfully!")
+        print("✓ You can now use the system.")
+        wait_for_enter()
+        return
+
+    except Exception as e:
+        print(f"\n❌ Error updating password: {e}")
+        logout()
+        wait_for_enter()
+        return
 
 
 # ═══════════════════════════════════════════════════════════════════════════
