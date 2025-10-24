@@ -224,8 +224,7 @@ def show_main_menu():
         print("  5. View System Logs")
         print("  6. Backup & Restore")
         print("  7. View My Profile")
-        print("  8. Update My Password")
-        print("  9. Logout")
+        print("  8. Logout")
 
     elif user["role"] == "system_admin":
         # System Admin menu
@@ -2160,8 +2159,6 @@ def main():
                 elif choice == "7":
                     view_my_profile_ui()
                 elif choice == "8":
-                    update_my_password_ui()
-                elif choice == "9":
                     logout()
                     print("\n✓ Logged out successfully")
                     wait_for_enter()

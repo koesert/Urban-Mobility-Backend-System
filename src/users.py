@@ -227,7 +227,8 @@ def create_service_engineer(username, first_name, last_name, password=None):
 # Key components:
 # - delete_user(): Delete System Admin or Service Engineer with permission checks
 #
-# Note: Cannot delete Super Admin or your own account
+# Note: System Admins CAN delete their own account
+#       Super Admin and Service Engineers CANNOT delete their own account
 # ═══════════════════════════════════════════════════════════════════════════
 
 
@@ -236,7 +237,8 @@ def delete_user(username):
     Delete user account (role-based permissions).
 
     Super Admin can delete System Admins and Service Engineers.
-    System Admin can delete Service Engineers only.
+    System Admin can delete Service Engineers AND their own account.
+    Service Engineer cannot delete accounts.
     Uses prepared statements and logs activity.
 
     Args:
@@ -263,9 +265,18 @@ def delete_user(username):
     if username.lower() == "super_admin":
         return False, "Cannot delete Super Administrator account"
 
-    # Cannot delete yourself
-    if username.lower() == current_user["username"].lower():
-        return False, "Cannot delete your own account"
+    # Check if trying to delete own account
+    is_self_deletion = username.lower() == current_user["username"].lower()
+
+    # Super Admin cannot delete their own account (hardcoded, only one exists)
+    # Service Engineer cannot delete their own account (safety measure)
+    # System Admin CAN delete their own account
+    if is_self_deletion:
+        if current_user["role"] == "super_admin":
+            return False, "Super Administrator cannot delete their own account"
+        elif current_user["role"] == "service_engineer":
+            return False, "Service Engineers cannot delete their own account"
+        # System Admin can proceed with self-deletion
 
     # Get target user info
     conn = get_connection()
