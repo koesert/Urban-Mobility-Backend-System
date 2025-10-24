@@ -403,20 +403,46 @@ def display_logs(logs, show_suspicious_only=False):
         print("No logs found.")
         return
 
+    # Column widths
+    col_widths = {
+        "no": 5,
+        "date": 12,
+        "time": 10,
+        "username": 15,
+        "activity": 30,
+        "additional_info": 55,
+        "suspicious": 10,
+    }
+
+    # Calculate total table width
+    total_width = sum(col_widths.values()) + (len(col_widths) - 1) * 3  # 3 for " | "
+
     # Header
-    print("\n" + "=" * 140)
+    print("\n" + "=" * total_width)
     print(
-        f"{'No.':<5} | {'Date':<12} | {'Time':<10} | {'Username':<15} | {'Activity':<25} | {'Additional Info':<30} | {'Suspicious':<10}"
+        f"{'No.':<{col_widths['no']}} | "
+        f"{'Date':<{col_widths['date']}} | "
+        f"{'Time':<{col_widths['time']}} | "
+        f"{'Username':<{col_widths['username']}} | "
+        f"{'Activity':<{col_widths['activity']}} | "
+        f"{'Additional Info':<{col_widths['additional_info']}} | "
+        f"{'Suspicious':<{col_widths['suspicious']}}"
     )
-    print("=" * 140)
+    print("=" * total_width)
 
     # Logs
     for log in logs:
         print(
-            f"{log['no']:<5} | {log['date']:<12} | {log['time']:<10} | {log['username']:<15} | {log['activity']:<25} | {log['additional_info']:<30} | {log['suspicious']:<10}"
+            f"{log['no']:<{col_widths['no']}} | "
+            f"{log['date']:<{col_widths['date']}} | "
+            f"{log['time']:<{col_widths['time']}} | "
+            f"{log['username']:<{col_widths['username']}} | "
+            f"{log['activity']:<{col_widths['activity']}} | "
+            f"{log['additional_info']:<{col_widths['additional_info']}} | "
+            f"{log['suspicious']:<{col_widths['suspicious']}}"
         )
 
-    print("=" * 140)
+    print("=" * total_width)
     print(f"Total logs: {len(logs)}")
 
     # Show suspicious count

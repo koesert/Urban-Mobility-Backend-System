@@ -825,7 +825,7 @@ def add_traveler_ui():
 
         # Mobile phone - validated
         mobile_phone = prompt_with_validation(
-            "Mobile phone (8 digits): ", validate_phone
+            "Mobile phone (8 digits): +31 6 ", validate_phone
         )
 
         # Driving license - validated

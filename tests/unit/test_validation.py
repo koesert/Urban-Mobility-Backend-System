@@ -621,3 +621,536 @@ class TestStateOfChargeValidation:
         """Test non-integer state of charge (like float)"""
         with pytest.raises(ValidationError, match="must be an integer"):
             validate_state_of_charge(50.5)
+
+
+# ============================================================================
+# Birthday Validation Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestBirthdayValidation:
+    """Test validate_birthday function"""
+
+    def test_valid_birthdays(self):
+        """Test valid birthday inputs"""
+        from validation import validate_birthday
+
+        assert validate_birthday("15-03-1995") == "15-03-1995"
+        assert validate_birthday("01-01-2000") == "01-01-2000"
+        assert validate_birthday("29-02-2000") == "29-02-2000"  # Leap year
+
+    def test_birthday_non_string(self):
+        """Test non-string birthday"""
+        from validation import validate_birthday
+
+        with pytest.raises(ValidationError, match="Birthday must be a string"):
+            validate_birthday(20001231)
+
+    def test_birthday_invalid_format(self):
+        """Test invalid birthday format"""
+        from validation import validate_birthday
+
+        with pytest.raises(ValidationError, match="Invalid birthday format"):
+            validate_birthday("1995-03-15")  # Wrong format
+        with pytest.raises(ValidationError, match="Invalid birthday format"):
+            validate_birthday("15/03/1995")  # Wrong separator
+
+    def test_birthday_invalid_date(self):
+        """Test invalid calendar date"""
+        from validation import validate_birthday
+
+        with pytest.raises(ValidationError, match="valid calendar date"):
+            validate_birthday("30-02-2000")  # Feb 30 doesn't exist
+        with pytest.raises(ValidationError, match="valid calendar date"):
+            validate_birthday("31-04-2000")  # April has 30 days
+
+    def test_birthday_future_date(self):
+        """Test future birthday"""
+        from validation import validate_birthday
+        from datetime import datetime, timedelta
+
+        future_date = datetime.now() + timedelta(days=365)
+        future_str = future_date.strftime("%d-%m-%Y")
+
+        with pytest.raises(ValidationError, match="cannot be in the future"):
+            validate_birthday(future_str)
+
+    def test_birthday_too_old(self):
+        """Test birthday more than 150 years ago"""
+        from validation import validate_birthday
+
+        with pytest.raises(ValidationError, match="150 years in the past"):
+            validate_birthday("01-01-1800")
+
+
+# ============================================================================
+# GPS Location Validation Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestGPSLocationValidation:
+    """Test validate_gps_location function"""
+
+    def test_valid_gps_locations(self):
+        """Test valid GPS coordinates"""
+        from validation import validate_gps_location
+
+        # Rotterdam Centraal
+        lat, lon = validate_gps_location(51.92481, 4.46910)
+        assert lat == 51.92481
+        assert lon == 4.46910
+
+        # Test string inputs
+        lat, lon = validate_gps_location("51.92481", "4.46910")
+        assert lat == 51.92481
+        assert lon == 4.46910
+
+        # Test edge cases
+        lat, lon = validate_gps_location(51.8000, 4.2500)
+        assert lat == 51.8
+        assert lon == 4.25
+
+    def test_gps_invalid_latitude(self):
+        """Test invalid latitude"""
+        from validation import validate_gps_location
+
+        with pytest.raises(ValidationError, match="Latitude must be within Rotterdam"):
+            validate_gps_location(51.7, 4.5)  # Too south
+        with pytest.raises(ValidationError, match="Latitude must be within Rotterdam"):
+            validate_gps_location(52.1, 4.5)  # Too north
+
+    def test_gps_invalid_longitude(self):
+        """Test invalid longitude"""
+        from validation import validate_gps_location
+
+        with pytest.raises(ValidationError, match="Longitude must be within Rotterdam"):
+            validate_gps_location(51.9, 4.2)  # Too west
+        with pytest.raises(ValidationError, match="Longitude must be within Rotterdam"):
+            validate_gps_location(51.9, 4.7)  # Too east
+
+    def test_gps_invalid_types(self):
+        """Test invalid coordinate types"""
+        from validation import validate_gps_location
+
+        with pytest.raises(ValidationError, match="must be valid numbers"):
+            validate_gps_location("invalid", "4.5")
+        with pytest.raises(ValidationError, match="must be numbers"):
+            validate_gps_location(None, 4.5)
+
+
+# ============================================================================
+# Brand Validation Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestBrandValidation:
+    """Test validate_brand function"""
+
+    def test_valid_brands(self):
+        """Test valid brand inputs"""
+        from validation import validate_brand
+
+        assert validate_brand("Segway") == "Segway"
+        assert validate_brand("NIU") == "NIU"
+        assert validate_brand("E-Rider") == "E-Rider"
+
+    def test_brand_non_string(self):
+        """Test non-string brand"""
+        from validation import validate_brand
+
+        with pytest.raises(ValidationError, match="Brand must be a string"):
+            validate_brand(12345)
+
+    def test_brand_too_short(self):
+        """Test brand too short"""
+        from validation import validate_brand
+
+        with pytest.raises(ValidationError, match="at least 2 characters"):
+            validate_brand("A")
+
+    def test_brand_too_long(self):
+        """Test brand too long"""
+        from validation import validate_brand
+
+        with pytest.raises(ValidationError, match="at most 50 characters"):
+            validate_brand("A" * 51)
+
+    def test_brand_invalid_chars(self):
+        """Test brand with invalid characters"""
+        from validation import validate_brand
+
+        with pytest.raises(ValidationError, match="can only contain"):
+            validate_brand("Brand@123")
+
+
+# ============================================================================
+# Model Validation Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestModelValidation:
+    """Test validate_model function"""
+
+    def test_valid_models(self):
+        """Test valid model inputs"""
+        from validation import validate_model
+
+        assert validate_model("ES2") == "ES2"
+        assert validate_model("Pro Max") == "Pro Max"
+        assert validate_model("X-100") == "X-100"
+
+    def test_model_non_string(self):
+        """Test non-string model"""
+        from validation import validate_model
+
+        with pytest.raises(ValidationError, match="Model must be a string"):
+            validate_model(12345)
+
+    def test_model_too_short(self):
+        """Test model too short"""
+        from validation import validate_model
+
+        with pytest.raises(ValidationError, match="at least 2 characters"):
+            validate_model("A")
+
+    def test_model_too_long(self):
+        """Test model too long"""
+        from validation import validate_model
+
+        with pytest.raises(ValidationError, match="at most 50 characters"):
+            validate_model("A" * 51)
+
+    def test_model_invalid_chars(self):
+        """Test model with invalid characters"""
+        from validation import validate_model
+
+        with pytest.raises(ValidationError, match="can only contain"):
+            validate_model("Model@#$")
+
+
+# ============================================================================
+# Top Speed Validation Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestTopSpeedValidation:
+    """Test validate_top_speed function"""
+
+    def test_valid_top_speeds(self):
+        """Test valid top speed inputs"""
+        from validation import validate_top_speed
+
+        assert validate_top_speed(25) == 25.0
+        assert validate_top_speed(45.5) == 45.5
+        assert validate_top_speed("30") == 30.0
+        assert validate_top_speed("45.5") == 45.5
+
+    def test_top_speed_negative(self):
+        """Test negative top speed"""
+        from validation import validate_top_speed
+
+        with pytest.raises(ValidationError, match="cannot be negative"):
+            validate_top_speed(-10)
+
+    def test_top_speed_too_high(self):
+        """Test top speed too high"""
+        from validation import validate_top_speed
+
+        with pytest.raises(ValidationError, match="cannot exceed 80"):
+            validate_top_speed(100)
+
+    def test_top_speed_invalid_string(self):
+        """Test invalid string top speed"""
+        from validation import validate_top_speed
+
+        with pytest.raises(ValidationError, match="must be a number"):
+            validate_top_speed("fast")
+
+    def test_top_speed_invalid_type(self):
+        """Test invalid type top speed"""
+        from validation import validate_top_speed
+
+        with pytest.raises(ValidationError, match="must be a number"):
+            validate_top_speed(None)
+
+
+# ============================================================================
+# Battery Capacity Validation Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestBatteryCapacityValidation:
+    """Test validate_battery_capacity function"""
+
+    def test_valid_battery_capacities(self):
+        """Test valid battery capacity inputs"""
+        from validation import validate_battery_capacity
+
+        assert validate_battery_capacity(500) == 500
+        assert validate_battery_capacity(750) == 750
+        assert validate_battery_capacity("1000") == 1000
+
+    def test_battery_capacity_negative(self):
+        """Test negative battery capacity"""
+        from validation import validate_battery_capacity
+
+        with pytest.raises(ValidationError, match="cannot be negative"):
+            validate_battery_capacity(-100)
+
+    def test_battery_capacity_too_high(self):
+        """Test battery capacity too high"""
+        from validation import validate_battery_capacity
+
+        with pytest.raises(ValidationError, match="cannot exceed 10000"):
+            validate_battery_capacity(15000)
+
+    def test_battery_capacity_invalid_string(self):
+        """Test invalid string battery capacity"""
+        from validation import validate_battery_capacity
+
+        with pytest.raises(ValidationError, match="must be a number"):
+            validate_battery_capacity("large")
+
+    def test_battery_capacity_invalid_type(self):
+        """Test invalid type battery capacity"""
+        from validation import validate_battery_capacity
+
+        with pytest.raises(ValidationError, match="must be an integer"):
+            validate_battery_capacity(500.5)
+
+
+# ============================================================================
+# Target Range SoC Validation Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestTargetRangeSOCValidation:
+    """Test validate_target_range_soc function"""
+
+    def test_valid_target_range_soc(self):
+        """Test valid target range SoC"""
+        from validation import validate_target_range_soc
+
+        min_soc, max_soc = validate_target_range_soc(20, 80)
+        assert min_soc == 20
+        assert max_soc == 80
+
+        # Test string inputs
+        min_soc, max_soc = validate_target_range_soc("20", "80")
+        assert min_soc == 20
+        assert max_soc == 80
+
+    def test_target_range_min_greater_than_max(self):
+        """Test min SoC greater than or equal to max SoC"""
+        from validation import validate_target_range_soc
+
+        with pytest.raises(ValidationError, match="must be less than"):
+            validate_target_range_soc(80, 20)
+        with pytest.raises(ValidationError, match="must be less than"):
+            validate_target_range_soc(50, 50)
+
+    def test_target_range_invalid_min(self):
+        """Test invalid min SoC"""
+        from validation import validate_target_range_soc
+
+        with pytest.raises(ValidationError, match="Minimum SoC"):
+            validate_target_range_soc(-10, 80)
+        with pytest.raises(ValidationError, match="Minimum SoC"):
+            validate_target_range_soc(110, 120)
+        with pytest.raises(ValidationError, match="must be a number"):
+            validate_target_range_soc("abc", 80)
+        with pytest.raises(ValidationError, match="must be an integer"):
+            validate_target_range_soc(20.5, 80)
+
+    def test_target_range_invalid_max(self):
+        """Test invalid max SoC"""
+        from validation import validate_target_range_soc
+
+        with pytest.raises(ValidationError, match="Maximum SoC"):
+            validate_target_range_soc(20, -10)
+        with pytest.raises(ValidationError, match="Maximum SoC"):
+            validate_target_range_soc(20, 110)
+        with pytest.raises(ValidationError, match="must be a number"):
+            validate_target_range_soc(20, "xyz")
+        with pytest.raises(ValidationError, match="must be an integer"):
+            validate_target_range_soc(20, 80.5)
+
+
+# ============================================================================
+# Out of Service Status Validation Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestOutOfServiceStatusValidation:
+    """Test validate_out_of_service_status function"""
+
+    def test_valid_out_of_service_statuses(self):
+        """Test valid out of service status inputs"""
+        from validation import validate_out_of_service_status
+
+        assert validate_out_of_service_status(True) is True
+        assert validate_out_of_service_status(False) is False
+        assert validate_out_of_service_status("Yes") is True
+        assert validate_out_of_service_status("yes") is True
+        assert validate_out_of_service_status("No") is False
+        assert validate_out_of_service_status("no") is False
+        assert validate_out_of_service_status("True") is True
+        assert validate_out_of_service_status("true") is True
+        assert validate_out_of_service_status("False") is False
+        assert validate_out_of_service_status("false") is False
+        assert validate_out_of_service_status("1") is True
+        assert validate_out_of_service_status("0") is False
+        assert validate_out_of_service_status(1) is True
+        assert validate_out_of_service_status(0) is False
+
+    def test_out_of_service_invalid_string(self):
+        """Test invalid string status"""
+        from validation import validate_out_of_service_status
+
+        with pytest.raises(ValidationError, match="Invalid out-of-service status"):
+            validate_out_of_service_status("maybe")
+
+    def test_out_of_service_invalid_int(self):
+        """Test invalid integer status"""
+        from validation import validate_out_of_service_status
+
+        with pytest.raises(ValidationError, match="Invalid out-of-service status"):
+            validate_out_of_service_status(2)
+
+    def test_out_of_service_invalid_type(self):
+        """Test invalid type status"""
+        from validation import validate_out_of_service_status
+
+        with pytest.raises(
+            ValidationError, match="must be boolean, string, or integer"
+        ):
+            validate_out_of_service_status(None)
+
+
+# ============================================================================
+# Mileage Validation Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestMileageValidation:
+    """Test validate_mileage function"""
+
+    def test_valid_mileages(self):
+        """Test valid mileage inputs"""
+        from validation import validate_mileage
+
+        assert validate_mileage(0) == 0.0
+        assert validate_mileage(1500) == 1500.0
+        assert validate_mileage(2500.5) == 2500.5
+        assert validate_mileage("3000") == 3000.0
+        assert validate_mileage("4500.5") == 4500.5
+
+    def test_mileage_negative(self):
+        """Test negative mileage"""
+        from validation import validate_mileage
+
+        with pytest.raises(ValidationError, match="cannot be negative"):
+            validate_mileage(-100)
+
+    def test_mileage_too_high(self):
+        """Test mileage too high"""
+        from validation import validate_mileage
+
+        with pytest.raises(ValidationError, match="cannot exceed 999999"):
+            validate_mileage(1000000)
+
+    def test_mileage_invalid_string(self):
+        """Test invalid string mileage"""
+        from validation import validate_mileage
+
+        with pytest.raises(ValidationError, match="must be a number"):
+            validate_mileage("many")
+
+    def test_mileage_invalid_type(self):
+        """Test invalid type mileage"""
+        from validation import validate_mileage
+
+        with pytest.raises(ValidationError, match="must be a number"):
+            validate_mileage(None)
+
+
+# ============================================================================
+# Null Byte Detection Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestNullByteDetection:
+    """Test null byte detection across all validation functions"""
+
+    def test_null_byte_in_username(self):
+        """Test null byte detection in username"""
+        with pytest.raises(ValidationError, match="null-byte"):
+            validate_username("user\0name")
+
+    def test_null_byte_in_password(self):
+        """Test null byte detection in password"""
+        from validation import validate_password
+
+        with pytest.raises(ValidationError, match="null-byte"):
+            validate_password("Pass\0word123!")
+
+    def test_null_byte_in_email(self):
+        """Test null byte detection in email"""
+        from validation import validate_email
+
+        with pytest.raises(ValidationError, match="null-byte"):
+            validate_email("user\0@example.com")
+
+    def test_null_byte_in_phone(self):
+        """Test null byte detection in phone"""
+        from validation import validate_phone
+
+        with pytest.raises(ValidationError):
+            validate_phone("123\x00456")
+
+    def test_null_byte_in_zipcode(self):
+        """Test null byte detection in zipcode"""
+        from validation import validate_zipcode
+
+        with pytest.raises(ValidationError, match="null-byte"):
+            validate_zipcode("3011\0AB")
+
+    def test_null_byte_in_name(self):
+        """Test null byte detection in name"""
+        from validation import validate_name
+
+        with pytest.raises(ValidationError, match="null-byte"):
+            validate_name("John\0Doe")
+
+    def test_null_byte_in_city(self):
+        """Test null byte detection in city"""
+        from validation import validate_city
+
+        with pytest.raises(ValidationError, match="null-byte"):
+            validate_city("Amster\0dam")
+
+    def test_null_byte_in_serial_number(self):
+        """Test null byte detection in serial number"""
+        from validation import validate_serial_number
+
+        with pytest.raises(ValidationError, match="null-byte"):
+            validate_serial_number("ABCDEFGH\x00IJ")
+
+    def test_null_byte_in_gps(self):
+        """Test null byte detection in GPS coordinates"""
+        from validation import validate_gps_location
+
+        with pytest.raises(ValidationError):
+            validate_gps_location("51.92\x0048", "4.469")
+        with pytest.raises(ValidationError):
+            validate_gps_location("51.9248", "4.4\x0069")
