@@ -329,7 +329,10 @@ class TestDeleteUser:
     @patch("users.get_current_user")
     def test_delete_user_service_engineer_cannot_delete_self(self, mock_get_user):
         """Test that Service Engineer cannot delete their own account"""
-        mock_get_user.return_value = {"username": "engineer1", "role": "service_engineer"}
+        mock_get_user.return_value = {
+            "username": "engineer1",
+            "role": "service_engineer",
+        }
 
         success, msg = delete_user("engineer1")
 
