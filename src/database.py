@@ -11,7 +11,7 @@
 # ═══════════════════════════════════════════════════════════════════════════
 
 import sqlite3
-import hashlib
+import bcrypt
 from pathlib import Path
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
@@ -208,50 +208,56 @@ def decrypt_field(encrypted_text):
 # ═══════════════════════════════════════════════════════════════════════════
 # SECTION 4: PASSWORD HASHING
 # ═══════════════════════════════════════════════════════════════════════════
-# Description: Secure password hashing with SHA-256 and salting
+# Description: Secure password hashing with bcrypt
 #
 # Key components:
-# - hash_password(): Hash password with username as salt (SHA-256)
-# - verify_password(): Verify password by comparing hashes
+# - hash_password(): Hash password using bcrypt with automatic salt generation
+# - verify_password(): Verify password against bcrypt hash
 #
-# Note: Username salt prevents rainbow table attacks and ensures unique hashes
+# Note: bcrypt includes random salt in the hash and uses adaptive cost factor
+#       to remain resistant to brute-force attacks as hardware improves
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def hash_password(password, username):
+def hash_password(password, username=None):
     """
-    Hash password with SHA-256 using username as salt.
+    Hash password using bcrypt with automatic salt generation.
 
-    Salting prevents rainbow table attacks and ensures identical passwords
-    produce different hashes for different users.
+    bcrypt is designed for password hashing with:
+    - Automatic random salt generation
+    - Adaptive cost factor
+    - Industry-standard security
 
     Args:
         password (str): Plain text password
-        username (str): Username (used as salt)
+        username (str): Unused, kept for API compatibility with existing code
 
     Returns:
-        str: SHA-256 hash as hexadecimal string
+        str: Bcrypt hash string
     """
-    salt = username.lower()
-    salted_password = password + salt
-    password_hash = hashlib.sha256(salted_password.encode()).hexdigest()
-    return password_hash
+    password_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt(rounds=12)  # Cost factor: 12
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
 
 
 def verify_password(password, username, stored_hash):
     """
-    Verify password by comparing hashes.
+    Verify password against bcrypt hash.
+
+    bcrypt automatically extracts the salt from the stored hash.
 
     Args:
         password (str): Plain text password to verify
-        username (str): Username (for salt)
-        stored_hash (str): Hash from database
+        username (str): Unused, kept for API compatibility with existing code
+        stored_hash (str): Bcrypt hash from database
 
     Returns:
         bool: True if password is correct
     """
-    input_hash = hash_password(password, username)
-    return input_hash == stored_hash
+    password_bytes = password.encode('utf-8')
+    stored_hash_bytes = stored_hash.encode('utf-8')
+    return bcrypt.checkpw(password_bytes, stored_hash_bytes)
 
 
 # ═══════════════════════════════════════════════════════════════════════════

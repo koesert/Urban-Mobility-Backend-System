@@ -212,7 +212,8 @@ class TestPasswordHashing:
         assert hashed is not None
         assert hashed != password
         assert isinstance(hashed, str)
-        assert len(hashed) == 64  # SHA-256 produces 64-char hex string
+        assert hashed.startswith('$2b$')  # bcrypt hash format
+        assert len(hashed) == 60  # bcrypt produces 60-char string
 
     def test_verify_password_correct(self):
         """Test verifying correct password"""
@@ -231,26 +232,19 @@ class TestPasswordHashing:
 
         assert verify_password(wrong_password, username, hashed) is False
 
-    def test_hash_password_different_usernames(self):
-        """Test that same password with different usernames produces different hashes"""
-        password = "TestPass123!"
-        user1 = "user1"
-        user2 = "user2"
-
-        hash1 = hash_password(password, user1)
-        hash2 = hash_password(password, user2)
-
-        assert hash1 != hash2
-
-    def test_hash_password_deterministic(self):
-        """Test that same password and username always produces same hash"""
+    def test_hash_password_non_deterministic(self):
+        """Test that bcrypt produces different hashes each time (random salt)"""
         password = "TestPass123!"
         username = "testuser"
 
         hash1 = hash_password(password, username)
         hash2 = hash_password(password, username)
 
-        assert hash1 == hash2
+        # bcrypt is non-deterministic (different random salt each time)
+        assert hash1 != hash2
+        # But both should verify correctly
+        assert verify_password(password, username, hash1) is True
+        assert verify_password(password, username, hash2) is True
 
     def test_verify_password_case_sensitive(self):
         """Test that password verification is case-sensitive"""
