@@ -189,8 +189,19 @@ logs/
 temp/
 *.log
 
+# Data folder (contains database, keys, logs, backups)
+src/data/
+src/backups/
+
 # Encryption keys (if any are generated)
 *.key
 *.pem
 
 *.json
+
+*.bin
+
+# Claude
+*.claude
+CLAUDE.md
+.github/
