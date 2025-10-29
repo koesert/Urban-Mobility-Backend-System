@@ -4,7 +4,13 @@
 # Description: All module imports for the Urban Mobility Backend System UI
 #
 # External libraries: os
-# Internal modules: auth, users, travelers, scooters, activity_log, backup, validation
+# Internal modules: auth, users, travelers, scooters, activity_log, backup, validation, input_handlers
+#
+# All validation functions are actively used throughout the UI for:
+# - Immediate user input validation with feedback loops
+# - Cross-field validation (e.g., GPS coordinates, target SoC min/max)
+# - Security protection (null-byte detection, format validation)
+# - Data integrity enforcement before database operations
 # ═══════════════════════════════════════════════════════════════════════════
 
 import os
@@ -70,11 +76,13 @@ from validation import (
     validate_out_of_service_status,
     validate_mileage,
     validate_date,
+    validate_city,
 )
 from input_handlers import (
     CancelInputException,
     prompt_with_validation,
     prompt_integer_with_validation,
+    prompt_password_with_confirmation,
     prompt_menu_choice,
     prompt_confirmation,
     prompt_optional_field,
@@ -927,34 +935,114 @@ def update_traveler_ui():
     print_header("UPDATE TRAVELER")
     print_user_info()
 
-    customer_id = input("\nEnter customer ID: ").strip()
+    try:
+        customer_id = input("\nEnter customer ID: ").strip()
 
-    # Check if traveler exists
-    traveler = get_traveler_by_id(customer_id)
-    if not traveler:
-        print(f"\nTraveler with ID '{customer_id}' not found.")
-        wait_for_enter()
-        return
+        # Check if traveler exists
+        traveler = get_traveler_by_id(customer_id)
+        if not traveler:
+            print(f"\nTraveler with ID '{customer_id}' not found.")
+            wait_for_enter()
+            return
 
-    print(
-        f"\nCurrent information for: {traveler['first_name']} {traveler['last_name']}"
-    )
-    print("Leave blank to keep current value.")
+        print(
+            f"\nCurrent information for: {traveler['first_name']} {traveler['last_name']}"
+        )
+        print(f"Customer ID: {traveler['customer_id']}")
+        print(f"Birthday: {traveler['birthday']} (cannot be changed)")
+        print(f"Gender: {traveler['gender']} (cannot be changed)")
+        print(
+            f"Address: {traveler['street_name']} {traveler['house_number']}, {traveler['zip_code']} {traveler['city']}"
+        )
+        print(f"Email: {traveler['email']}")
+        print(f"Phone: {traveler['mobile_phone']}")
+        print(f"License: {traveler['driving_license']}")
+        print(f"Registered: {traveler['registration_date']} (cannot be changed)")
 
-    email = input(f"New email [{traveler['email']}]: ").strip()
-    mobile_phone = input(f"New phone (8 digits) [{traveler['mobile_phone']}]: ").strip()
+        print("\n" + "=" * 70)
+        print("UPDATE TRAVELER INFORMATION")
+        print("=" * 70)
+        print("Leave any field blank to keep the current value.")
+        print("Type 'exit' or 'cancel' to abort the update.\n")
 
-    updates = {}
-    if email:
-        updates["email"] = email
-    if mobile_phone:
-        updates["mobile_phone"] = mobile_phone
+        # Personal Information (names can be updated for legal name changes)
+        print("--- Personal Information ---")
+        first_name = prompt_optional_field(
+            "New first name", lambda x: validate_name(x, "First name"), current_value=traveler['first_name']
+        )
+        last_name = prompt_optional_field(
+            "New last name", lambda x: validate_name(x, "Last name"), current_value=traveler['last_name']
+        )
 
-    if not updates:
-        print("\nNo changes made.")
-    else:
-        success, msg = update_traveler(customer_id, **updates)
-        print(f"\n{msg}")
+        # Address Information
+        print("\n--- Address Information ---")
+        street_name = prompt_optional_field(
+            "New street name", lambda x: validate_name(x, "Street name"), current_value=traveler['street_name']
+        )
+        house_number = prompt_optional_field(
+            "New house number", validate_house_number, current_value=traveler['house_number']
+        )
+        zip_code = prompt_optional_field(
+            "New zip code (1234AB format)", validate_zipcode, current_value=traveler['zip_code']
+        )
+        city = prompt_optional_field(
+            "New city", validate_city, current_value=traveler['city']
+        )
+
+        # Contact Information
+        print("\n--- Contact Information ---")
+        email = prompt_optional_field(
+            "New email", validate_email, current_value=traveler['email']
+        )
+        mobile_phone = prompt_optional_field(
+            "New phone (8 digits)", validate_phone, current_value=traveler['mobile_phone']
+        )
+
+        # Driving License Information
+        print("\n--- License Information ---")
+        driving_license = prompt_optional_field(
+            "New driving license (AB1234567 format)", validate_driving_license, current_value=traveler['driving_license']
+        )
+
+        # Build updates dictionary
+        updates = {}
+        if first_name:
+            updates["first_name"] = first_name
+        if last_name:
+            updates["last_name"] = last_name
+        if street_name:
+            updates["street_name"] = street_name
+        if house_number:
+            updates["house_number"] = house_number
+        if zip_code:
+            updates["zip_code"] = zip_code
+        if city:
+            updates["city"] = city
+        if email:
+            updates["email"] = email
+        if mobile_phone:
+            updates["mobile_phone"] = mobile_phone
+        if driving_license:
+            updates["driving_license"] = driving_license
+
+        if not updates:
+            print("\nNo changes made.")
+        else:
+            print("\n" + "=" * 70)
+            print("SUMMARY OF CHANGES")
+            print("=" * 70)
+            for key, value in updates.items():
+                print(f"  {key}: {value}")
+            print("=" * 70)
+
+            if prompt_confirmation("\nConfirm these changes? (yes/no): "):
+                success, msg = update_traveler(customer_id, **updates)
+                print(f"\n{msg}")
+            else:
+                print("\nUpdate cancelled.")
+
+    except CancelInputException:
+        print("\nUpdate cancelled.")
 
     wait_for_enter()
 
@@ -1063,44 +1151,51 @@ def add_scooter_ui():
         "Current State of Charge % (0-100): ", validate_state_of_charge
     )
 
-    # Target range SoC
+    # Target range SoC - with min < max validation
     print("\nTarget-range State of Charge (recommended battery operating range):")
-    target_range_soc_min = prompt_integer_with_validation(
-        "Minimum SoC % (e.g., 20): ", validate_state_of_charge
-    )
-    target_range_soc_max = prompt_integer_with_validation(
-        "Maximum SoC % (e.g., 80): ", validate_state_of_charge
-    )
+    while True:
+        target_range_soc_min = prompt_integer_with_validation(
+            "Minimum SoC % (e.g., 20): ", validate_state_of_charge
+        )
+        target_range_soc_max = prompt_integer_with_validation(
+            "Maximum SoC % (e.g., 80): ", validate_state_of_charge
+        )
+
+        # Validate that min < max
+        try:
+            target_range_soc_min, target_range_soc_max = validate_target_range_soc(
+                target_range_soc_min, target_range_soc_max
+            )
+            break  # Valid range, exit loop
+        except ValidationError as e:
+            print(f"❌ Error: {e}\n")
+            print("Please re-enter the target range values.\n")
 
     # GPS Location
     print("\nGPS Location (Rotterdam region):")
     print(
         "Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)"
     )
-    latitude = prompt_with_validation("Latitude (51.8-52.05): ", lambda x: float(x))
-    longitude = prompt_with_validation("Longitude (4.25-4.65): ", lambda x: float(x))
+    # Get latitude and longitude separately, then validate together
+    latitude_input = prompt_with_validation("Latitude (51.8-52.05): ", lambda x: float(x))
+    longitude_input = prompt_with_validation("Longitude (4.25-4.65): ", lambda x: float(x))
+
+    # Validate GPS coordinates are within Rotterdam region
+    latitude, longitude = validate_gps_location(latitude_input, longitude_input)
 
     # Out-of-service status - validated with menu choice
-    print("\nOut-of-service status:")
-    print("  1) In service (available)")
-    print("  2) Out of service (maintenance/unavailable)")
-
-    while True:
-        status_choice = input("Enter choice (1-2): ").strip()
-        if status_choice in ["1", "2"]:
-            out_of_service_status = status_choice == "2"
-            break
-        else:
-            print("❌ Error: Please enter 1 or 2\n")
+    status_choice = prompt_choice_from_list(
+        "Out-of-service status:", ["In service (available)", "Out of service (maintenance/unavailable)"]
+    )
+    out_of_service_status = status_choice == "Out of service (maintenance/unavailable)"
 
     # Mileage - validated
     mileage = prompt_with_validation("Mileage in km (0-999999): ", validate_mileage)
 
-    # Last maintenance date - optional
+    # Last maintenance date - optional, but validated if provided
     print("\nLast maintenance date (optional, press Enter to skip):")
-    last_maintenance_date_input = input("Date (YYYY-MM-DD): ").strip()
-    last_maintenance_date = (
-        last_maintenance_date_input if last_maintenance_date_input else None
+    last_maintenance_date = prompt_optional_field(
+        "Date (YYYY-MM-DD)", validate_date, allow_exit=False
     )
 
     # All fields validated - now add to database
@@ -1204,86 +1299,138 @@ def update_scooter_ui():
     print_header("UPDATE SCOOTER")
     print_user_info()
 
-    serial_number = input("\nEnter scooter serial number: ").strip()
+    try:
+        serial_number = input("\nEnter scooter serial number: ").strip()
 
-    # Get current scooter
-    scooter = get_scooter_by_serial(serial_number)
-    if not scooter:
-        print(f"\nScooter '{serial_number}' not found.")
-        wait_for_enter()
-        return
+        # Get current scooter
+        scooter = get_scooter_by_serial(serial_number)
+        if not scooter:
+            print(f"\nScooter '{serial_number}' not found.")
+            wait_for_enter()
+            return
 
-    print(f"\nCurrent information:")
-    print(f"Brand: {scooter.get('brand', 'N/A')}")
-    print(f"Model: {scooter.get('model', 'N/A')}")
-    print(f"Top Speed: {scooter.get('top_speed', 'N/A')} km/h")
-    print(f"Battery Capacity: {scooter.get('battery_capacity', 'N/A')} Wh")
-    print(f"State of Charge: {scooter.get('state_of_charge', 'N/A')}%")
-    print(
-        f"Target SoC Range: {scooter.get('target_range_soc_min', 'N/A')}-{scooter.get('target_range_soc_max', 'N/A')}%"
-    )
-    print(
-        f"Location: {scooter.get('latitude', 'N/A')}, {scooter.get('longitude', 'N/A')}"
-    )
-    print(f"Out of Service: {scooter.get('out_of_service_status', 'N/A')}")
-    print(f"Mileage: {scooter.get('mileage', 'N/A')} km")
-    print(f"Last Maintenance: {scooter.get('last_maintenance_date', 'N/A')}")
+        print(f"\nCurrent information for scooter: {scooter.get('serial_number')}")
+        print(f"Serial Number: {scooter.get('serial_number')} (cannot be changed)")
+        print(f"Brand: {scooter.get('brand', 'N/A')}")
+        print(f"Model: {scooter.get('model', 'N/A')}")
+        print(f"Top Speed: {scooter.get('top_speed', 'N/A')} km/h")
+        print(f"Battery Capacity: {scooter.get('battery_capacity', 'N/A')} Wh")
+        print(f"State of Charge: {scooter.get('state_of_charge', 'N/A')}%")
+        print(
+            f"Target SoC Range: {scooter.get('target_range_soc_min', 'N/A')}-{scooter.get('target_range_soc_max', 'N/A')}%"
+        )
+        print(
+            f"Location: {scooter.get('latitude', 'N/A')}, {scooter.get('longitude', 'N/A')}"
+        )
+        print(f"Out of Service: {'Yes' if scooter.get('out_of_service_status') else 'No'}")
+        print(f"Mileage: {scooter.get('mileage', 'N/A')} km")
+        print(f"Last Maintenance: {scooter.get('last_maintenance_date', 'N/A')}")
+        print(f"In Service Since: {scooter.get('in_service_date', 'N/A')} (cannot be changed)")
 
-    print("\nLeave blank to keep current value.")
+        print("\n" + "=" * 70)
+        print("UPDATE SCOOTER INFORMATION")
+        print("=" * 70)
+        print("Leave any field blank to keep the current value.")
+        print("Type 'exit' or 'cancel' to abort the update.\n")
 
-    brand = input("New brand: ").strip()
-    model = input("New model: ").strip()
-    top_speed = input("New top speed (km/h): ").strip()
-    battery_capacity = input("New battery capacity (Wh): ").strip()
-    state_of_charge = input("New state of charge (%): ").strip()
-    target_min = input("New target min SoC (%): ").strip()
-    target_max = input("New target max SoC (%): ").strip()
+        # Scooter Specifications
+        print("--- Scooter Specifications ---")
+        brand = prompt_optional_field("New brand", validate_brand, current_value=scooter.get('brand'))
+        model = prompt_optional_field("New model", validate_model, current_value=scooter.get('model'))
+        top_speed = prompt_optional_field("New top speed (km/h)", validate_top_speed, current_value=scooter.get('top_speed'))
+        battery_capacity = prompt_optional_field("New battery capacity (Wh)", validate_battery_capacity, current_value=scooter.get('battery_capacity'))
 
-    print("\nGPS Location (enter both or leave both blank):")
-    latitude = input("New latitude: ").strip()
-    longitude = input("New longitude: ").strip()
+        # Battery Status
+        print("\n--- Battery Status ---")
+        state_of_charge = prompt_optional_field("New state of charge (%)", validate_state_of_charge, current_value=scooter.get('state_of_charge'))
 
-    print("\nOut-of-service status: 1) In service  2) Out of service  (blank to keep)")
-    service_choice = input("Enter choice: ").strip()
+        print("\nTarget SoC Range (enter both values or skip both):")
+        target_min = prompt_optional_field("New target min SoC (%)", validate_state_of_charge, current_value=scooter.get('target_range_soc_min'))
+        target_max = prompt_optional_field("New target max SoC (%)", validate_state_of_charge, current_value=scooter.get('target_range_soc_max'))
 
-    mileage = input("\nNew mileage (km): ").strip()
-    last_maintenance = input("New last maintenance date (YYYY-MM-DD): ").strip()
+        # Validate target range if both provided
+        if target_min is not None and target_max is not None:
+            target_min, target_max = validate_target_range_soc(target_min, target_max)
+        elif target_min is not None or target_max is not None:
+            print("\n❌ Error: Both target min and max SoC must be provided together.")
+            wait_for_enter()
+            return
 
-    updates = {}
+        # GPS Location
+        print("\n--- GPS Location ---")
+        print("Rotterdam region - enter both coordinates or skip both")
+        print("Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)")
+        latitude = prompt_optional_field("New latitude (51.8-52.05)", lambda x: float(x), current_value=scooter.get('latitude'))
+        longitude = prompt_optional_field("New longitude (4.25-4.65)", lambda x: float(x), current_value=scooter.get('longitude'))
 
-    if brand:
-        updates["brand"] = brand
-    if model:
-        updates["model"] = model
-    if top_speed:
-        updates["top_speed"] = top_speed
-    if battery_capacity:
-        updates["battery_capacity"] = battery_capacity
-    if state_of_charge:
-        updates["state_of_charge"] = state_of_charge
-    if target_min:
-        updates["target_range_soc_min"] = target_min
-    if target_max:
-        updates["target_range_soc_max"] = target_max
-    if latitude and longitude:
-        updates["latitude"] = latitude
-        updates["longitude"] = longitude
-    elif latitude or longitude:
-        print("\n❌ Error: Both latitude and longitude must be provided together.")
-        wait_for_enter()
-        return
-    if service_choice in ["1", "2"]:
-        updates["out_of_service_status"] = service_choice == "2"
-    if mileage:
-        updates["mileage"] = mileage
-    if last_maintenance:
-        updates["last_maintenance_date"] = last_maintenance
+        # Validate GPS if both provided
+        if latitude is not None and longitude is not None:
+            latitude, longitude = validate_gps_location(latitude, longitude)
+        elif latitude is not None or longitude is not None:
+            print("\n❌ Error: Both latitude and longitude must be provided together.")
+            wait_for_enter()
+            return
 
-    if not updates:
-        print("\nNo changes made.")
-    else:
-        success, msg = update_scooter(serial_number, **updates)
-        print(f"\n{msg}")
+        # Service Status
+        print("\n--- Service Status ---")
+        print(f"Current status: {'Out of service' if scooter.get('out_of_service_status') else 'In service'}")
+        service_input = prompt_optional_field(
+            "New status (1/Yes=Out of service, 0/No=In service)",
+            lambda x: validate_out_of_service_status(x),
+            allow_exit=True
+        )
+        out_of_service_status = service_input if service_input is not None else None
+
+        # Maintenance Information
+        print("\n--- Maintenance Information ---")
+        mileage = prompt_optional_field("New mileage (km)", validate_mileage, current_value=scooter.get('mileage'))
+        last_maintenance = prompt_optional_field("New last maintenance date (YYYY-MM-DD)", validate_date, current_value=scooter.get('last_maintenance_date'))
+
+        # Build updates dictionary
+        updates = {}
+        if brand:
+            updates["brand"] = brand
+        if model:
+            updates["model"] = model
+        if top_speed is not None:
+            updates["top_speed"] = top_speed
+        if battery_capacity is not None:
+            updates["battery_capacity"] = battery_capacity
+        if state_of_charge is not None:
+            updates["state_of_charge"] = state_of_charge
+        if target_min is not None:
+            updates["target_range_soc_min"] = target_min
+        if target_max is not None:
+            updates["target_range_soc_max"] = target_max
+        if latitude is not None:
+            updates["latitude"] = latitude
+        if longitude is not None:
+            updates["longitude"] = longitude
+        if out_of_service_status is not None:
+            updates["out_of_service_status"] = out_of_service_status
+        if mileage is not None:
+            updates["mileage"] = mileage
+        if last_maintenance:
+            updates["last_maintenance_date"] = last_maintenance
+
+        if not updates:
+            print("\nNo changes made.")
+        else:
+            print("\n" + "=" * 70)
+            print("SUMMARY OF CHANGES")
+            print("=" * 70)
+            for key, value in updates.items():
+                print(f"  {key}: {value}")
+            print("=" * 70)
+
+            if prompt_confirmation("\nConfirm these changes? (yes/no): "):
+                success, msg = update_scooter(serial_number, **updates)
+                print(f"\n{msg}")
+            else:
+                print("\nUpdate cancelled.")
+
+    except CancelInputException:
+        print("\nUpdate cancelled.")
 
     wait_for_enter()
 
@@ -1294,80 +1441,125 @@ def update_scooter_engineer_ui():
     print_header("UPDATE SCOOTER (SERVICE ENGINEER)")
     print_user_info()
 
-    print(
-        "\nNote: You can update operational fields (battery, location, status, mileage, maintenance)."
-    )
-    print(
-        "You cannot modify scooter specifications (brand, model, top speed, battery capacity)."
-    )
+    try:
+        serial_number = input("\nEnter scooter serial number: ").strip()
 
-    serial_number = input("\nEnter scooter serial number: ").strip()
+        # Get current scooter
+        scooter = get_scooter_by_serial(serial_number)
+        if not scooter:
+            print(f"\nScooter '{serial_number}' not found.")
+            wait_for_enter()
+            return
 
-    # Get current scooter
-    scooter = get_scooter_by_serial(serial_number)
-    if not scooter:
-        print(f"\nScooter '{serial_number}' not found.")
-        wait_for_enter()
-        return
+        print(f"\nCurrent information for scooter: {scooter.get('serial_number')}")
+        print(f"Serial Number: {scooter.get('serial_number')} (cannot be changed)")
+        print(f"Brand: {scooter.get('brand', 'N/A')} (cannot be changed)")
+        print(f"Model: {scooter.get('model', 'N/A')} (cannot be changed)")
+        print(f"Top Speed: {scooter.get('top_speed', 'N/A')} km/h (cannot be changed)")
+        print(f"Battery Capacity: {scooter.get('battery_capacity', 'N/A')} Wh (cannot be changed)")
+        print(f"State of Charge: {scooter.get('state_of_charge', 'N/A')}%")
+        print(
+            f"Target SoC Range: {scooter.get('target_range_soc_min', 'N/A')}-{scooter.get('target_range_soc_max', 'N/A')}%"
+        )
+        print(
+            f"Location: {scooter.get('latitude', 'N/A')}, {scooter.get('longitude', 'N/A')}"
+        )
+        print(f"Out of Service: {'Yes' if scooter.get('out_of_service_status') else 'No'}")
+        print(f"Mileage: {scooter.get('mileage', 'N/A')} km")
+        print(f"Last Maintenance: {scooter.get('last_maintenance_date', 'N/A')}")
+        print(f"In Service Since: {scooter.get('in_service_date', 'N/A')} (cannot be changed)")
 
-    print(f"\nCurrent information:")
-    print(f"State of Charge: {scooter.get('state_of_charge', 'N/A')}%")
-    print(
-        f"Target SoC Range: {scooter.get('target_range_soc_min', 'N/A')}-{scooter.get('target_range_soc_max', 'N/A')}%"
-    )
-    print(
-        f"Location: {scooter.get('latitude', 'N/A')}, {scooter.get('longitude', 'N/A')}"
-    )
-    print(f"Out of Service: {scooter.get('out_of_service_status', 'N/A')}")
-    print(f"Mileage: {scooter.get('mileage', 'N/A')} km")
-    print(f"Last Maintenance: {scooter.get('last_maintenance_date', 'N/A')}")
+        print("\n" + "=" * 70)
+        print("UPDATE SCOOTER INFORMATION (SERVICE ENGINEER)")
+        print("=" * 70)
+        print("Note: You can update operational fields only.")
+        print("You cannot modify specifications (brand, model, top speed, battery capacity).")
+        print("\nLeave any field blank to keep the current value.")
+        print("Type 'exit' or 'cancel' to abort the update.\n")
 
-    print("\nLeave blank to keep current value.")
+        # Battery Status
+        print("--- Battery Status ---")
+        state_of_charge = prompt_optional_field("New state of charge (0-100%)", validate_state_of_charge, current_value=scooter.get('state_of_charge'))
 
-    state_of_charge = input("New state of charge (0-100%): ").strip()
-    target_min = input("New target min SoC (%): ").strip()
-    target_max = input("New target max SoC (%): ").strip()
+        print("\nTarget SoC Range (enter both values or skip both):")
+        target_min = prompt_optional_field("New target min SoC (%)", validate_state_of_charge, current_value=scooter.get('target_range_soc_min'))
+        target_max = prompt_optional_field("New target max SoC (%)", validate_state_of_charge, current_value=scooter.get('target_range_soc_max'))
 
-    print("\nGPS Location (Rotterdam region - enter both or leave both blank):")
-    print(
-        "Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)"
-    )
-    latitude = input("New latitude: ").strip()
-    longitude = input("New longitude: ").strip()
+        # Validate target range if both provided
+        if target_min is not None and target_max is not None:
+            target_min, target_max = validate_target_range_soc(target_min, target_max)
+        elif target_min is not None or target_max is not None:
+            print("\n❌ Error: Both target min and max SoC must be provided together.")
+            wait_for_enter()
+            return
 
-    print("\nOut-of-service status: 1) In service  2) Out of service  (blank to keep)")
-    service_choice = input("Enter choice: ").strip()
+        # GPS Location
+        print("\n--- GPS Location ---")
+        print("Rotterdam region - enter both coordinates or skip both")
+        print("Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)")
+        latitude = prompt_optional_field("New latitude (51.8-52.05)", lambda x: float(x), current_value=scooter.get('latitude'))
+        longitude = prompt_optional_field("New longitude (4.25-4.65)", lambda x: float(x), current_value=scooter.get('longitude'))
 
-    mileage = input("\nNew mileage (km): ").strip()
-    last_maintenance = input("New last maintenance date (YYYY-MM-DD): ").strip()
+        # Validate GPS if both provided
+        if latitude is not None and longitude is not None:
+            latitude, longitude = validate_gps_location(latitude, longitude)
+        elif latitude is not None or longitude is not None:
+            print("\n❌ Error: Both latitude and longitude must be provided together.")
+            wait_for_enter()
+            return
 
-    updates = {}
+        # Service Status
+        print("\n--- Service Status ---")
+        print(f"Current status: {'Out of service' if scooter.get('out_of_service_status') else 'In service'}")
+        service_input = prompt_optional_field(
+            "New status (1/Yes=Out of service, 0/No=In service)",
+            lambda x: validate_out_of_service_status(x),
+            allow_exit=True
+        )
+        out_of_service_status = service_input if service_input is not None else None
 
-    if state_of_charge:
-        updates["state_of_charge"] = state_of_charge
-    if target_min:
-        updates["target_range_soc_min"] = target_min
-    if target_max:
-        updates["target_range_soc_max"] = target_max
-    if latitude and longitude:
-        updates["latitude"] = latitude
-        updates["longitude"] = longitude
-    elif latitude or longitude:
-        print("\n❌ Error: Both latitude and longitude must be provided together.")
-        wait_for_enter()
-        return
-    if service_choice in ["1", "2"]:
-        updates["out_of_service_status"] = service_choice == "2"
-    if mileage:
-        updates["mileage"] = mileage
-    if last_maintenance:
-        updates["last_maintenance_date"] = last_maintenance
+        # Maintenance Information
+        print("\n--- Maintenance Information ---")
+        mileage = prompt_optional_field("New mileage (km)", validate_mileage, current_value=scooter.get('mileage'))
+        last_maintenance = prompt_optional_field("New last maintenance date (YYYY-MM-DD)", validate_date, current_value=scooter.get('last_maintenance_date'))
 
-    if not updates:
-        print("\nNo changes made.")
-    else:
-        success, msg = update_scooter(serial_number, **updates)
-        print(f"\n{msg}")
+        # Build updates dictionary
+        updates = {}
+        if state_of_charge is not None:
+            updates["state_of_charge"] = state_of_charge
+        if target_min is not None:
+            updates["target_range_soc_min"] = target_min
+        if target_max is not None:
+            updates["target_range_soc_max"] = target_max
+        if latitude is not None:
+            updates["latitude"] = latitude
+        if longitude is not None:
+            updates["longitude"] = longitude
+        if out_of_service_status is not None:
+            updates["out_of_service_status"] = out_of_service_status
+        if mileage is not None:
+            updates["mileage"] = mileage
+        if last_maintenance:
+            updates["last_maintenance_date"] = last_maintenance
+
+        if not updates:
+            print("\nNo changes made.")
+        else:
+            print("\n" + "=" * 70)
+            print("SUMMARY OF CHANGES")
+            print("=" * 70)
+            for key, value in updates.items():
+                print(f"  {key}: {value}")
+            print("=" * 70)
+
+            if prompt_confirmation("\nConfirm these changes? (yes/no): "):
+                success, msg = update_scooter(serial_number, **updates)
+                print(f"\n{msg}")
+            else:
+                print("\nUpdate cancelled.")
+
+    except CancelInputException:
+        print("\nUpdate cancelled.")
 
     wait_for_enter()
 
@@ -1378,46 +1570,44 @@ def delete_scooter_ui():
     print_header("DELETE SCOOTER")
     print_user_info()
 
-    serial_number = input("\nEnter scooter serial number to delete: ").strip()
+    try:
+        # Validate serial number format before lookup
+        serial_number = prompt_with_validation(
+            "\nEnter scooter serial number to delete: ", validate_serial_number
+        )
 
-    if not serial_number:
-        print("\n❌ Serial number cannot be empty.")
-        wait_for_enter()
-        return
+        # Check if scooter exists
+        scooter = get_scooter_by_serial(serial_number)
 
-    # First check if scooter exists
-    scooter = get_scooter_by_serial(serial_number)
+        if not scooter:
+            print(f"\n❌ Scooter with serial number '{serial_number}' not found.")
+            wait_for_enter()
+            return
 
-    if not scooter:
-        print(f"\n❌ Scooter with serial number '{serial_number}' not found.")
-        wait_for_enter()
-        return
+        # Show scooter information
+        print(f"\n✓ Scooter found:")
+        print(f"  Serial Number: {scooter['serial_number']}")
+        print(f"  Brand: {scooter['brand']}")
+        print(f"  Model: {scooter['model']}")
+        print(f"  Top Speed: {scooter['top_speed']} km/h")
+        print(f"  State of Charge: {scooter['state_of_charge']}%")
+        print(f"  Location: {scooter['latitude']}, {scooter['longitude']}")
+        print(f"  Out of Service: {'Yes' if scooter['out_of_service_status'] else 'No'}")
+        print(f"  Mileage: {scooter['mileage']} km")
+        print(f"  Last Maintenance: {scooter['last_maintenance_date'] or 'Never'}")
+        print(f"  In Service Since: {scooter['in_service_date']}")
 
-    # Show scooter information
-    print(f"\n✓ Scooter found:")
-    print(f"  Serial Number: {scooter['serial_number']}")
-    print(f"  Brand: {scooter['brand']}")
-    print(f"  Model: {scooter['model']}")
-    print(f"  Top Speed: {scooter['top_speed']} km/h")
-    print(f"  State of Charge: {scooter['state_of_charge']}%")
-    print(f"  Location: {scooter['latitude']}, {scooter['longitude']}")
-    print(f"  Out of Service: {'Yes' if scooter['out_of_service_status'] else 'No'}")
-    print(f"  Mileage: {scooter['mileage']} km")
-    print(f"  Last Maintenance: {scooter['last_maintenance_date'] or 'Never'}")
-    print(f"  In Service Since: {scooter['in_service_date']}")
+        # Ask for confirmation
+        if prompt_confirmation(
+            f"\n⚠️  Are you sure you want to delete this scooter? (yes/no): "
+        ):
+            success, msg = delete_scooter(serial_number)
+            print(f"\n{msg}")
+        else:
+            print("\nDeletion cancelled.")
 
-    # Now ask for confirmation
-    confirm = (
-        input(f"\n⚠️  Are you sure you want to delete this scooter? (yes/no): ")
-        .strip()
-        .lower()
-    )
-
-    if confirm == "yes":
-        success, msg = delete_scooter(serial_number)
-        print(f"\n{msg}")
-    else:
-        print("\nDeletion cancelled.")
+    except CancelInputException:
+        print("\nOperation cancelled.")
 
     wait_for_enter()
 
@@ -1692,36 +1882,37 @@ def generate_restore_code_ui():
     print_header("GENERATE RESTORE CODE")
     print_user_info()
 
-    backups = list_backups()
-
-    if not backups:
-        print("\nNo backups found.")
-        wait_for_enter()
-        return
-
-    print("\nAvailable backups:")
-    for i, b in enumerate(backups, 1):
-        print(f"{i}. {b['filename']}")
-
-    choice = input(f"\nEnter backup number (1-{len(backups)}): ").strip()
-
     try:
+        backups = list_backups()
+
+        if not backups:
+            print("\nNo backups found.")
+            wait_for_enter()
+            return
+
+        print("\nAvailable backups:")
+        for i, b in enumerate(backups, 1):
+            print(f"{i}. {b['filename']}")
+
+        choice = prompt_menu_choice(f"\nEnter backup number (1-{len(backups)}): ", 1, len(backups))
         backup_idx = int(choice) - 1
         backup_filename = backups[backup_idx]["filename"]
-    except (ValueError, IndexError):
-        print("\nInvalid choice.")
-        wait_for_enter()
-        return
 
-    target_username = input("Enter System Admin username: ").strip()
+        # Validate username format
+        target_username = prompt_with_validation(
+            "Enter System Admin username: ", validate_username
+        )
 
-    success, msg, code = generate_restore_code(backup_filename, target_username)
+        success, msg, code = generate_restore_code(backup_filename, target_username)
 
-    print(f"\n{msg}")
-    if success:
-        print(f"\n✓ Restore code: {code}")
-        print(f"  Valid for: {target_username}")
-        print(f"  Backup: {backup_filename}")
+        print(f"\n{msg}")
+        if success:
+            print(f"\n✓ Restore code: {code}")
+            print(f"  Valid for: {target_username}")
+            print(f"  Backup: {backup_filename}")
+
+    except CancelInputException:
+        print("\nOperation cancelled.")
 
     wait_for_enter()
 
@@ -1918,24 +2109,13 @@ def update_my_password_ui():
         wait_for_enter()
         return
 
-    # Step 2: Get new password with immediate validation
+    # Step 2: Get new password with validation and confirmation
     print("\n✓ Current password verified.")
-    new_password = prompt_with_validation("Enter new password: ", validate_password)
+    new_password = prompt_password_with_confirmation(
+        "Enter new password: ", validate_password, current_password=current_password
+    )
 
-    # Step 3: Confirm new password
-    confirm_password = input("Confirm new password: ").strip()
-
-    if not confirm_password:
-        print("\n❌ Confirmation password cannot be empty.")
-        wait_for_enter()
-        return
-
-    if new_password != confirm_password:
-        print("\n❌ Passwords do not match.")
-        wait_for_enter()
-        return
-
-    # Step 4: Update password
+    # Step 3: Update password
     success, msg = update_password(current_password, new_password)
 
     print(f"\n{msg}")
@@ -1963,81 +2143,59 @@ def force_password_change_ui():
     print("  - At least 1 digit")
     print("  - At least 1 special character (~!@#$%&_-+=|\\(){}[]:;'<>,.?/)")
 
-    max_attempts = 3
-    for attempt in range(max_attempts):
-        new_password = prompt_with_validation("Enter new password: ", validate_password)
+    # Get new password with validation and confirmation
+    try:
+        new_password = prompt_password_with_confirmation(
+            "Enter new password: ", validate_password
+        )
+    except CancelInputException:
+        print("\n⚠️  Password change cancelled. You will be logged out.")
+        logout()
+        wait_for_enter()
+        return
 
-        # Confirm new password
-        confirm_password = input("Confirm new password: ").strip()
+    # Update password (no current password needed - user just logged in)
+    user = get_current_user()
+    from database import get_connection
+    from auth import hash_password
 
-        if not confirm_password:
-            print("\n❌ Confirmation password cannot be empty.")
-            if attempt < max_attempts - 1:
-                print(f"Try again ({max_attempts - attempt - 1} attempts remaining)\n")
-                continue
-            else:
-                print("⚠️  Maximum attempts reached. You will be logged out.")
-                logout()
-                wait_for_enter()
-                return
-
-        if new_password != confirm_password:
-            print("\n❌ Passwords do not match.")
-            if attempt < max_attempts - 1:
-                print(f"Try again ({max_attempts - attempt - 1} attempts remaining)\n")
-                continue
-            else:
-                print("⚠️  Maximum attempts reached. You will be logged out.")
-                logout()
-                wait_for_enter()
-                return
-
-        # Update password (no current password needed - user just logged in)
-        user = get_current_user()
-        from database import get_connection
-        from auth import hash_password
-
-        try:
-            if not user:
-                print("\n❌ Error: No user logged in.")
-                return
-
-            conn = get_connection()
-            cursor = conn.cursor()
-
-            # Hash the new password
-            new_hash = hash_password(new_password, user["username"])
-
-            # Update password and reset must_change_password flag
-            cursor.execute(
-                """
-                UPDATE users
-                SET password_hash = ?, must_change_password = 0
-                WHERE id = ?
-            """,
-                (new_hash, user["user_id"]),
-            )
-
-            conn.commit()
-            conn.close()
-
-            # Update session state
-            user["must_change_password"] = False
-
-            print("\n✓ Password changed successfully!")
-            print("✓ You can now use the system.")
-            wait_for_enter()
+    try:
+        if not user:
+            print("\n❌ Error: No user logged in.")
             return
 
-        except Exception as e:
-            print(f"\n❌ Error updating password: {e}")
-            if attempt < max_attempts - 1:
-                print(f"Try again ({max_attempts - attempt - 1} attempts remaining)\n")
-            else:
-                print("⚠️  Maximum attempts reached. You will be logged out.")
-                logout()
-                wait_for_enter()
-                return
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # Hash the new password
+        new_hash = hash_password(new_password, user["username"])
+
+        # Update password and reset must_change_password flag
+        cursor.execute(
+            """
+            UPDATE users
+            SET password_hash = ?, must_change_password = 0
+            WHERE id = ?
+        """,
+            (new_hash, user["user_id"]),
+        )
+
+        conn.commit()
+        conn.close()
+
+        # Update session state
+        user["must_change_password"] = False
+
+        print("\n✓ Password changed successfully!")
+        print("✓ You can now use the system.")
+        wait_for_enter()
+        return
+
+    except Exception as e:
+        print(f"\n❌ Error updating password: {e}")
+        logout()
+        wait_for_enter()
+        return
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -2070,7 +2228,15 @@ def login_screen():
     print("  Password: Admin_123?")
     print("=" * 70)
 
-    username = input("\nUsername: ").strip()
+    # Validate username format to prevent injection attacks
+    try:
+        username = prompt_with_validation("\nUsername: ", validate_username, allow_exit=False)
+    except ValidationError as e:
+        print(f"\n❌ Invalid username format: {e}")
+        wait_for_enter()
+        return False
+
+    # Password can be any string - validation happens in login()
     password = input("Password: ").strip()
 
     success, message = login(username, password)

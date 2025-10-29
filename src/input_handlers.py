@@ -116,6 +116,74 @@ def prompt_integer_with_validation(prompt_text, validator_func, allow_exit=True)
             print(f"❌ Error: Please enter a valid number\n")
 
 
+def prompt_password_with_confirmation(
+    prompt_text, validator_func, current_password=None, allow_exit=True
+):
+    """
+    Prompt user for password with validation and confirmation.
+
+    Handles the complete password entry flow:
+    1. Prompts for password with validation
+    2. Checks if different from current password (if provided)
+    3. Prompts for confirmation
+    4. Validates confirmation matches
+    5. Retries on any error
+
+    Args:
+        prompt_text (str): Text to show for password prompt (e.g., "Enter new password: ")
+        validator_func (callable): Validation function for password format
+        current_password (str, optional): Current password to compare against
+        allow_exit (bool): If True, user can type 'exit' or 'cancel' to abort
+
+    Returns:
+        str: Validated and confirmed password
+
+    Raises:
+        CancelInputException: If user types 'exit' or 'cancel' and allow_exit=True
+
+    Example:
+        try:
+            new_pwd = prompt_password_with_confirmation(
+                "Enter new password: ",
+                validate_password,
+                current_password="old_password"
+            )
+        except CancelInputException:
+            print("Password change cancelled")
+            return
+    """
+    while True:
+        # Step 1: Get password with validation
+        password = prompt_with_validation(prompt_text, validator_func, allow_exit)
+
+        # Step 2: Check if different from current password (if provided)
+        if current_password is not None and password == current_password:
+            print("\n❌ New password must be different from current password.")
+            print("Please try again.\n")
+            continue
+
+        # Step 3: Get confirmation
+        confirm = input("Confirm password: ").strip()
+
+        # Check for exit/cancel
+        if allow_exit and confirm.lower() in ["exit", "cancel"]:
+            raise CancelInputException("User cancelled input")
+
+        # Step 4: Validate confirmation
+        if not confirm:
+            print("\n❌ Confirmation password cannot be empty.")
+            print("Please try again.\n")
+            continue
+
+        if password != confirm:
+            print("\n❌ Passwords do not match.")
+            print("Please try again.\n")
+            continue
+
+        # All validations passed
+        return password
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # SECTION 3: MENU & CHOICE PROMPTS
 # ═══════════════════════════════════════════════════════════════════════════
