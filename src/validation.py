@@ -74,6 +74,8 @@ def _check_null_bytes(value, field_name):
 # ═══════════════════════════════════════════════════════════════════════════
 
 
+#check length of input. topspeed is max length 3
+
 def validate_username(username):
     """
     Validate username format.
@@ -99,8 +101,10 @@ def validate_username(username):
     _check_null_bytes(username, "Username")
     username = username.strip()
 
+    # alleen tijdens registreren helpen met vereisten zoals password length etc. niet tijdens login. help de hacker niet met info
+
     # Special case: allow "super_admin" system account (bypasses length rule)
-    if username.lower() == "super_admin":
+    if username.lower() == "super_admin": # cant use lower!!
         if not re.match(r"^[a-zA-Z_]", username):  # pragma: no cover
             raise ValidationError("Username must start with a letter or underscore")
         if not re.match(r"^[a-zA-Z0-9_'.]+$", username):  # pragma: no cover
@@ -116,7 +120,7 @@ def validate_username(username):
         )
     if len(username) > 10:
         raise ValidationError(
-            "Username must be at most 10 characters long. Expected: 8-10 characters (e.g., john_doe)"
+            "Username must be at most 10 characters long. Expected: 8-10 characters (e.g., john_doe)" # niet erbij vermelden wat er fout is
         )
 
     if not re.match(r"^[a-zA-Z_]", username):
@@ -313,15 +317,18 @@ def validate_zipcode(zipcode):
         ValidationError: If zipcode is invalid
     """
     if not isinstance(zipcode, str):
-        raise ValidationError("Zipcode must be a string")
+        raise ValidationError("Zipcode must be a string") # dit mag niet. 
 
     _check_null_bytes(zipcode, "Zipcode")
-    zipcode = zipcode.replace(" ", "").upper()
+    zipcode = zipcode.replace(" ", "").upper() # dit mag niet
 
     if not re.match(r"^\d{4}[A-Z]{2}$", zipcode):
         raise ValidationError(
             "Invalid zipcode format. Expected: DDDDXX (4 digits + 2 letters, e.g., 3011AB)"
-        )
+        ) # DIT IS BLACKLISTING
+    # RETURN TRUE OR FALSE
+    #DENIED BY DEFAULT
+    
 
     return zipcode
 
@@ -934,7 +941,7 @@ def validate_top_speed(speed):
         ValidationError: If speed is invalid
     """
     # Convert string to float if needed
-    if isinstance(speed, str):
+    if isinstance(speed, str): 
         try:
             speed = float(speed.strip())
         except ValueError:
@@ -942,7 +949,7 @@ def validate_top_speed(speed):
                 "Top speed must be a number. Expected: 0-80 km/h (e.g., 25, 45.5)"
             )
 
-    if not isinstance(speed, (int, float)):
+    if not isinstance(speed, (int, float)): #numeric value
         raise ValidationError(
             "Top speed must be a number. Expected: 0-80 km/h (e.g., 25, 45.5)"
         )
