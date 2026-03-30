@@ -80,17 +80,6 @@ def login(username, password):
     Returns:
         tuple: (success: bool, message: str)
     """
-    try:
-        username = validate_username(username)
-    except ValidationError as e:
-        log_activity(
-            "unknown",
-            "Unsuccessful login",
-            f"Invalid username format: {username}",
-            suspicious=True,
-        )
-        return False, f"Invalid username: {e}"
-
     conn = get_connection()
     cursor = conn.cursor()
 

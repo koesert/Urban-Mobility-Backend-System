@@ -97,39 +97,38 @@ def validate_username(username):
         raise ValidationError("Username must be a string")
 
     _check_null_bytes(username, "Username")
-    username = username.strip()
 
     # Special case: allow "super_admin" system account (bypasses length rule)
-    if username.lower() == "super_admin":
-        if not re.match(r"^[a-zA-Z_]", username):  # pragma: no cover
-            raise ValidationError("Username must start with a letter or underscore")
-        if not re.match(r"^[a-zA-Z0-9_'.]+$", username):  # pragma: no cover
+    if username == "super_admin":
+        if not re.match(r"^[a-z_]", username):  # pragma: no cover
+            raise ValidationError("Username must start with a lowercase letter or underscore")
+        if not re.match(r"^[a-z0-9_'.]+$", username):  # pragma: no cover
             raise ValidationError(
-                "Username can only contain letters, digits, underscore, apostrophe, and period"
+                "Username can only contain lowercase letters, digits, underscore, apostrophe, and period"
             )
-        return username.lower()
+        return username
 
     # Validate length for regular users
     if len(username) < 8:
         raise ValidationError(
-            "Username must be at least 8 characters long. Expected: 8-10 characters (e.g., john_doe)"
+            "Username must be at least 8 characters long"
         )
     if len(username) > 10:
         raise ValidationError(
-            "Username must be at most 10 characters long. Expected: 8-10 characters (e.g., john_doe)"
+            "Username must be at most 10 characters long"
         )
 
-    if not re.match(r"^[a-zA-Z_]", username):
+    if not re.match(r"^[a-z_]", username):
         raise ValidationError(
-            "Username must start with a letter or underscore. Expected: starts with letter or _ (e.g., john_doe, _username)"
+            "Username must start with a lowercase letter or underscore"
         )
 
-    if not re.match(r"^[a-zA-Z0-9_'.]+$", username):
+    if not re.match(r"^[a-z0-9_'.]+$", username):
         raise ValidationError(
-            "Username can only contain letters, digits, underscore, apostrophe, and period. Expected: alphanumeric plus _'. (e.g., john_doe, user.123)"
+            "Username can only contain lowercase letters, digits, underscore, apostrophe, and period"
         )
 
-    return username.lower()
+    return username
 
 
 def validate_password(password):
@@ -157,31 +156,31 @@ def validate_password(password):
 
     if len(password) < 12:
         raise ValidationError(
-            "Password must be at least 12 characters long. Expected: 12-30 characters (e.g., MySecure@Pass123)"
+            "Password must be at least 12 characters long"
         )
     if len(password) > 30:
         raise ValidationError(
-            "Password must be at most 30 characters long. Expected: 12-30 characters (e.g., MySecure@Pass123)"
+            "Password must be at most 30 characters long"
         )
 
     if not re.search(r"[a-z]", password):
         raise ValidationError(
-            "Password must contain at least 1 lowercase letter. Expected: includes a-z, A-Z, 0-9, special chars (e.g., MySecure@Pass123)"
+            "Password must contain at least 1 lowercase letter"
         )
 
     if not re.search(r"[A-Z]", password):
         raise ValidationError(
-            "Password must contain at least 1 uppercase letter. Expected: includes a-z, A-Z, 0-9, special chars (e.g., MySecure@Pass123)"
+            "Password must contain at least 1 uppercase letter"
         )
 
     if not re.search(r"\d", password):
         raise ValidationError(
-            "Password must contain at least 1 digit. Expected: includes a-z, A-Z, 0-9, special chars (e.g., MySecure@Pass123)"
+            "Password must contain at least 1 digit"
         )
 
     if not re.search(r"[~!@#$%&_\-+=`|\\(){}[\]:;'<>,.?/]", password):
         raise ValidationError(
-            r"Password must contain at least 1 special character. Expected: includes ~!@#$%&_-+=`|\(){}[]:;'<>,.?/ (e.g., MySecure@Pass123)"
+            "Password must contain at least 1 special character"
         )
 
     return password
@@ -222,21 +221,20 @@ def validate_email(email):
         raise ValidationError("Email must be a string")
 
     _check_null_bytes(email, "Email")
-    email = email.strip()
 
     if len(email) > 50:
         raise ValidationError(
-            "Email cannot be longer than 50 characters. Expected: max 50 chars (e.g., user@example.com)"
+            "Email cannot be longer than 50 characters"
         )
 
-    email_pattern = r"^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    email_pattern = r"^[a-z0-9._+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
 
     if not re.match(email_pattern, email):
         raise ValidationError(
-            "Invalid email format. Expected: user@domain.tld (e.g., john.doe@example.com)"
+            "Invalid email format"
         )
 
-    return email.lower()
+    return email
 
 
 def validate_phone(phone):
@@ -263,21 +261,17 @@ def validate_phone(phone):
 
     _check_null_bytes(phone, "Phone")
 
-    # Remove all formatting characters
-    phone_clean = phone.replace(" ", "").replace("-", "").replace("+", "")
-
-    # Check if already formatted (+31-6-DDDDDDDD format)
-    if phone_clean.startswith("316") and len(phone_clean) == 11:
-        # Extract last 8 digits
-        phone_clean = phone_clean[3:]
+    # Accept already-formatted value (e.g. after a previous validate_phone call)
+    if re.match(r"^\+31-6-\d{8}$", phone):
+        return phone
 
     # Validate: must be exactly 8 digits
-    if not re.match(r"^\d{8}$", phone_clean):
+    if not re.match(r"^\d{8}$", phone):
         raise ValidationError(
-            "Phone number must be exactly 8 digits. Expected: 8 digits (e.g., 12345678)"
+            "Phone number must be exactly 8 digits"
         )
 
-    return f"+31-6-{phone_clean}"
+    return f"+31-6-{phone}"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -316,11 +310,10 @@ def validate_zipcode(zipcode):
         raise ValidationError("Zipcode must be a string")
 
     _check_null_bytes(zipcode, "Zipcode")
-    zipcode = zipcode.replace(" ", "").upper()
 
     if not re.match(r"^\d{4}[A-Z]{2}$", zipcode):
         raise ValidationError(
-            "Invalid zipcode format. Expected: DDDDXX (4 digits + 2 letters, e.g., 3011AB)"
+            "Invalid zipcode format"
         )
 
     return zipcode
@@ -350,26 +343,25 @@ def validate_house_number(house_number):
         raise ValidationError("House number must be a string")
 
     _check_null_bytes(house_number, "House number")
-    house_number = house_number.strip()
 
     if not house_number:
         raise ValidationError(
-            "House number cannot be empty. Expected: max 6 chars, starts with digit (e.g., 42, 42A)"
+            "House number cannot be empty"
         )
 
     if len(house_number) > 6:
         raise ValidationError(
-            "House number cannot be longer than 6 characters. Expected: max 6 chars (e.g., 42, 42A, 42-1)"
+            "House number cannot be longer than 6 characters"
         )
 
     if not re.match(r"^\d", house_number):
         raise ValidationError(
-            "House number must start with a digit. Expected: starts with digit (e.g., 42A, 123-B)"
+            "House number must start with a digit"
         )
 
     if not re.match(r"^[\d\w\-]+$", house_number):
         raise ValidationError(
-            "House number contains invalid characters. Expected: digits, letters, hyphens (e.g., 42, 42A, 42-1)"
+            "House number contains invalid characters"
         )
 
     return house_number
@@ -410,7 +402,6 @@ def validate_city(city):
         raise ValidationError("City must be a string")
 
     _check_null_bytes(city, "City")
-    city = city.strip()
 
     if city not in VALID_CITIES:
         raise ValidationError(f"City must be one of: {', '.join(VALID_CITIES)}")
@@ -456,7 +447,6 @@ def validate_name(name, field_name="Name"):
         raise ValidationError(f"{field_name} must be a string")
 
     _check_null_bytes(name, field_name)
-    name = name.strip()
 
     if not name:
         raise ValidationError(f"{field_name} cannot be empty")
@@ -492,11 +482,10 @@ def validate_birthday(date_str):
         raise ValidationError("Birthday must be a string")
 
     _check_null_bytes(date_str, "Birthday")
-    date_str = date_str.strip()
 
     if not re.match(r"^\d{2}-\d{2}-\d{4}$", date_str):
         raise ValidationError(
-            "Invalid birthday format. Expected: DD-MM-YYYY (e.g., 15-03-1995)"
+            "Invalid birthday format"
         )
 
     try:
@@ -508,14 +497,14 @@ def validate_birthday(date_str):
     today = datetime.now()
     if date_obj > today:
         raise ValidationError(
-            "Birthday cannot be in the future. Expected: date in the past (e.g., 15-03-1995)"
+            "Birthday cannot be in the future"
         )
 
     max_years_ago = 150
     earliest_allowed = datetime(today.year - max_years_ago, today.month, today.day)
     if date_obj < earliest_allowed:
         raise ValidationError(
-            f"Birthday cannot be more than {max_years_ago} years in the past. Expected: within last {max_years_ago} years"
+            f"Birthday cannot be more than {max_years_ago} years in the past"
         )
 
     return date_str
@@ -541,11 +530,10 @@ def validate_date(date_str):
         raise ValidationError("Date must be a string")
 
     _check_null_bytes(date_str, "Date")
-    date_str = date_str.strip()
 
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
         raise ValidationError(
-            "Invalid date format. Expected: YYYY-MM-DD (e.g., 2024-03-15)"
+            "Invalid date format"
         )
 
     try:
@@ -576,7 +564,6 @@ def validate_gender(gender):
         raise ValidationError("Gender must be a string")
 
     _check_null_bytes(gender, "Gender")
-    gender = gender.strip()
 
     if gender not in ["Male", "Female"]:
         raise ValidationError("Gender must be 'Male' or 'Female'")
@@ -606,14 +593,54 @@ def validate_driving_license(license_number):
         raise ValidationError("Driving license must be a string")
 
     _check_null_bytes(license_number, "Driving license")
-    license_number = license_number.replace(" ", "").upper()
 
     if not re.match(r"^[A-Z]{1,2}\d{7}$", license_number):
         raise ValidationError(
-            "Invalid driving license format. Expected: XDDDDDDD or XXDDDDDDD (1-2 letters + 7 digits, e.g., AB1234567)"
+            "Invalid driving license format"
         )
 
     return license_number
+
+
+def validate_nonempty(value):
+    """
+    Validate that input is not empty. Used for lookup fields (e.g. find a user
+    by username) where no format rules apply — only existence matters.
+
+    Args:
+        value (str): The raw user input
+
+    Returns:
+        str: The input unchanged
+
+    Raises:
+        ValidationError: If value is empty
+    """
+    if not isinstance(value, str) or not value:
+        raise ValidationError("Input cannot be empty")
+    return value
+
+
+def validate_float(value):
+    """
+    Convert string input to float, raising ValidationError if not a valid number.
+
+    Used as a validator for numeric fields (e.g., GPS coordinates) collected
+    via prompt_with_validation / prompt_optional_field.
+
+    Args:
+        value (str): The raw user input
+
+    Returns:
+        float: The converted value
+
+    Raises:
+        ValidationError: If value cannot be converted to float
+    """
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        raise ValidationError("Must be a valid number")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -652,20 +679,19 @@ def validate_serial_number(serial_number):
         raise ValidationError("Serial number must be a string")
 
     _check_null_bytes(serial_number, "Serial number")
-    serial_number = serial_number.strip().upper()
 
     if len(serial_number) < 10:
         raise ValidationError(
-            "Serial number must be at least 10 characters long. Expected: 10-17 alphanumeric chars (e.g., ABC1234567XYZ)"
+            "Serial number must be at least 10 characters long"
         )
     if len(serial_number) > 17:
         raise ValidationError(
-            "Serial number must be at most 17 characters long. Expected: 10-17 alphanumeric chars (e.g., ABC1234567XYZ)"
+            "Serial number must be at most 17 characters long"
         )
 
     if not re.match(r"^[A-Z0-9]+$", serial_number):
         raise ValidationError(
-            "Serial number can only contain letters and digits. Expected: alphanumeric only (e.g., ABC1234567XYZ, SERIAL2024FLEET)"
+            "Serial number can only contain uppercase letters and digits"
         )
 
     return serial_number
@@ -692,22 +718,21 @@ def validate_scooter_type(scooter_type):
         raise ValidationError("Scooter type must be a string")
 
     _check_null_bytes(scooter_type, "Scooter type")
-    scooter_type = scooter_type.strip()
 
     # Validate length
     if len(scooter_type) < 2:
         raise ValidationError(
-            "Scooter type must be at least 2 characters long. Expected: 2-30 characters (e.g., E-Scooter Pro, Model X)"
+            "Scooter type must be at least 2 characters long"
         )
     if len(scooter_type) > 30:
         raise ValidationError(
-            "Scooter type must be at most 30 characters long. Expected: 2-30 characters (e.g., E-Scooter Pro)"
+            "Scooter type must be at most 30 characters long"
         )
 
     # Validate format (letters, digits, spaces, hyphens)
     if not re.match(r"^[a-zA-Z0-9\s\-]+$", scooter_type):
         raise ValidationError(
-            "Scooter type can only contain letters, digits, spaces, and hyphens. Expected: letters, digits, spaces, - (e.g., E-Scooter Pro, Model X2)"
+            "Scooter type can only contain letters, digits, spaces, and hyphens"
         )
 
     return scooter_type
@@ -731,24 +756,24 @@ def validate_state_of_charge(soc):
     # Convert string to int if needed
     if isinstance(soc, str):
         try:
-            soc = int(soc.strip())
+            soc = int(soc)
         except ValueError:
             raise ValidationError(
-                "State of Charge must be a number. Expected: integer 0-100 (e.g., 75, 100)"
+                "State of Charge must be a number"
             )
 
     if not isinstance(soc, int):
         raise ValidationError(
-            "State of Charge must be an integer. Expected: integer 0-100 (e.g., 75, 100)"
+            "State of Charge must be an integer"
         )
 
     if soc < 0:
         raise ValidationError(
-            "State of Charge cannot be negative. Expected: 0-100 (e.g., 0, 50, 100)"
+            "State of Charge cannot be negative"
         )
     if soc > 100:
         raise ValidationError(
-            "State of Charge cannot exceed 100. Expected: 0-100 (e.g., 0, 50, 100)"
+            "State of Charge cannot exceed 100"
         )
 
     return soc
@@ -787,30 +812,30 @@ def validate_gps_location(latitude, longitude):
     # Convert to float if string
     try:
         if isinstance(latitude, str):
-            latitude = float(latitude.strip())
+            latitude = float(latitude)
         if isinstance(longitude, str):
-            longitude = float(longitude.strip())
+            longitude = float(longitude)
     except (ValueError, AttributeError):
         raise ValidationError(
-            "Coordinates must be valid numbers. Expected: latitude 51.8-52.05, longitude 4.25-4.65 (e.g., 51.92481, 4.46910)"
+            "Coordinates must be valid numbers"
         )
 
     if not isinstance(latitude, (int, float)) or not isinstance(
         longitude, (int, float)
     ):
         raise ValidationError(
-            "Coordinates must be numbers. Expected: latitude 51.8-52.05, longitude 4.25-4.65 (e.g., 51.92481, 4.46910)"
+            "Coordinates must be numbers"
         )
 
     # Validate Rotterdam region bounds
     if latitude < 51.8000 or latitude > 52.0500:
         raise ValidationError(
-            "Latitude must be within Rotterdam region. Expected: 51.8000 to 52.0500 (e.g., 51.92481 for Rotterdam Centraal)"
+            "Latitude must be within Rotterdam region"
         )
 
     if longitude < 4.2500 or longitude > 4.6500:
         raise ValidationError(
-            "Longitude must be within Rotterdam region. Expected: 4.2500 to 4.6500 (e.g., 4.46910 for Rotterdam Centraal)"
+            "Longitude must be within Rotterdam region"
         )
 
     # Round to 5 decimal places for 2-meter accuracy
@@ -857,20 +882,19 @@ def validate_brand(brand):
         raise ValidationError("Brand must be a string")
 
     _check_null_bytes(brand, "Brand")
-    brand = brand.strip()
 
     if len(brand) < 2:
         raise ValidationError(
-            "Brand must be at least 2 characters long. Expected: 2-50 characters (e.g., Segway, NIU)"
+            "Brand must be at least 2 characters long"
         )
     if len(brand) > 50:
         raise ValidationError(
-            "Brand must be at most 50 characters long. Expected: 2-50 characters (e.g., Segway)"
+            "Brand must be at most 50 characters long"
         )
 
     if not re.match(r"^[a-zA-Z0-9\s\-]+$", brand):
         raise ValidationError(
-            "Brand can only contain letters, digits, spaces, and hyphens. Expected: letters, digits, spaces, - (e.g., Segway, NIU, E-Rider)"
+            "Brand can only contain letters, digits, spaces, and hyphens"
         )
 
     return brand
@@ -897,20 +921,19 @@ def validate_model(model):
         raise ValidationError("Model must be a string")
 
     _check_null_bytes(model, "Model")
-    model = model.strip()
 
     if len(model) < 2:
         raise ValidationError(
-            "Model must be at least 2 characters long. Expected: 2-50 characters (e.g., ES2, Pro Max)"
+            "Model must be at least 2 characters long"
         )
     if len(model) > 50:
         raise ValidationError(
-            "Model must be at most 50 characters long. Expected: 2-50 characters (e.g., ES2)"
+            "Model must be at most 50 characters long"
         )
 
     if not re.match(r"^[a-zA-Z0-9\s\-]+$", model):
         raise ValidationError(
-            "Model can only contain letters, digits, spaces, and hyphens. Expected: letters, digits, spaces, - (e.g., ES2, Pro Max, X-100)"
+            "Model can only contain letters, digits, spaces, and hyphens"
         )
 
     return model
@@ -936,24 +959,24 @@ def validate_top_speed(speed):
     # Convert string to float if needed
     if isinstance(speed, str):
         try:
-            speed = float(speed.strip())
+            speed = float(speed)
         except ValueError:
             raise ValidationError(
-                "Top speed must be a number. Expected: 0-80 km/h (e.g., 25, 45.5)"
+                "Top speed must be a number"
             )
 
     if not isinstance(speed, (int, float)):
         raise ValidationError(
-            "Top speed must be a number. Expected: 0-80 km/h (e.g., 25, 45.5)"
+            "Top speed must be a number"
         )
 
     if speed < 0:
         raise ValidationError(
-            "Top speed cannot be negative. Expected: 0-80 km/h (e.g., 25, 45.5)"
+            "Top speed cannot be negative"
         )
     if speed > 80:
         raise ValidationError(
-            "Top speed cannot exceed 80 km/h. Expected: 0-80 km/h (e.g., 25, 45.5)"
+            "Top speed cannot exceed 80 km/h"
         )
 
     return float(speed)
@@ -979,24 +1002,24 @@ def validate_battery_capacity(capacity):
     # Convert string to int if needed
     if isinstance(capacity, str):
         try:
-            capacity = int(capacity.strip())
+            capacity = int(capacity)
         except ValueError:
             raise ValidationError(
-                "Battery capacity must be a number. Expected: 0-10000 Wh (e.g., 500, 750)"
+                "Battery capacity must be a number"
             )
 
     if not isinstance(capacity, int):
         raise ValidationError(
-            "Battery capacity must be an integer. Expected: 0-10000 Wh (e.g., 500, 750)"
+            "Battery capacity must be an integer"
         )
 
     if capacity < 0:
         raise ValidationError(
-            "Battery capacity cannot be negative. Expected: 0-10000 Wh (e.g., 500, 750)"
+            "Battery capacity cannot be negative"
         )
     if capacity > 10000:
         raise ValidationError(
-            "Battery capacity cannot exceed 10000 Wh. Expected: 0-10000 Wh (e.g., 500, 750)"
+            "Battery capacity cannot exceed 10000 Wh"
         )
 
     return capacity
@@ -1023,51 +1046,51 @@ def validate_target_range_soc(min_soc, max_soc):
     # Convert strings to int if needed
     if isinstance(min_soc, str):
         try:
-            min_soc = int(min_soc.strip())
+            min_soc = int(min_soc)
         except ValueError:
             raise ValidationError(
-                "Minimum SoC must be a number. Expected: 0-100 (e.g., 20)"
+                "Minimum SoC must be a number"
             )
 
     if isinstance(max_soc, str):
         try:
-            max_soc = int(max_soc.strip())
+            max_soc = int(max_soc)
         except ValueError:
             raise ValidationError(
-                "Maximum SoC must be a number. Expected: 0-100 (e.g., 80)"
+                "Maximum SoC must be a number"
             )
 
     if not isinstance(min_soc, int):
         raise ValidationError(
-            "Minimum SoC must be an integer. Expected: 0-100 (e.g., 20)"
+            "Minimum SoC must be an integer"
         )
 
     if not isinstance(max_soc, int):
         raise ValidationError(
-            "Maximum SoC must be an integer. Expected: 0-100 (e.g., 80)"
+            "Maximum SoC must be an integer"
         )
 
     if min_soc < 0:
         raise ValidationError(
-            "Minimum SoC cannot be negative. Expected: 0-100 (e.g., 20)"
+            "Minimum SoC cannot be negative"
         )
     if min_soc > 100:
         raise ValidationError(
-            "Minimum SoC cannot exceed 100. Expected: 0-100 (e.g., 20)"
+            "Minimum SoC cannot exceed 100"
         )
 
     if max_soc < 0:
         raise ValidationError(
-            "Maximum SoC cannot be negative. Expected: 0-100 (e.g., 80)"
+            "Maximum SoC cannot be negative"
         )
     if max_soc > 100:
         raise ValidationError(
-            "Maximum SoC cannot exceed 100. Expected: 0-100 (e.g., 80)"
+            "Maximum SoC cannot exceed 100"
         )
 
     if min_soc >= max_soc:
         raise ValidationError(
-            "Minimum SoC must be less than Maximum SoC. Expected: min < max (e.g., min=20, max=80)"
+            "Minimum SoC must be less than Maximum SoC"
         )
 
     return min_soc, max_soc
@@ -1098,13 +1121,12 @@ def validate_out_of_service_status(status):
 
     _check_null_bytes(status, "Status")
     if isinstance(status, str):
-        status = status.strip().lower()
         if status in ["yes", "true", "1"]:
             return True
         if status in ["no", "false", "0"]:
             return False
         raise ValidationError(
-            "Invalid out-of-service status. Expected: Yes/No, True/False, 1/0 (e.g., Yes, No)"
+            "Invalid out-of-service status"
         )
 
     if isinstance(status, int):
@@ -1113,11 +1135,11 @@ def validate_out_of_service_status(status):
         if status == 0:
             return False
         raise ValidationError(
-            "Invalid out-of-service status. Expected: 1 (out of service) or 0 (in service)"
+            "Invalid out-of-service status"
         )
 
     raise ValidationError(
-        "Out-of-service status must be boolean, string, or integer. Expected: Yes/No, True/False, 1/0"
+        "Out-of-service status must be boolean, string, or integer"
     )
 
 
@@ -1141,24 +1163,24 @@ def validate_mileage(mileage):
     # Convert string to float if needed
     if isinstance(mileage, str):
         try:
-            mileage = float(mileage.strip())
+            mileage = float(mileage)
         except ValueError:
             raise ValidationError(
-                "Mileage must be a number. Expected: 0-999999 km (e.g., 1500, 2500.5)"
+                "Mileage must be a number"
             )
 
     if not isinstance(mileage, (int, float)):
         raise ValidationError(
-            "Mileage must be a number. Expected: 0-999999 km (e.g., 1500, 2500.5)"
+            "Mileage must be a number"
         )
 
     if mileage < 0:
         raise ValidationError(
-            "Mileage cannot be negative. Expected: 0-999999 km (e.g., 1500, 2500.5)"
+            "Mileage cannot be negative"
         )
     if mileage > 999999:
         raise ValidationError(
-            "Mileage cannot exceed 999999 km (6 figures). Expected: 0-999999 km (e.g., 1500)"
+            "Mileage cannot exceed 999999 km"
         )
 
     return float(mileage)

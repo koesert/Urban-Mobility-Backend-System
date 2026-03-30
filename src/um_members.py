@@ -77,6 +77,8 @@ from validation import (
     validate_mileage,
     validate_date,
     validate_city,
+    validate_float,
+    validate_nonempty,
 )
 from input_handlers import (
     CancelInputException,
@@ -492,7 +494,7 @@ def reset_admin_password_ui():
 
     try:
         username = prompt_with_validation(
-            "\nEnter admin username to reset: ", validate_username
+            "\nEnter admin username to reset: ", validate_nonempty
         )
 
         success, msg, temp_password = reset_user_password(username)
@@ -515,8 +517,20 @@ def update_admin_profile_ui():
 
     try:
         username = prompt_with_validation(
-            "\nEnter admin username to update: ", validate_username
+            "\nEnter admin username to update: ", validate_nonempty
         )
+
+        all_users = list_all_users()
+        admin = None
+        for user in all_users:
+            if user["username"] == username and user["role"] == "system_admin":
+                admin = user
+                break
+
+        if not admin:
+            print(f"\n❌ System Administrator '{username}' not found.")
+            wait_for_enter()
+            return
 
         first_name = prompt_optional_field(
             "New first name", lambda x: validate_name(x, "First name")
@@ -551,7 +565,7 @@ def delete_system_admin_ui():
 
     try:
         username = prompt_with_validation(
-            "\nEnter admin username to delete: ", validate_username
+            "\nEnter admin username to delete: ", validate_nonempty
         )
 
         # Check if user exists by trying to find them in the list
@@ -672,7 +686,7 @@ def reset_engineer_password_ui():
 
     try:
         username = prompt_with_validation(
-            "\nEnter engineer username to reset: ", validate_username
+            "\nEnter engineer username to reset: ", validate_nonempty
         )
 
         success, msg, temp_password = reset_user_password(username)
@@ -695,8 +709,21 @@ def update_engineer_profile_ui():
 
     try:
         username = prompt_with_validation(
-            "\nEnter engineer username to update: ", validate_username
+            "\nEnter engineer username to update: ", validate_nonempty
         )
+
+        # Check if engineer exists before asking for updates
+        all_users = list_all_users()
+        engineer = None
+        for user in all_users:
+            if user["username"] == username and user["role"] == "service_engineer":
+                engineer = user
+                break
+
+        if not engineer:
+            print(f"\n❌ Service Engineer '{username}' not found.")
+            wait_for_enter()
+            return
 
         first_name = prompt_optional_field(
             "New first name", lambda x: validate_name(x, "First name")
@@ -731,7 +758,7 @@ def delete_service_engineer_ui():
 
     try:
         username = prompt_with_validation(
-            "\nEnter engineer username to delete: ", validate_username
+            "\nEnter engineer username to delete: ", validate_nonempty
         )
 
         # Check if user exists by trying to find them in the list
@@ -829,7 +856,7 @@ def add_traveler_ui():
         city = prompt_choice_from_list("Select city:", VALID_CITIES)
 
         # Email - validated
-        email = prompt_with_validation("Email: ", validate_email)
+        email = prompt_with_validation("Email (lowercase, e.g. john@example.com): ", validate_email)
 
         # Mobile phone - validated
         mobile_phone = prompt_with_validation(
@@ -936,7 +963,7 @@ def update_traveler_ui():
     print_user_info()
 
     try:
-        customer_id = input("\nEnter customer ID: ").strip()
+        customer_id = input("\nEnter customer ID: ")
 
         # Check if traveler exists
         traveler = get_traveler_by_id(customer_id)
@@ -992,7 +1019,7 @@ def update_traveler_ui():
         # Contact Information
         print("\n--- Contact Information ---")
         email = prompt_optional_field(
-            "New email", validate_email, current_value=traveler['email']
+            "New email (lowercase, e.g. john@example.com)", validate_email, current_value=traveler['email']
         )
         mobile_phone = prompt_optional_field(
             "New phone (8 digits)", validate_phone, current_value=traveler['mobile_phone']
@@ -1053,7 +1080,7 @@ def delete_traveler_ui():
     print_header("DELETE TRAVELER")
     print_user_info()
 
-    customer_id = input("\nEnter customer ID to delete: ").strip()
+    customer_id = input("\nEnter customer ID to delete: ")
 
     if not customer_id:
         print("\n❌ Customer ID cannot be empty.")
@@ -1082,13 +1109,7 @@ def delete_traveler_ui():
     print(f"  License: {traveler['driving_license']}")
 
     # Now ask for confirmation
-    confirm = (
-        input(f"\n⚠️  Are you sure you want to delete this traveler? (yes/no): ")
-        .strip()
-        .lower()
-    )
-
-    if confirm == "yes":
+    if prompt_confirmation(f"\n⚠️  Are you sure you want to delete this traveler? (yes/no): "):
         success, msg = delete_traveler(customer_id)
         print(f"\n{msg}")
     else:
@@ -1177,8 +1198,8 @@ def add_scooter_ui():
         "Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)"
     )
     # Get latitude and longitude separately, then validate together
-    latitude_input = prompt_with_validation("Latitude (51.8-52.05): ", lambda x: float(x))
-    longitude_input = prompt_with_validation("Longitude (4.25-4.65): ", lambda x: float(x))
+    latitude_input = prompt_with_validation("Latitude (51.8-52.05): ", validate_float)
+    longitude_input = prompt_with_validation("Longitude (4.25-4.65): ", validate_float)
 
     # Validate GPS coordinates are within Rotterdam region
     latitude, longitude = validate_gps_location(latitude_input, longitude_input)
@@ -1226,7 +1247,7 @@ def search_scooters_ui():
     print_user_info()
 
     print("\nSearch by: brand, model, or GPS coordinates")
-    search_key = input("Enter search term: ").strip()
+    search_key = input("Enter search term: ")
 
     if not search_key:
         print("\nSearch term cannot be empty.")
@@ -1300,7 +1321,7 @@ def update_scooter_ui():
     print_user_info()
 
     try:
-        serial_number = input("\nEnter scooter serial number: ").strip()
+        serial_number = input("\nEnter scooter serial number: ")
 
         # Get current scooter
         scooter = get_scooter_by_serial(serial_number)
@@ -1360,8 +1381,8 @@ def update_scooter_ui():
         print("\n--- GPS Location ---")
         print("Rotterdam region - enter both coordinates or skip both")
         print("Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)")
-        latitude = prompt_optional_field("New latitude (51.8-52.05)", lambda x: float(x), current_value=scooter.get('latitude'))
-        longitude = prompt_optional_field("New longitude (4.25-4.65)", lambda x: float(x), current_value=scooter.get('longitude'))
+        latitude = prompt_optional_field("New latitude (51.8-52.05)", validate_float, current_value=scooter.get('latitude'))
+        longitude = prompt_optional_field("New longitude (4.25-4.65)", validate_float, current_value=scooter.get('longitude'))
 
         # Validate GPS if both provided
         if latitude is not None and longitude is not None:
@@ -1442,7 +1463,7 @@ def update_scooter_engineer_ui():
     print_user_info()
 
     try:
-        serial_number = input("\nEnter scooter serial number: ").strip()
+        serial_number = input("\nEnter scooter serial number: ")
 
         # Get current scooter
         scooter = get_scooter_by_serial(serial_number)
@@ -1497,8 +1518,8 @@ def update_scooter_engineer_ui():
         print("\n--- GPS Location ---")
         print("Rotterdam region - enter both coordinates or skip both")
         print("Examples: Rotterdam Centraal (51.92481, 4.46910), Erasmusbrug (51.91081, 4.48250)")
-        latitude = prompt_optional_field("New latitude (51.8-52.05)", lambda x: float(x), current_value=scooter.get('latitude'))
-        longitude = prompt_optional_field("New longitude (4.25-4.65)", lambda x: float(x), current_value=scooter.get('longitude'))
+        latitude = prompt_optional_field("New latitude (51.8-52.05)", validate_float, current_value=scooter.get('latitude'))
+        longitude = prompt_optional_field("New longitude (4.25-4.65)", validate_float, current_value=scooter.get('longitude'))
 
         # Validate GPS if both provided
         if latitude is not None and longitude is not None:
@@ -1571,9 +1592,8 @@ def delete_scooter_ui():
     print_user_info()
 
     try:
-        # Validate serial number format before lookup
         serial_number = prompt_with_validation(
-            "\nEnter scooter serial number to delete: ", validate_serial_number
+            "\nEnter scooter serial number to delete: ", validate_nonempty
         )
 
         # Check if scooter exists
@@ -1639,7 +1659,7 @@ def view_logs_menu():
         print("3. View Suspicious Activities Only")
         print("4. Back to Main Menu")
 
-        choice = input("\nEnter choice (1-4): ").strip()
+        choice = input("\nEnter choice (1-4): ")
 
         if choice == "1":
             view_all_logs_ui()
@@ -1744,7 +1764,7 @@ def backup_restore_menu():
         else:
             print("4. Back to Main Menu")
 
-        choice = input("\nEnter choice: ").strip()
+        choice = input("\nEnter choice: ")
 
         if choice == "1":
             create_backup_ui()
@@ -1825,7 +1845,7 @@ def restore_backup_ui():
     for i, b in enumerate(backups, 1):
         print(f"{i}. {b['filename']} ({b['created']})")
 
-    choice = input(f"\nEnter backup number (1-{len(backups)}): ").strip()
+    choice = input(f"\nEnter backup number (1-{len(backups)}): ")
 
     try:
         backup_idx = int(choice) - 1
@@ -1838,7 +1858,7 @@ def restore_backup_ui():
     # System Admin needs restore code
     restore_code = None
     if user and user["role"] == "system_admin":
-        restore_code = input("\nEnter restore code: ").strip()
+        restore_code = input("\nEnter restore code: ")
 
         # Validate restore code BEFORE asking for confirmation
         from backup import _validate_restore_code
@@ -1898,9 +1918,8 @@ def generate_restore_code_ui():
         backup_idx = int(choice) - 1
         backup_filename = backups[backup_idx]["filename"]
 
-        # Validate username format
         target_username = prompt_with_validation(
-            "Enter System Admin username: ", validate_username
+            "Enter System Admin username: ", validate_nonempty
         )
 
         success, msg, code = generate_restore_code(backup_filename, target_username)
@@ -1936,7 +1955,7 @@ def revoke_restore_code_ui():
             f"{i}. {c['code']} - User: {c['target_username']} - Backup: {c['backup_filename']}"
         )
 
-    choice = input(f"\nEnter code number to revoke (1-{len(codes)}): ").strip()
+    choice = input(f"\nEnter code number to revoke (1-{len(codes)}): ")
 
     try:
         code_idx = int(choice) - 1
@@ -2082,7 +2101,7 @@ def update_my_password_ui():
     print("  - At least 1 special character (~!@#$%&_-+=|\\(){}[]:;'<>,.?/)")
 
     # Step 1: Verify current password first
-    current_password = input("\nEnter current password: ").strip()
+    current_password = input("\nEnter current password: ")
 
     if not current_password:
         print("\n❌ Current password cannot be empty.")
@@ -2230,14 +2249,14 @@ def login_screen():
 
     # Validate username format to prevent injection attacks
     try:
-        username = prompt_with_validation("\nUsername: ", validate_username, allow_exit=False)
+        username = prompt_with_validation("\nUsername: ", validate_nonempty, allow_exit=False)
     except ValidationError as e:
         print(f"\n❌ Invalid username format: {e}")
         wait_for_enter()
         return False
 
     # Password can be any string - validation happens in login()
-    password = input("Password: ").strip()
+    password = input("Password: ")
 
     success, message = login(username, password)
 
@@ -2290,10 +2309,15 @@ def main():
     while True:
         # Login
         if not login_screen():
-            retry = input("\nRetry login? (yes/no): ").strip().lower()
-            if retry != "yes":
-                print("\nGoodbye!")
-                break
+            while True:
+                retry = input("\nRetry login? (yes/no): ")
+                if retry == "yes":
+                    break
+                elif retry == "no":
+                    print("\nGoodbye!")
+                    return
+                else:
+                    print("❌ Invalid input.")
             continue
 
         # Main menu loop (after successful login)
@@ -2306,7 +2330,7 @@ def main():
             if not show_main_menu():
                 break
 
-            choice = input("\nEnter choice: ").strip()
+            choice = input("\nEnter choice: ")
 
             # Route based on role
             if user["role"] == "super_admin":

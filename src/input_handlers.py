@@ -59,7 +59,7 @@ def prompt_with_validation(prompt_text, validator_func, allow_exit=True):
             return
     """
     while True:
-        user_input = input(prompt_text).strip()
+        user_input = input(prompt_text)
 
         # Check for exit/cancel commands
         if allow_exit and user_input.lower() in ["exit", "cancel"]:
@@ -100,7 +100,7 @@ def prompt_integer_with_validation(prompt_text, validator_func, allow_exit=True)
             return
     """
     while True:
-        user_input = input(prompt_text).strip()
+        user_input = input(prompt_text)
 
         # Check for exit/cancel commands
         if allow_exit and user_input.lower() in ["exit", "cancel"]:
@@ -163,7 +163,7 @@ def prompt_password_with_confirmation(
             continue
 
         # Step 3: Get confirmation
-        confirm = input("Confirm password: ").strip()
+        confirm = input("Confirm password: ")
 
         # Check for exit/cancel
         if allow_exit and confirm.lower() in ["exit", "cancel"]:
@@ -229,7 +229,7 @@ def prompt_menu_choice(prompt_text, min_choice, max_choice, allow_exit=True):
             return
     """
     while True:
-        user_input = input(prompt_text).strip()
+        user_input = input(prompt_text)
 
         # Check for exit/cancel commands
         if allow_exit and user_input.lower() in ["exit", "cancel"]:
@@ -239,16 +239,12 @@ def prompt_menu_choice(prompt_text, min_choice, max_choice, allow_exit=True):
         try:
             choice_num = int(user_input)
         except ValueError:
-            print(
-                f"❌ Error: Please enter a valid number. Expected: a number between {min_choice} and {max_choice}\n"
-            )
+            print(f"❌ Error: Invalid choice\n")
             continue
 
         # Validate it's in range
         if choice_num < min_choice or choice_num > max_choice:
-            print(
-                f"❌ Error: Choice out of range. Expected: a number between {min_choice} and {max_choice}\n"
-            )
+            print(f"❌ Error: Invalid choice\n")
             continue
 
         # Valid choice
@@ -280,10 +276,10 @@ def prompt_confirmation(prompt_text, allow_exit=True):
             return
     """
     while True:
-        user_input = input(prompt_text).strip().lower()
+        user_input = input(prompt_text)
 
         # Check for exit/cancel commands
-        if allow_exit and user_input in ["exit", "cancel"]:
+        if allow_exit and user_input.lower() in ["exit", "cancel"]:
             raise CancelInputException("User cancelled input")
 
         if user_input == "yes":
@@ -291,7 +287,7 @@ def prompt_confirmation(prompt_text, allow_exit=True):
         elif user_input == "no":
             return False
         else:
-            print(f"❌ Error: Please enter 'yes' or 'no'. Expected: yes or no\n")
+            print(f"❌ Error: Invalid input.\n")
 
 
 def prompt_optional_field(
@@ -335,7 +331,7 @@ def prompt_optional_field(
         full_prompt = f"{prompt_text} (Enter to skip, 'exit' to cancel): "
 
     while True:
-        user_input = input(full_prompt).strip()
+        user_input = input(full_prompt)
 
         # Empty input - skip this field
         if not user_input:
