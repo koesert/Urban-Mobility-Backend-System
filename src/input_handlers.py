@@ -11,6 +11,7 @@
 # ═══════════════════════════════════════════════════════════════════════════
 
 from validation import ValidationError
+import re
 
 
 class CancelInputException(Exception):
@@ -62,7 +63,7 @@ def prompt_with_validation(prompt_text, validator_func, allow_exit=True):
         user_input = input(prompt_text)
 
         # Check for exit/cancel commands
-        if allow_exit and user_input.lower() in ["exit", "cancel"]:
+        if allow_exit and user_input in ["exit", "Exit", "EXIT", "cancel", "Cancel", "CANCEL"]:
             raise CancelInputException("User cancelled input")
 
         try:
@@ -103,7 +104,7 @@ def prompt_integer_with_validation(prompt_text, validator_func, allow_exit=True)
         user_input = input(prompt_text)
 
         # Check for exit/cancel commands
-        if allow_exit and user_input.lower() in ["exit", "cancel"]:
+        if allow_exit and user_input in ["exit", "Exit", "EXIT", "cancel", "Cancel", "CANCEL"]:
             raise CancelInputException("User cancelled input")
 
         try:
@@ -166,7 +167,7 @@ def prompt_password_with_confirmation(
         confirm = input("Confirm password: ")
 
         # Check for exit/cancel
-        if allow_exit and confirm.lower() in ["exit", "cancel"]:
+        if allow_exit and confirm in ["exit", "Exit", "EXIT", "cancel", "Cancel", "CANCEL"]:
             raise CancelInputException("User cancelled input")
 
         # Step 4: Validate confirmation
@@ -232,7 +233,7 @@ def prompt_menu_choice(prompt_text, min_choice, max_choice, allow_exit=True):
         user_input = input(prompt_text)
 
         # Check for exit/cancel commands
-        if allow_exit and user_input.lower() in ["exit", "cancel"]:
+        if allow_exit and user_input in ["exit", "Exit", "EXIT", "cancel", "Cancel", "CANCEL"]:
             raise CancelInputException("User cancelled input")
 
         # Validate it's a number
@@ -248,7 +249,7 @@ def prompt_menu_choice(prompt_text, min_choice, max_choice, allow_exit=True):
             continue
 
         # Valid choice
-        return str(choice_num)
+        return user_input
 
 
 def prompt_confirmation(prompt_text, allow_exit=True):
@@ -279,12 +280,12 @@ def prompt_confirmation(prompt_text, allow_exit=True):
         user_input = input(prompt_text)
 
         # Check for exit/cancel commands
-        if allow_exit and user_input.lower() in ["exit", "cancel"]:
+        if allow_exit and user_input in ["exit", "Exit", "EXIT", "cancel", "Cancel", "CANCEL"]:
             raise CancelInputException("User cancelled input")
 
-        if user_input == "yes":
+        if user_input in ["yes", "Yes", "YES"]:
             return True
-        elif user_input == "no":
+        elif user_input in ["no", "No", "NO"]:
             return False
         else:
             print(f"❌ Error: Invalid input.\n")
@@ -338,7 +339,7 @@ def prompt_optional_field(
             return None
 
         # Check for exit/cancel commands
-        if allow_exit and user_input.lower() in ["exit", "cancel"]:
+        if allow_exit and user_input in ["exit", "Exit", "EXIT", "cancel", "Cancel", "CANCEL"]:
             raise CancelInputException("User cancelled input")
 
         # Validate the input
@@ -380,3 +381,110 @@ def prompt_choice_from_list(prompt_text, options, allow_exit=True):
         f"Enter choice (1-{len(options)}): ", 1, len(options), allow_exit
     )
     return options[int(choice) - 1]
+
+def validate_username_input(username):
+    if not isinstance(username, str):
+        return False
+
+    #_check_null_bytes(username, "Username")
+
+    # Special case: allow "super_admin" system account (bypasses length rule)
+    if username == "super_admin":
+        if not re.match(r"^[a-z_]", username):  # pragma: no cover
+            return False
+        if not re.match(r"^[a-z0-9_'.]+$", username):  # pragma: no cover
+            return False
+        return True
+
+    # Validate length for regular users
+    if len(username) < 8:
+        return False
+    if len(username) > 10:
+        return False
+
+    if not re.match(r"^[a-z_]", username):
+        return False
+
+    if not re.match(r"^[a-z0-9_'.]+$", username):
+        return False
+
+    return True
+
+def validate_password_input(password):
+    if not isinstance(password, str):
+        return False
+
+    #_check_null_bytes(password, "Password")
+
+    if len(password) < 12:
+        return False
+    if len(password) > 30:
+        return False
+
+    if not re.search(r"[a-z]", password):
+        return False
+    
+    if not re.search(r"[A-Z]", password):
+        return False
+
+    if not re.search(r"\d", password):
+        return False
+    if not re.search(r"[~!@#$%&_\-+=`|\\(){}[\]:;'<>,.?/]", password):
+        return False
+
+    return True
+
+def validate_email_input(email):
+    if not isinstance(email, str):
+        return False
+
+    #check_null_bytes(email, "Email")
+
+    if len(email) > 50:
+        return False
+
+    email_pattern = r"^[a-z0-9._+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+
+    if not re.match(email_pattern, email):
+        return False
+
+    return True
+
+def validate_phone_input(phone): # TODO: hier nog ff naar kijken ook naar validate_phone functie
+    if not isinstance(phone, str):
+        return False
+
+    #_check_null_bytes(phone, "Phone")
+
+    # Accept already-formatted value (e.g. after a previous validate_phone call)
+    if re.match(r"^\+31-6-\d{8}$", phone):
+        return True
+
+    # Validate: must be exactly 8 digits
+    if not re.match(r"^\d{8}$", phone):
+        return False
+
+    return f"+31-6-{phone}"
+
+def validate_customer_id_input(customer_id):
+    if not isinstance(customer_id, str):
+        return False
+
+    if not customer_id.isdigit():
+        return False
+
+    if int(customer_id) < 1:
+        return False
+
+    return True
+
+def validate_search_key_input(search_key):
+    if not isinstance(search_key, str):
+        return False
+
+    #_check_null_bytes(search_key, "Search key")
+
+    if (search_key not in ["brand", "Brand", "model", "Model", "GPS", "gps", "GPS coordinates", "gps coordinates"]):
+        return False
+
+    return True

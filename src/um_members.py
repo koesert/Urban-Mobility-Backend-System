@@ -89,6 +89,12 @@ from input_handlers import (
     prompt_confirmation,
     prompt_optional_field,
     prompt_choice_from_list,
+    validate_phone_input,
+    validate_email_input,
+    validate_password_input,
+    validate_username_input,
+    validate_customer_id_input,
+    validate_search_key_input,
 )
 
 
@@ -964,6 +970,10 @@ def update_traveler_ui():
 
     try:
         customer_id = input("\nEnter customer ID: ")
+        if (not validate_customer_id_input(customer_id)):
+            print("\n❌ Invalid customer ID format.")
+            wait_for_enter()
+            return
 
         # Check if traveler exists
         traveler = get_traveler_by_id(customer_id)
@@ -1081,6 +1091,10 @@ def delete_traveler_ui():
     print_user_info()
 
     customer_id = input("\nEnter customer ID to delete: ")
+    if (not validate_customer_id_input(customer_id)):
+        print("\n❌ Invalid customer ID format.")
+        wait_for_enter()
+        return
 
     if not customer_id:
         print("\n❌ Customer ID cannot be empty.")
@@ -1248,6 +1262,10 @@ def search_scooters_ui():
 
     print("\nSearch by: brand, model, or GPS coordinates")
     search_key = input("Enter search term: ")
+    if (not validate_search_key_input(search_key)):
+        print("\n❌ Invalid search term format.")
+        wait_for_enter()
+        return
 
     if not search_key:
         print("\nSearch term cannot be empty.")
@@ -2251,12 +2269,22 @@ def login_screen():
     try:
         username = prompt_with_validation("\nUsername: ", validate_nonempty, allow_exit=False)
     except ValidationError as e:
-        print(f"\n❌ Invalid username format: {e}")
+        print("\n❌ Invalid credentials")
+        wait_for_enter()
+        return False
+    
+    if (not validate_username_input(username)):
+        print("\n❌ Invalid credentials")
         wait_for_enter()
         return False
 
     # Password can be any string - validation happens in login()
     password = input("Password: ")
+
+    if (not validate_password_input(password)):
+        print("\n❌ Invalid credentials")
+        wait_for_enter()
+        return False
 
     success, message = login(username, password)
 
