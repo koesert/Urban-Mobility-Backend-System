@@ -952,8 +952,8 @@ def main():
 
     while True:
         if not login_screen():
-            retry = input("\nRetry? (yes/no): ")
-            if _matches(retry, "Retry", r"yes|y"):
+            retry = prompt_confirmation("\nRetry? (yes/no): ")
+            if not retry:
                 print("\nGoodbye!"); return
             continue
 
