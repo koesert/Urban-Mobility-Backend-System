@@ -4,6 +4,7 @@ input_handlers.py – Console input prompts with validation loops and exit suppo
 All prompt functions loop until the user provides valid input or types 'exit'/'cancel'.
 """
 
+import re
 from validation import ValidationError, _check_null_bytes
 
 
@@ -119,3 +120,53 @@ def prompt_choice_from_list(prompt_text, options, allow_exit=True):
         print(f"  {i}) {opt}")
     choice = prompt_menu_choice(f"Enter choice (1-{len(options)}): ", 1, len(options), allow_exit)
     return options[int(choice) - 1]
+
+
+# ── UI-layer quick validators ────────────────────────────────────────────
+def validate_username_input(username):
+    if not isinstance(username, str):
+        return False
+    try:
+        _check_null_bytes(username, "Username")
+    except ValidationError:
+        return False
+    if username == "super_admin":
+        return bool(re.match(r"^[a-z_][a-z0-9_'.]+$", username))
+    return bool(re.match(r"^[a-z_][a-z0-9_'.]{7,9}$", username))
+
+
+def validate_password_input(password, username=""):
+    if not isinstance(password, str):
+        return False
+    try:
+        _check_null_bytes(password, "Password")
+    except ValidationError:
+        return False
+    min_len = 9 if username == "super_admin" else 12
+    return bool(
+        min_len <= len(password) <= 50
+        and re.search(r"[a-z]", password)
+        and re.search(r"[A-Z]", password)
+        and re.search(r"\d", password)
+        and re.search(r"[~!@#$%&_\-+=`|\\(){}[\]:;'<>,.?/]", password)
+    )
+
+
+def validate_number_input(choice, length):
+    if not isinstance(choice, str):
+        return False
+    try:
+        _check_null_bytes(choice, "Menu choice")
+    except ValidationError:
+        return False
+    return choice in [str(i) for i in range(1, length + 1)]
+
+
+def validate_restore_code_input(code):
+    if not isinstance(code, str):
+        return False
+    try:
+        _check_null_bytes(code, "Restore code")
+    except ValidationError:
+        return False
+    return bool(re.match(r"^[A-Z0-9]{12}$", code))

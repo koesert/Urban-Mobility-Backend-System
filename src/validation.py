@@ -112,7 +112,7 @@ def is_valid_salary_batch(batch):
 
 
 def is_valid_travel_distance(distance):
-    return _matches(distance, "Travel distance", r"[1-9]\d{0,3}") and distance.isdigit()
+    return _matches(distance, "Travel distance", r"[1-9]\d{0,3}")
 
 
 def is_valid_name(name, field_name):
@@ -129,9 +129,10 @@ def is_valid_identity_document_type(doc_type):
 
 def is_valid_employee_id(eid):
     return _matches(eid, "Employee ID", r"EMP\d{6}")
+    
 
 def is_valid_id(id_str):
-    return _matches(id_str, "ID", r"\d{1,10}") and id_str.isdigit()
+    return _matches(id_str, "ID", r"\d{1,10}")
 
 
 # ── public validators (return cleaned value or raise) ────────────────────
