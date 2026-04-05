@@ -147,7 +147,7 @@ def is_valid_id(id_str):
 
 
 def is_valid_two_chars(input_str):
-    return _matches(input_str, "Input", r".{2,}")
+    return _matches(input_str, "Search key", r"[A-Za-z0-9\s\-']{2,50}")
 
 
 # ── public validators (return cleaned value or raise) ────────────────────

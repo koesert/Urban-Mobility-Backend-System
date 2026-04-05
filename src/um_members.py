@@ -296,7 +296,7 @@ def search_employees_ui():
     clear(); header("SEARCH EMPLOYEES"); user_info()
     print("\nSearch by name, ID, zip, city, street. Partial keys accepted.")
     try:
-        key = prompt_with_validation("\nSearch (min 2 chars): ", validate_two_chars)
+        key = prompt_with_validation("\nSearch: ", validate_two_chars)
         results = search_employees(key)
         if not results:
             print(f"\nNo matches for '{key}'.")
@@ -459,7 +459,7 @@ def search_claims_ui():
     clear(); header("SEARCH CLAIMS"); user_info()
     print("\nSearch by ID, employee, date, project, zip, status, batch. Partial keys OK.")
     try:
-        key = prompt_with_validation("\nSearch (min 2 chars): ", validate_two_chars)
+        key = prompt_with_validation("\nSearch: ", validate_two_chars)
         results = search_claims(key)
         if not results:
             print(f"\nNo matches for '{key}'.")
