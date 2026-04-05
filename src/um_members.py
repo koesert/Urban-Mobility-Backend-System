@@ -5,6 +5,7 @@ Run this file to start the application.
 """
 
 import os
+#from turtle import bk
 
 from auth import login, logout, get_current_user, update_password
 from users import (
@@ -84,7 +85,7 @@ def show_main_menu():
     user_info()
 
     sc = check_suspicious_activities()
-    if sc > 0:
+    if sc > 0 and u["role"] in ["super_admin", "manager"]:
         print(f"\n  WARNING: {sc} suspicious activities detected! Check logs.")
 
     print("\nMAIN MENU:")
@@ -227,6 +228,8 @@ def manage_employees_menu():
             print(f"  {i}. {t}")
         try:
             ch = prompt_menu_choice("\nChoice (1-7): ", 1, 7)
+            if not validate_number_input(ch, 7):
+                print("\nInvalid."); pause(); return
         except CancelInputException:
             break
         {"1": add_employee_ui, "2": search_employees_ui, "3": list_employees_ui,
@@ -415,6 +418,8 @@ def manage_claims_menu():
             print(f"  {i}. {t}")
         try:
             ch = prompt_menu_choice("\nChoice (1-7): ", 1, 7)
+            if not validate_number_input(ch, 7):
+                print("\nInvalid."); pause(); return
         except CancelInputException:
             break
         {"1": search_claims_ui, "2": view_claims_by_employee_ui,
@@ -576,6 +581,8 @@ def employee_claims_menu():
             print(f"  {i}. {t}")
         try:
             ch = prompt_menu_choice("\nChoice (1-5): ", 1, 5)
+            if not validate_number_input(ch, 5):
+                print("\nInvalid."); pause(); return
         except CancelInputException:
             break
         {"1": add_claim_ui, "2": view_my_claims_ui,
@@ -685,7 +692,13 @@ def view_logs_menu():
         for i, t in enumerate(["All Logs", "Recent (last 20)",
                                 "Suspicious Only", "Back"], 1):
             print(f"  {i}. {t}")
-        ch = input("\nChoice (1-4): ")
+        try:
+            ch = prompt_menu_choice("\nChoice (1-4): ", 1, 4)
+            if not validate_number_input(ch, 4):
+                print("\nInvalid."); pause(); return
+        except CancelInputException:
+            break
+
         if ch == "1":
             clear(); header("ALL LOGS"); display_logs(get_all_logs()); pause()
         elif ch == "2":
@@ -712,7 +725,12 @@ def backup_restore_menu():
         items.append("Back")
         for i, t in enumerate(items, 1):
             print(f"  {i}. {t}")
-        ch = input(f"\nChoice (1-{len(items)}): ")
+        try:
+            ch = prompt_menu_choice(f"\nChoice (1-{len(items)}): ", 1, len(items))
+            if not validate_number_input(ch, len(items)):
+                print("\nInvalid."); pause(); return
+        except CancelInputException:
+            break
 
         if ch == "1":
             clear(); header("CREATE BACKUP")
@@ -745,7 +763,7 @@ def _restore_backup_ui():
     if not bk:
         print("\nNo backups."); pause(); return
 
-    for i, b in enumerate(bk, 1):
+    for i, b in enumerate(bk, 1): 
         print(f"  {i}. {b['filename']} ({b['created']})")
     ch = input(f"\nBackup number (1-{len(bk)}): ")
     if not validate_number_input(ch, len(bk)):
@@ -928,8 +946,12 @@ def login_screen():
     print("\n  Hard-coded Super Admin: super_admin / Admin_123?\n")
     un = input("Username: ")
     pw = input("Password: ")
+
     if not validate_username_input(un) or not validate_password_input(pw, un):
-        print("\n  Invalid credentials."); pause(); return False
+        # Nog steeds login() aanroepen zodat brute-force tracking werkt
+        ok, msg = login(un, pw)
+        print(f"\n  {msg}"); pause(); return False
+
     ok, msg = login(un, pw)
     if ok:
         print(f"\n  {msg}"); pause()
@@ -938,7 +960,6 @@ def login_screen():
             force_password_change()
         return True
     print(f"\n  {msg}"); pause(); return False
-
 
 def main():
     print("\n" + "=" * 70)

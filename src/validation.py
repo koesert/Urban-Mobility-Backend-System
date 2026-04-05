@@ -27,6 +27,10 @@ def _check_null_bytes(value, field_name):
     """Detect null-byte injection and log it as suspicious."""
 
     if "\x00" in value or "%00" in value or "\\x00" in value:
+        from auth import get_current_user
+        user = get_current_user()
+        print(user) #dit nog afmaken
+
         log_activity(
             "SYSTEM", "Null-byte attack detected",
             f"Field: {field_name}, Value: {repr(value[:50])}", suspicious=True,

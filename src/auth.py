@@ -11,6 +11,7 @@ from database import (
 )
 from validation import validate_username, validate_password, ValidationError
 from activity_log import log_activity
+from datetime import datetime, timedelta
 
 # ── session state ────────────────────────────────────────────────────────
 _session = {
@@ -50,6 +51,12 @@ PERMISSIONS = {
 }
 
 
+# ── brute-force protection ───────────────────────────────────────────────
+_failed_attempts = {}  # {username_lower: {"count": int, "locked_until": datetime|None}}
+_LOCKOUT_THRESHOLD = 3
+_LOCKOUT_DURATION = timedelta(minutes=5)
+
+
 # ── public API ───────────────────────────────────────────────────────────
 def get_current_user():
     return _session.copy() if _session["logged_in"] else None
@@ -81,6 +88,20 @@ def require_permission(perm):
 def login(username, password):
     conn = get_connection()
     c = conn.cursor()
+
+    # ── check if account is temporarily locked ───────────────────────
+    if username in _failed_attempts:
+        info = _failed_attempts[username]
+        
+        if info["locked_until"] and datetime.now() < info["locked_until"]:
+            remaining = (info["locked_until"] - datetime.now()).seconds // 60 + 1
+            log_activity("unknown", "Login blocked",
+                         f"Account '{username}' is locked ({remaining} min remaining)",
+                         suspicious=True)
+            conn.close()
+            return False, f"Account temporarily locked. Try again in {remaining} minute(s)."
+
+    # ── lookup user ──────────────────────────────────────────────────
     c.execute(
         "SELECT id, username, password_hash, role, first_name, last_name, "
         "must_change_password, employee_id FROM users WHERE username = ?",
@@ -90,17 +111,19 @@ def login(username, password):
     conn.close()
 
     if not user:
-        log_activity("unknown", "Unsuccessful login",
-                     f"username '{username}' not found", suspicious=True)
-        return False, "Invalid username or password"
+        _register_failed_attempt(username)
+        return False, "Invalid username or password."
 
     uid, enc_un, pw_hash, role, fn, ln, mcp, eid = user
     un = decrypt_username(enc_un)
 
     if not verify_password(password, un, pw_hash):
-        log_activity("unknown", "Unsuccessful login",
-                     f"wrong password for '{un}'", suspicious=True)
-        return False, "Invalid username or password"
+        _register_failed_attempt(username)
+        return False, "Invalid username or password."
+
+    # ── successful login: reset failed attempts ──────────────────────
+    if username in _failed_attempts:
+        del _failed_attempts[username]
 
     _session.update(
         logged_in=True, user_id=uid, username=un, role=role,
@@ -109,6 +132,28 @@ def login(username, password):
     )
     log_activity(un, "Logged in")
     return True, f"Welcome {fn} {ln}!"
+
+
+def _register_failed_attempt(username):
+    """Track failed login attempts and lock account after threshold."""
+    if username not in _failed_attempts:
+        _failed_attempts[username] = {"count": 0, "locked_until": None}
+
+    _failed_attempts[username]["count"] += 1
+    count = _failed_attempts[username]["count"]
+
+    if count >= _LOCKOUT_THRESHOLD:
+        _failed_attempts[username]["locked_until"] = datetime.now() + _LOCKOUT_DURATION
+        log_activity("unknown", "Account locked",
+                     f"Multiple failed login attempts for '{username}' "
+                     f"({count} attempts)", suspicious=True)
+    elif count > 1:
+        log_activity("unknown", "Unsuccessful login",
+                     f"Multiple attempts for '{username}' "
+                     f"(attempt {count}/{_LOCKOUT_THRESHOLD})", suspicious=True)
+    else:
+        log_activity("unknown", "Unsuccessful login",
+                     f"Failed login for '{username}'", suspicious=True)
 
 
 def logout():
