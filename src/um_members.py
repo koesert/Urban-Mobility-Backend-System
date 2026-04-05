@@ -457,7 +457,7 @@ def _show_claim_detail(c):
 
 def search_claims_ui():
     clear(); header("SEARCH CLAIMS"); user_info()
-    print("\nSearch by ID, employee, date, project, zip, status, batch. Partial keys OK.")
+    print("\nSearch by ID, date, project, zip, status, batch. Partial keys OK.")
     try:
         key = prompt_with_validation("\nSearch: ", validate_two_chars)
         results = search_claims(key)
