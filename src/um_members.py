@@ -32,7 +32,7 @@ from validation import (
     validate_travel_distance, validate_salary_batch, validate_name,
     validate_house_number, validate_project_number, validate_nonempty,
     validate_identity_document_number, validate_bsn_number, _matches,
-    validate_employee_id, validate_id
+    validate_employee_id, validate_id, validate_two_chars
 )
 from input_handlers import (
     CancelInputException,
@@ -296,10 +296,7 @@ def search_employees_ui():
     clear(); header("SEARCH EMPLOYEES"); user_info()
     print("\nSearch by name, ID, zip, city, street. Partial keys accepted.")
     try:
-        key = prompt_with_validation("\nSearch (min 2 chars): ",
-                                     lambda x: x if len(x) >= 2
-                                     else (_ for _ in ()).throw(
-                                         ValidationError("Min 2 characters")))
+        key = prompt_with_validation("\nSearch (min 2 chars): ", validate_two_chars)
         results = search_employees(key)
         if not results:
             print(f"\nNo matches for '{key}'.")
@@ -462,10 +459,7 @@ def search_claims_ui():
     clear(); header("SEARCH CLAIMS"); user_info()
     print("\nSearch by ID, employee, date, project, zip, status, batch. Partial keys OK.")
     try:
-        key = prompt_with_validation("\nSearch (min 2 chars): ",
-                                     lambda x: x if len(x) >= 2
-                                     else (_ for _ in ()).throw(
-                                         ValidationError("Min 2 characters")))
+        key = prompt_with_validation("\nSearch (min 2 chars): ", validate_two_chars)
         results = search_claims(key)
         if not results:
             print(f"\nNo matches for '{key}'.")

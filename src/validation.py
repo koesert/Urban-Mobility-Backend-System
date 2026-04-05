@@ -146,6 +146,10 @@ def is_valid_id(id_str):
     return _matches(id_str, "ID", r"\d{1,10}") 
 
 
+def is_valid_two_chars(input_str):
+    return _matches(input_str, "Input", r".{2,}")
+
+
 # ── public validators (return cleaned value or raise) ────────────────────
 def validate_username(username, allow_super_admin=False):
     if is_valid_username(username, allow_super_admin):
@@ -272,6 +276,12 @@ def validate_id(id_str):
     if is_valid_id(id_str):
         return id_str
     raise ValidationError("Invalid ID format. Must be a number higher than 0.")
+
+
+def validate_two_chars(input_str):
+    if is_valid_two_chars(input_str):
+        return input_str
+    raise ValidationError("Input must be at least 2 characters long.")
 
 
 def validate_nonempty(value, field_name="Input"):
