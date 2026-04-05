@@ -81,7 +81,7 @@ def get_all_logs():
         return [
             {
                 "no": int(row["No."]),
-                "date": row["Date"],
+                "date": row["Date"], 
                 "time": row["Time"],
                 "username": row["Username"],
                 "activity": row["Activity"],

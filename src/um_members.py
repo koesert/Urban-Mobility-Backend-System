@@ -982,7 +982,8 @@ def main():
             u = get_current_user()
             if not u or not show_main_menu():
                 break
-            ch = input("\nChoice: ")
+            
+            ch = prompt_menu_choice("\nChoice: ", 1, 9 if u["role"] == "manager" else 7 if u["role"] == "super_admin" else 4)
 
             actions_sa = {"1": manage_managers_menu, "2": manage_employees_menu,
                           "3": manage_claims_menu, "4": view_logs_menu,
