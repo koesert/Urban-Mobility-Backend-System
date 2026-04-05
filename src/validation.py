@@ -31,8 +31,6 @@ def _check_null_bytes(value, field_name):
         user = get_current_user()
         username = user["username"] if user else "unknown"
 
-        print(f"\n  WARNING: Null-byte detected in {field_name}! Value: {repr(value[:50])}")
-
         log_activity(
             username, "Null-byte attack detected",
             f"Field: {field_name}, Value: {repr(value[:50])}", suspicious=True,
