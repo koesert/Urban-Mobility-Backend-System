@@ -9,7 +9,7 @@ from database import (
     get_connection, encrypt_username, decrypt_username,
     hash_password, verify_password,
 )
-from validation import validate_username, validate_password, ValidationError
+from validation import is_valid_username, is_valid_password, validate_password, validate_username, ValidationError
 from activity_log import log_activity
 from datetime import datetime, timedelta
 
@@ -71,67 +71,78 @@ def get_role_name(role):
 
 
 def check_permission(perm):
-    if not _session["logged_in"]:
-        return False
-    return perm in PERMISSIONS.get(_session["role"], set())
+    if _session["logged_in"]:
+        return perm in PERMISSIONS.get(_session["role"], set())
+    return False
 
 
 def require_permission(perm):
+    if _session["logged_in"] and check_permission(perm):
+        return True, None
     if not _session["logged_in"]:
         return False, "You must be logged in."
     if not check_permission(perm):
         return False, f"Access denied. Role '{_session['role']}' lacks permission: {perm}"
-    return True, None
+    return False, "Access denied."
 
 
 # ── login / logout ───────────────────────────────────────────────────────
 def login(username, password):
-    conn = get_connection()
-    c = conn.cursor()
+    # ── whitelist: validate input format first ───────────────────────
+    if is_valid_username(username, allow_super_admin=True) and is_valid_password(password, username):
 
-    # ── check if account is temporarily locked ───────────────────────
+        # ── check if account is temporarily locked ───────────────────
+        if username in _failed_attempts:
+            info = _failed_attempts[username]
+            if info["locked_until"] and datetime.now() < info["locked_until"]:
+                remaining = (info["locked_until"] - datetime.now()).seconds // 60 + 1
+                log_activity("unknown", "Login blocked",
+                             f"Account '{username}' is locked ({remaining} min remaining)",
+                             suspicious=True)
+                return False, f"Account temporarily locked. Try again in {remaining} minute(s)."
+
+        # ── lookup user ──────────────────────────────────────────────
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute(
+            "SELECT id, username, password_hash, role, first_name, last_name, "
+            "must_change_password, employee_id FROM users WHERE username = ?",
+            (encrypt_username(username),),
+        )
+        user = c.fetchone()
+        conn.close()
+
+        if user:
+            uid, enc_un, pw_hash, role, fn, ln, mcp, eid = user
+            un = decrypt_username(enc_un)
+
+            if verify_password(password, un, pw_hash):
+                # ── successful login: reset failed attempts ──────────
+                if username in _failed_attempts:
+                    del _failed_attempts[username]
+
+                _session.update(
+                    logged_in=True, user_id=uid, username=un, role=role,
+                    role_name=get_role_name(role), first_name=fn, last_name=ln,
+                    must_change_password=bool(mcp), employee_id=eid,
+                )
+                log_activity(un, "Logged in")
+                return True, f"Welcome {fn} {ln}!"
+
+    # ── deny by default: anything that didn't pass gets rejected ─────
+    _register_failed_attempt(username)
+
+    # ── check if account is temporarily locked ───────────────────
     if username in _failed_attempts:
         info = _failed_attempts[username]
-        
         if info["locked_until"] and datetime.now() < info["locked_until"]:
             remaining = (info["locked_until"] - datetime.now()).seconds // 60 + 1
             log_activity("unknown", "Login blocked",
-                         f"Account '{username}' is locked ({remaining} min remaining)",
-                         suspicious=True)
-            conn.close()
+                            f"Account '{username}' is locked ({remaining} min remaining)",
+                            suspicious=True)
             return False, f"Account temporarily locked. Try again in {remaining} minute(s)."
 
-    # ── lookup user ──────────────────────────────────────────────────
-    c.execute(
-        "SELECT id, username, password_hash, role, first_name, last_name, "
-        "must_change_password, employee_id FROM users WHERE username = ?",
-        (encrypt_username(username),),
-    )
-    user = c.fetchone()
-    conn.close()
-
-    if not user:
-        _register_failed_attempt(username)
-        return False, "Invalid username or password."
-
-    uid, enc_un, pw_hash, role, fn, ln, mcp, eid = user
-    un = decrypt_username(enc_un)
-
-    if not verify_password(password, un, pw_hash):
-        _register_failed_attempt(username)
-        return False, "Invalid username or password."
-
-    # ── successful login: reset failed attempts ──────────────────────
-    if username in _failed_attempts:
-        del _failed_attempts[username]
-
-    _session.update(
-        logged_in=True, user_id=uid, username=un, role=role,
-        role_name=get_role_name(role), first_name=fn, last_name=ln,
-        must_change_password=bool(mcp), employee_id=eid,
-    )
-    log_activity(un, "Logged in")
-    return True, f"Welcome {fn} {ln}!"
+    return False, "Invalid username or password."
 
 
 def _register_failed_attempt(username):
@@ -157,54 +168,53 @@ def _register_failed_attempt(username):
 
 
 def logout():
-    if not _session["logged_in"]:
-        return False, "No user logged in."
-    un = _session["username"]
-    log_activity(un, "Logged out")
-    _session.update(
-        logged_in=False, user_id=None, username=None, role=None,
-        role_name=None, first_name=None, last_name=None,
-        must_change_password=False, employee_id=None,
-    )
-    return True, f"User {un} logged out."
+    if _session["logged_in"]:
+        un = _session["username"]
+        log_activity(un, "Logged out")
+        _session.update(
+            logged_in=False, user_id=None, username=None, role=None,
+            role_name=None, first_name=None, last_name=None,
+            must_change_password=False, employee_id=None,
+        )
+        return True, f"User {un} logged out."
+    return False, "No user logged in."
 
 
 # ── password change ──────────────────────────────────────────────────────
 def update_password(old_password, new_password):
-    if not _session["logged_in"]:
-        return False, "Not logged in."
+    if _session["logged_in"]:
+        uid, un = _session["user_id"], _session["username"]
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT password_hash FROM users WHERE id = ?", (uid,))
+        row = c.fetchone()
 
-    uid, un = _session["user_id"], _session["username"]
-    conn = get_connection()
-    c = conn.cursor()
-    c.execute("SELECT password_hash FROM users WHERE id = ?", (uid,))
-    row = c.fetchone()
-    if not row:
-        conn.close()
-        return False, "User not found."
+        if row and verify_password(old_password, un, row[0]):
+            try:
+                new_password = validate_password(new_password, un)
+            except ValidationError as e:
+                conn.close()
+                return False, f"Invalid new password: {e}"
 
-    if not verify_password(old_password, un, row[0]):
+            if old_password != new_password:
+                c.execute("UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?",
+                          (hash_password(new_password, un), uid))
+                conn.commit()
+                conn.close()
+                _session["must_change_password"] = False
+                log_activity(un, "Password updated")
+                return True, "Password updated successfully."
+
+            conn.close()
+            return False, "New password must differ from current password."
+
         conn.close()
+        if not row:
+            return False, "User not found."
         log_activity(un, "Password change failed", "incorrect current password", suspicious=True)
         return False, "Incorrect current password."
 
-    try:
-        new_password = validate_password(new_password)
-    except ValidationError as e:
-        conn.close()
-        return False, f"Invalid new password: {e}"
-
-    if old_password == new_password:
-        conn.close()
-        return False, "New password must differ from current password."
-
-    c.execute("UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?",
-              (hash_password(new_password, un), uid))
-    conn.commit()
-    conn.close()
-    _session["must_change_password"] = False
-    log_activity(un, "Password updated")
-    return True, "Password updated successfully."
+    return False, "Not logged in."
 
 
 # ── user lookup helpers ──────────────────────────────────────────────────

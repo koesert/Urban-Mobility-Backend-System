@@ -32,7 +32,7 @@ def prompt_with_validation(prompt_text, validator_func, allow_exit=True):
             print(f"  Error: {e}\n")
 
 
-def prompt_integer_with_validation(prompt_text, validator_func, allow_exit=True):
+def prompt_integer_with_validation(prompt_text, validator_func, allow_exit=True): # wordt niet gebruikt
     while True:
         value = input(prompt_text)
         if allow_exit and _is_exit(value):

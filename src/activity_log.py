@@ -20,9 +20,9 @@ _HEADER = "No.,Date,Time,Username,Activity,Additional Info,Suspicious\n"
 
 # ── encryption helpers ───────────────────────────────────────────────────
 def _cipher():
-    if not FERNET_KEY_FILE.exists():
-        raise FileNotFoundError("Fernet key not found – run database.py first.")
-    return Fernet(FERNET_KEY_FILE.read_bytes())
+    if FERNET_KEY_FILE.exists():
+        return Fernet(FERNET_KEY_FILE.read_bytes())
+    raise FileNotFoundError("Fernet key not found – run database.py first.")
 
 
 def _encrypt(text):

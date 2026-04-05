@@ -29,26 +29,27 @@ def _generate_temporary_password():
 # ── creation ─────────────────────────────────────────────────────────────
 def create_manager(username, first_name, last_name, password=None):
     """Create a Manager account (Super Admin only). Returns (ok, msg, temp_pw)."""
-    if not check_permission("add_manager"):
-        return False, "Access denied. Only Super Admin can create Managers.", None
-    return _create_user(username, first_name, last_name, "manager", password)
+    if check_permission("add_manager"):
+        return _create_user(username, first_name, last_name, "manager", password)
+    return False, "Access denied. Only Super Admin can create Managers.", None
 
 
 def create_employee_account(username, first_name, last_name, employee_id=None, password=None):
     """Create an Employee account (Super Admin or Manager). Returns (ok, msg, temp_pw)."""
-    if not check_permission("add_employee"):
-        return False, "Access denied. Cannot create Employees.", None
-    return _create_user(username, first_name, last_name, "employee", password, employee_id)
+    if check_permission("add_employee"):
+        return _create_user(username, first_name, last_name, "employee", password, employee_id)
+    return False, "Access denied. Cannot create Employees.", None
 
 
 def _create_user(username, first_name, last_name, role, password=None, employee_id=None):
-    cur = get_current_user()
     try:
         username = validate_username(username)
         first_name = validate_name(first_name, "First name")
         last_name = validate_name(last_name, "Last name")
     except ValidationError as e:
         return False, f"Validation error: {e}", None
+    
+    cur = get_current_user()
 
     temp_pw = None
     if password is None:

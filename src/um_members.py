@@ -812,6 +812,8 @@ def _revoke_restore_code_ui():
     for i, c in enumerate(codes, 1):
         print(f"  {i}. {c['code']} – {c['target_username']} – {c['backup_filename']}")
     ch = input(f"\nCode to revoke (1-{len(codes)}): ")
+    if not validate_restore_code_input(ch):
+        print("\nInvalid code format."); pause(); return
     try:
         sel = codes[int(ch) - 1]
     except (ValueError, IndexError):
@@ -842,6 +844,9 @@ def update_my_password_ui():
     clear(); header("UPDATE PASSWORD"); user_info()
     print("\nRequirements: 12-50 chars, lowercase + uppercase + digit + special")
     cur_pw = input("\nCurrent password: ")
+    if not validate_password_input(cur_pw, get_current_user()["username"]):
+        print("\n  Incorrect password."); pause(); return
+    
     if not cur_pw:
         print("\n  Cannot be empty."); pause(); return
 
@@ -946,11 +951,6 @@ def login_screen():
     print("\n  Hard-coded Super Admin: super_admin / Admin_123?\n")
     un = input("Username: ")
     pw = input("Password: ")
-
-    if not validate_username_input(un) or not validate_password_input(pw, un):
-        # Nog steeds login() aanroepen zodat brute-force tracking werkt
-        ok, msg = login(un, pw)
-        print(f"\n  {msg}"); pause(); return False
 
     ok, msg = login(un, pw)
     if ok:
